@@ -6,7 +6,8 @@ export type Role =
   | "DELIVERY_BOY"
   | "USER"
   | "PRODUCT_MANAGER"
-  | "PAYMENT_MANAGER";
+  | "PAYMENT_MANAGER"
+  | "SECRET_SHOP";
 
 export interface AuthUser {
   id: string;
@@ -38,6 +39,7 @@ export const roleHome: Record<Role, string> = {
   USER: "/dashboard",
   PRODUCT_MANAGER: "/pm/dashboard",
   PAYMENT_MANAGER: "/pay/dashboard",
+  SECRET_SHOP: "/secret-shop/dashboard",
 };
 
 /** Login URL per role. */
@@ -49,4 +51,5 @@ export const roleLogin: Record<Role, string> = {
   USER: "/login",
   PRODUCT_MANAGER: "/pm/login",
   PAYMENT_MANAGER: "/pay/login",
+  SECRET_SHOP: "/secret-shop/login",
 };

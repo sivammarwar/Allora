@@ -435,6 +435,419 @@ router.post(
   }
 );
 
+// ─── Global Item Catalog ──────────────────────────────────────────────────────
+
+const catalogItemSchema = z.object({
+  name: z.string().trim().min(1),
+  brandName: z.string().trim().optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(),
+});
+
+router.get("/items", async (req, res, next) => {
+  try {
+    const { search } = req.query;
+    const items = await prisma.agentItem.findMany({
+      where: {
+        isActive: true,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: String(search), mode: "insensitive" } },
+                { brandName: { contains: String(search), mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { name: "asc" },
+    });
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/items", validateBody(catalogItemSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof catalogItemSchema>;
+    const item = await prisma.agentItem.create({
+      data: {
+        name: body.name,
+        brandName: body.brandName ?? null,
+        imageUrl: body.imageUrl ?? null,
+      },
+    });
+    res.json(item);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.put("/items/:id", validateBody(catalogItemSchema.partial()), async (req, res, next) => {
+  try {
+    const item = await prisma.agentItem.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    res.json(item);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete("/items/:id", async (req, res, next) => {
+  try {
+    await prisma.agentItem.update({ where: { id: req.params.id }, data: { isActive: false } });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Agent Inventory ──────────────────────────────────────────────────────────
+
+const inventoryItemSchema = z.object({
+  itemId: z.string().min(1),
+  quantity: z.number().int().min(0),
+  mrp: z.number().positive().optional().nullable(),
+  price: z.number().positive(),
+  specification: z.string().trim().optional().nullable(),
+});
+
+const inventoryUpdateSchema = z.object({
+  quantity: z.number().int().min(0).optional(),
+  mrp: z.number().positive().optional().nullable(),
+  price: z.number().positive().optional(),
+  specification: z.string().trim().optional().nullable(),
+});
+
+router.get("/inventory", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { search } = req.query;
+    const rows = await prisma.agentInventoryItem.findMany({
+      where: {
+        agentId: profile.id,
+        isActive: true,
+        ...(search
+          ? {
+              item: {
+                OR: [
+                  { name: { contains: String(search), mode: "insensitive" } },
+                  { brandName: { contains: String(search), mode: "insensitive" } },
+                ],
+              },
+            }
+          : {}),
+      },
+      include: { item: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post("/inventory", validateBody(inventoryItemSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const body = req.body as z.infer<typeof inventoryItemSchema>;
+    const row = await prisma.agentInventoryItem.upsert({
+      where: { agentId_itemId: { agentId: profile.id, itemId: body.itemId } },
+      update: {
+        quantity: body.quantity,
+        mrp: body.mrp ?? null,
+        price: body.price,
+        specification: body.specification ?? null,
+        isActive: true,
+      },
+      create: {
+        agentId: profile.id,
+        itemId: body.itemId,
+        quantity: body.quantity,
+        mrp: body.mrp ?? null,
+        price: body.price,
+        specification: body.specification ?? null,
+      },
+      include: { item: true },
+    });
+    res.json(row);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.put("/inventory/:id", validateBody(inventoryUpdateSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const existing = await prisma.agentInventoryItem.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.agentId !== profile.id) {
+      return res.status(404).json({ error: "Inventory item not found" });
+    }
+    const row = await prisma.agentInventoryItem.update({
+      where: { id: req.params.id },
+      data: req.body,
+      include: { item: true },
+    });
+    res.json(row);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete("/inventory/:id", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const existing = await prisma.agentInventoryItem.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.agentId !== profile.id) {
+      return res.status(404).json({ error: "Inventory item not found" });
+    }
+    await prisma.agentInventoryItem.update({ where: { id: req.params.id }, data: { isActive: false } });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Secret Shop Verification ────────────────────────────────────────────────
+
+router.get("/secret-shop-requests", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const requests = await prisma.secretShopRequest.findMany({
+      where: { agentId: profile.id, status: { in: ["PENDING", "IN_PROGRESS"] } },
+      include: { user: { select: { id: true, email: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(requests);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/verified-secret-shops", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const shops = await prisma.secretShopProfile.findMany({
+      where: { verifiedByAgentId: profile.id, isActive: true },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        _count: { select: { orders: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(shops);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const verifySecretShopSchema = z.object({
+  requestId: z.string(),
+  action: z.enum(["approve", "reject"]),
+});
+
+router.post("/secret-shop-requests/verify", validateBody(verifySecretShopSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { requestId, action } = req.body as z.infer<typeof verifySecretShopSchema>;
+
+    const request = await prisma.secretShopRequest.findUnique({
+      where: { id: requestId },
+      include: { user: true },
+    });
+    if (!request || request.agentId !== profile.id) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (action === "approve") {
+      await prisma.$transaction([
+        prisma.secretShopRequest.update({
+          where: { id: requestId },
+          data: { status: "VERIFIED" },
+        }),
+        prisma.secretShopProfile.upsert({
+          where: { userId: request.userId },
+          update: {
+            isVerifiedByAgent: true,
+            verifiedByAgentId: profile.id,
+            shopName: request.shopName,
+            phone: request.phone,
+            address: request.address,
+            locationLat: request.locationLat,
+            locationLng: request.locationLng,
+          },
+          create: {
+            userId: request.userId,
+            isVerifiedByAgent: true,
+            verifiedByAgentId: profile.id,
+            shopName: request.shopName,
+            phone: request.phone,
+            address: request.address,
+            locationLat: request.locationLat,
+            locationLng: request.locationLng,
+          },
+        }),
+      ]);
+    } else {
+      await prisma.secretShopRequest.update({
+        where: { id: requestId },
+        data: { status: "REJECTED" },
+      });
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Secret Orders ───────────────────────────────────────────────────────────
+
+router.get("/secret-orders", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { past } = req.query;
+    const pastOrders = past === "true";
+
+    const orders = await prisma.secretOrder.findMany({
+      where: {
+        agentId: profile.id,
+        ...(pastOrders
+          ? { status: { in: ["DELIVERED", "CANCELLED"] } }
+          : { status: { notIn: ["DELIVERED", "CANCELLED"] } }),
+      },
+      include: {
+        shop: { select: { id: true, shopName: true, phone: true, address: true } },
+        items: {
+          include: {
+            inventoryItem: {
+              include: {
+                item: { select: { id: true, name: true, brandName: true, imageUrl: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(orders);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const updateOrderStatusSchema = z.object({
+  status: z.enum(["RECEIVED", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"]),
+});
+
+router.put("/secret-orders/:id/status", validateBody(updateOrderStatusSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const order = await prisma.secretOrder.findUnique({
+      where: { id: req.params.id },
+      include: { items: true },
+    });
+    if (!order || order.agentId !== profile.id) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    if (req.body.status === "DELIVERED") {
+      const allMarked = order.items.every((i) => i.isPacked || i.isRejected);
+      if (!allMarked) {
+        return res.status(400).json({ error: "Mark every item as packed or rejected before delivering" });
+      }
+    }
+    const updated = await prisma.secretOrder.update({
+      where: { id: req.params.id },
+      data: { status: req.body.status },
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const itemStatusSchema = z.object({
+  isPacked: z.boolean().optional(),
+  isRejected: z.boolean().optional(),
+});
+
+router.patch("/secret-orders/:orderId/items/:itemId", validateBody(itemStatusSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const order = await prisma.secretOrder.findUnique({
+      where: { id: req.params.orderId },
+      select: { agentId: true },
+    });
+    if (!order || order.agentId !== profile.id) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    const body = req.body as z.infer<typeof itemStatusSchema>;
+    const updated = await prisma.secretOrderItem.update({
+      where: { id: req.params.itemId },
+      data: {
+        ...(body.isPacked !== undefined && { isPacked: body.isPacked }),
+        ...(body.isRejected !== undefined && { isRejected: body.isRejected }),
+      },
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Verified Heroes list ────────────────────────────────────────────────────
+router.get("/verified-heroes", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const heroes = await prisma.heroProfile.findMany({
+      where: { verifiedByAgentId: profile.id, isActive: true },
+      select: {
+        id: true,
+        shopName: true,
+        serviceName: true,
+        phone: true,
+        address: true,
+        categoryIds: true,
+        subcategoryIds: true,
+        requiresDelivery: true,
+        profileImageUrl: true,
+        createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(heroes);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Verified Delivery Boys list ─────────────────────────────────────────────
+router.get("/verified-delivery-boys", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const boys = await prisma.deliveryBoyProfile.findMany({
+      where: { verifiedByAgentId: profile.id, isActive: true },
+      select: {
+        id: true,
+        phone: true,
+        address: true,
+        purpose: true,
+        assignedShopIds: true,
+        profileImageUrl: true,
+        createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(boys);
+  } catch (e) {
+    next(e);
+  }
+});
+
 // ─── Stats ─────────────────────────────────────────────────────────────────
 router.get("/stats", async (req, res, next) => {
   try {

@@ -4,6 +4,7 @@ import {
   MapPin,
   ShoppingBag,
   Truck,
+  Store,
   ShieldCheck,
   Sparkles,
   Wallet,
@@ -74,6 +75,13 @@ export default function HomePage() {
             >
               <Truck size={16} />
               Drive with us
+            </Link>
+            <Link
+              href="/secret-shop/login"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-sm border border-brand-border text-brand-text hover:bg-brand-surface transition-colors font-medium"
+            >
+              <Store size={16} />
+              Secret Shop
             </Link>
           </div>
 

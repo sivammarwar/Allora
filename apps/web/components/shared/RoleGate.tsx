@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/lib/auth";
 import { roleLogin, type Role } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export function RoleGate({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const pathname = usePathname() ?? "";
   // Treat any `/login` segment as a public auth route within this layout tree.
   const isPublicAuthRoute = pathname.endsWith("/login");
@@ -36,9 +38,12 @@ export function RoleGate({
       return;
     }
     if (user.role !== role) {
+      // Force a fresh /me fetch before redirecting — catches stale-cache mismatches
+      // where cookies belong to a different user than what's in the React Query cache.
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
       router.replace(roleLogin[user.role]);
     }
-  }, [user, isLoading, role, router, isPublicAuthRoute]);
+  }, [user, isLoading, role, router, isPublicAuthRoute, qc]);
 
   if (isPublicAuthRoute) return <>{children}</>;
 

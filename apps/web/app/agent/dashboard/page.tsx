@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MapPinned, ShieldCheck, ShieldAlert, Truck } from "lucide-react";
+import {
+  MapPinned, ShieldCheck, ShieldAlert, Truck, User,
+  Phone, MapPin, Package, ChevronDown, ChevronUp,
+} from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +25,50 @@ interface AgentStats {
   verifiedDeliveryBoys: number;
 }
 
+interface VerifiedHero {
+  id: string;
+  shopName: string | null;
+  serviceName: string | null;
+  phone: string;
+  address: string;
+  requiresDelivery: boolean;
+  profileImageUrl: string | null;
+  createdAt: string;
+  user: { name: string | null; email: string };
+}
+
+interface VerifiedDeliveryBoy {
+  id: string;
+  phone: string;
+  address: string;
+  purpose: string | null;
+  assignedShopIds: string[];
+  profileImageUrl: string | null;
+  createdAt: string;
+  user: { name: string | null; email: string };
+}
+
+function Avatar({ imageUrl, name }: { imageUrl: string | null; name: string }) {
+  if (imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={imageUrl} alt={name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+    );
+  }
+  return (
+    <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+      <User size={16} className="text-brand-primary" />
+    </div>
+  );
+}
+
 export default function AgentDashboardPage() {
   const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [showHeroes, setShowHeroes] = useState(true);
+  const [showDelivery, setShowDelivery] = useState(true);
+
   const { data: areas = [], isLoading } = useQuery<AgentArea[]>({
     queryKey: ["agent", "areas"],
     queryFn: () => api.get("/api/agent/areas"),
@@ -35,8 +80,17 @@ export default function AgentDashboardPage() {
     enabled: areas.length > 0,
   });
 
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
+  const { data: heroes = [] } = useQuery<VerifiedHero[]>({
+    queryKey: ["agent", "verified-heroes"],
+    queryFn: () => api.get("/api/agent/verified-heroes"),
+    enabled: areas.length > 0,
+  });
+
+  const { data: deliveryBoys = [] } = useQuery<VerifiedDeliveryBoy[]>({
+    queryKey: ["agent", "verified-delivery-boys"],
+    queryFn: () => api.get("/api/agent/verified-delivery-boys"),
+    enabled: areas.length > 0,
+  });
 
   const addWorkspace = useMutation({
     mutationFn: () =>
@@ -111,13 +165,15 @@ export default function AgentDashboardPage() {
   ];
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="page-enter space-y-8">
       <div>
         <h1 className="font-heading text-3xl text-brand-text">Dashboard</h1>
         <p className="text-brand-textMuted text-sm mt-1">
           Operating across {areas.length} area{areas.length === 1 ? "" : "s"}.
         </p>
       </div>
+
+      {/* Stat tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {tiles.map(([label, value, hint, Icon]) => (
           <Card key={label}>
@@ -133,6 +189,149 @@ export default function AgentDashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Verified Heroes */}
+      <div className="space-y-3">
+        <button
+          onClick={() => setShowHeroes((v) => !v)}
+          className="w-full flex items-center justify-between px-1 group"
+        >
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} className="text-brand-primary" />
+            <h2 className="font-heading text-xl text-brand-text">
+              Verified Heroes
+            </h2>
+            <span className="text-xs text-brand-textMuted font-mono bg-brand-surface px-2 py-0.5 rounded">
+              {heroes.length}
+            </span>
+          </div>
+          {showHeroes ? (
+            <ChevronUp size={16} className="text-brand-textMuted" />
+          ) : (
+            <ChevronDown size={16} className="text-brand-textMuted" />
+          )}
+        </button>
+
+        {showHeroes && (
+          heroes.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-brand-textMuted text-sm">
+                No verified heroes yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {heroes.map((hero) => (
+                <Card key={hero.id}>
+                  <CardContent className="py-4 flex items-start gap-3">
+                    <Avatar
+                      imageUrl={hero.profileImageUrl}
+                      name={hero.user.name ?? hero.user.email}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-brand-text truncate">
+                          {hero.shopName ?? hero.serviceName ?? hero.user.name ?? "—"}
+                        </p>
+                        {hero.requiresDelivery && (
+                          <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-brand-primary/10 text-brand-primary">
+                            <Truck size={10} />
+                            Delivery
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-brand-textMuted truncate">{hero.user.email}</p>
+                      <div className="flex items-center gap-1 text-xs text-brand-textMuted">
+                        <Phone size={11} />
+                        {hero.phone}
+                      </div>
+                      <div className="flex items-start gap-1 text-xs text-brand-textMuted">
+                        <MapPin size={11} className="flex-shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{hero.address}</span>
+                      </div>
+                      <p className="text-xs text-brand-textMuted">
+                        Verified {new Date(hero.createdAt).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Verified Delivery Boys */}
+      <div className="space-y-3">
+        <button
+          onClick={() => setShowDelivery((v) => !v)}
+          className="w-full flex items-center justify-between px-1 group"
+        >
+          <div className="flex items-center gap-2">
+            <Truck size={16} className="text-brand-primary" />
+            <h2 className="font-heading text-xl text-brand-text">
+              Verified Delivery Partners
+            </h2>
+            <span className="text-xs text-brand-textMuted font-mono bg-brand-surface px-2 py-0.5 rounded">
+              {deliveryBoys.length}
+            </span>
+          </div>
+          {showDelivery ? (
+            <ChevronUp size={16} className="text-brand-textMuted" />
+          ) : (
+            <ChevronDown size={16} className="text-brand-textMuted" />
+          )}
+        </button>
+
+        {showDelivery && (
+          deliveryBoys.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-brand-textMuted text-sm">
+                No verified delivery partners yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {deliveryBoys.map((boy) => (
+                <Card key={boy.id}>
+                  <CardContent className="py-4 flex items-start gap-3">
+                    <Avatar
+                      imageUrl={boy.profileImageUrl}
+                      name={boy.user.name ?? boy.user.email}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="font-medium text-brand-text truncate">
+                        {boy.user.name ?? boy.user.email}
+                      </p>
+                      <p className="text-xs text-brand-textMuted truncate">{boy.user.email}</p>
+                      <div className="flex items-center gap-1 text-xs text-brand-textMuted">
+                        <Phone size={11} />
+                        {boy.phone}
+                      </div>
+                      <div className="flex items-start gap-1 text-xs text-brand-textMuted">
+                        <MapPin size={11} className="flex-shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{boy.address}</span>
+                      </div>
+                      {boy.purpose && (
+                        <p className="text-xs text-brand-textMuted italic line-clamp-1">
+                          {boy.purpose}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1 text-xs text-brand-textMuted">
+                        <Package size={11} />
+                        {boy.assignedShopIds.length} assigned shop{boy.assignedShopIds.length !== 1 ? "s" : ""}
+                      </div>
+                      <p className="text-xs text-brand-textMuted">
+                        Verified {new Date(boy.createdAt).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        )}
       </div>
     </div>
   );

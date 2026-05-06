@@ -9,6 +9,7 @@ import agentRouter from "./agent";
 import userRouter from "./user";
 import paymentsRouter from "./payments";
 import payRouter from "./pay";
+import secretShopRouter from "./secret-shop";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use("/agent", agentRouter);
 router.use("/user", userRouter);
 router.use("/payments", paymentsRouter);
 router.use("/pay", payRouter);
+router.use("/secret-shop", secretShopRouter);
 
 export default router;

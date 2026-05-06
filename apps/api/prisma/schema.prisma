@@ -28,6 +28,7 @@ enum Role {
   USER
   PRODUCT_MANAGER
   PAYMENT_MANAGER
+  SECRET_SHOP
 }
 
 enum CategoryType {
@@ -57,6 +58,15 @@ enum VerificationStatus {
   IN_PROGRESS
   VERIFIED
   REJECTED
+}
+
+enum SecretOrderStatus {
+  PLACED
+  RECEIVED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
 }
 
 enum OrderStatus {
@@ -123,9 +133,11 @@ model User {
   agentProfile        AgentProfile?
   heroProfile         HeroProfile?
   deliveryBoyProfile  DeliveryBoyProfile?
+  secretShopProfile   SecretShopProfile?
 
   // Activity
   verificationRequests VerificationRequest[] @relation("RequesterVerification")
+  secretShopRequests   SecretShopRequest[]
   orders               Order[]
   reviews              Review[]
   notifications        Notification[]
@@ -185,6 +197,10 @@ model AgentProfile {
   verifiedHeroes          HeroProfile[]         @relation("HeroVerifiedByAgent")
   verifiedDeliveryBoys    DeliveryBoyProfile[]  @relation("DeliveryVerifiedByAgent")
   handledRequests         VerificationRequest[] @relation("AgentVerificationRequests")
+  secretShopRequests      SecretShopRequest[]   @relation("AgentSecretShopRequests")
+  verifiedSecretShops     SecretShopProfile[]   @relation("SecretShopVerifiedByAgent")
+  inventoryItems          AgentInventoryItem[]
+  secretOrders            SecretOrder[]         @relation("AgentSecretOrders")
 
   @@index([primaryAreaId])
 }
@@ -544,6 +560,119 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, isRead, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECRET SHOP
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SecretShopProfile {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopName          String
+  phone             String
+  address           String
+  locationLat       Float
+  locationLng       Float
+  isVerifiedByAgent Boolean       @default(false)
+  verifiedByAgentId String?
+  verifiedByAgent   AgentProfile? @relation("SecretShopVerifiedByAgent", fields: [verifiedByAgentId], references: [id])
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  orders SecretOrder[]
+
+  @@index([isVerifiedByAgent, isActive])
+}
+
+model SecretShopRequest {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId     String?
+  agent       AgentProfile?      @relation("AgentSecretShopRequests", fields: [agentId], references: [id])
+  status      VerificationStatus @default(PENDING)
+  shopName    String
+  phone       String
+  address     String
+  locationLat Float
+  locationLng Float
+  purpose     String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([status, agentId])
+  @@index([userId])
+}
+
+model AgentItem {
+  id            String    @id @default(cuid())
+  name          String
+  brandName     String?
+  imageUrl      String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  inventoryItems AgentInventoryItem[]
+
+  @@index([isActive])
+}
+
+model AgentInventoryItem {
+  id            String       @id @default(cuid())
+  agentId       String
+  agent         AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          AgentItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity      Int          @default(0)
+  mrp           Decimal?     @db.Decimal(10, 2)
+  price         Decimal      @db.Decimal(10, 2)
+  specification String?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  orderItems SecretOrderItem[]
+
+  @@unique([agentId, itemId])
+  @@index([agentId, isActive])
+}
+
+model SecretOrder {
+  id          String            @id @default(cuid())
+  shopId      String
+  shop        SecretShopProfile @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  agentId     String
+  agent       AgentProfile      @relation("AgentSecretOrders", fields: [agentId], references: [id])
+  status      SecretOrderStatus @default(PLACED)
+  totalAmount Decimal           @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  items SecretOrderItem[]
+
+  @@index([shopId, status])
+  @@index([agentId, status])
+}
+
+model SecretOrderItem {
+  id              String             @id @default(cuid())
+  orderId         String
+  order           SecretOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   AgentInventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity        Int                @default(1)
+  unitPrice       Decimal            @db.Decimal(10, 2)
+  isPacked        Boolean            @default(false)
+  isRejected      Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+
+  @@index([orderId])
+  @@index([inventoryItemId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

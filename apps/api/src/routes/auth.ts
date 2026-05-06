@@ -52,7 +52,7 @@ function clearAuthCookies(res: import("express").Response) {
 const sendOtpSchema = z.object({
   email: z.string().email().transform((s) => s.toLowerCase()),
   role: z
-    .enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER"])
+    .enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER", "SECRET_SHOP"])
     .optional(),
 });
 
@@ -75,7 +75,7 @@ router.post(
       //    later via /hero/register-request etc.
       //  - ADMIN / AGENT / PRODUCT_MANAGER / PAYMENT_MANAGER: must be seeded
       //    or admin-added; reject self-registration.
-      const SELF_REGISTERABLE: Array<typeof role> = ["USER", "HERO", "DELIVERY_BOY"];
+      const SELF_REGISTERABLE: Array<typeof role> = ["USER", "HERO", "DELIVERY_BOY", "SECRET_SHOP"];
       if (!user) {
         const requestedRole = role ?? "USER";
         if (!SELF_REGISTERABLE.includes(requestedRole)) {
