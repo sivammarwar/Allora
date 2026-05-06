@@ -1,0 +1,51 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "./api";
+import type { AuthUser, Role } from "./types";
+
+/** Fetches the current authenticated user, or null if unauthenticated. */
+export function useCurrentUser() {
+  return useQuery<AuthUser | null>({
+    queryKey: ["auth", "me"],
+    queryFn: async () => {
+      try {
+        const { user } = await api.get<{ user: AuthUser }>("/api/auth/me");
+        return user;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+export function useSendOtp() {
+  return useMutation({
+    mutationFn: (input: { email: string; role?: Role }) =>
+      api.post<{ ok: true }>("/api/auth/send-otp", input),
+  });
+}
+
+export function useVerifyOtp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { email: string; otp: string }) =>
+      api.post<{ ok: true; user: AuthUser }>("/api/auth/verify-otp", input),
+    onSuccess: ({ user }) => {
+      qc.setQueryData(["auth", "me"], user);
+    },
+  });
+}
+
+export function useLogout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ ok: true }>("/api/auth/logout"),
+    onSuccess: () => {
+      qc.setQueryData(["auth", "me"], null);
+      qc.clear();
+    },
+  });
+}

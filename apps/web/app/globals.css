@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Allora — global theme tokens
+   Hex equivalents (for reference):
+     --background        #FFF0F3
+     --foreground        #2E1A1A
+     --card              #FFF8F9
+     --primary           #C0626A
+     --secondary         #8B4A4A
+     --muted-foreground  #7A5050
+     --border            #E8C9CC
+     --destructive       #C0404A
+   HSL values are used so shadcn/ui utilities (hsl(var(--x))) work cleanly.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    --background: 351 100% 97%;       /* #FFF0F3 */
+    --foreground: 0 27% 14%;          /* #2E1A1A */
+
+    --card: 350 100% 98%;             /* #FFF8F9 */
+    --card-foreground: 0 27% 14%;
+
+    --popover: 350 100% 98%;
+    --popover-foreground: 0 27% 14%;
+
+    --primary: 354 39% 57%;           /* #C0626A */
+    --primary-foreground: 350 100% 98%;
+
+    --secondary: 0 30% 42%;           /* #8B4A4A */
+    --secondary-foreground: 350 100% 98%;
+
+    --muted: 350 50% 94%;
+    --muted-foreground: 0 21% 39%;    /* #7A5050 */
+
+    --accent: 354 39% 57%;
+    --accent-foreground: 350 100% 98%;
+
+    --destructive: 355 53% 50%;       /* #C0404A */
+    --destructive-foreground: 350 100% 98%;
+
+    --success: 132 30% 55%;           /* #6AAF7A */
+    --warning: 28 60% 56%;            /* #D4904A */
+
+    --border: 354 47% 85%;            /* #E8C9CC */
+    --input: 354 47% 85%;
+    --ring: 354 39% 57%;
+
+    --radius: 12px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-brand-bg text-brand-text;
+    font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-image:
+      radial-gradient(at 12% 8%, rgba(192, 98, 106, 0.10) 0px, transparent 55%),
+      radial-gradient(at 88% 14%, rgba(139, 74, 74, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(232, 201, 204, 0.35) 0px, transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair), ui-serif, Georgia, serif;
+    @apply text-brand-text;
+    letter-spacing: -0.01em;
+  }
+
+  code, kbd, pre, samp, .font-mono {
+    font-family: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+  }
+
+  ::selection {
+    background: rgba(192, 98, 106, 0.25);
+    color: #2E1A1A;
+  }
+}
+
+@layer components {
+  /* Reusable card surface */
+  .card-surface {
+    @apply bg-brand-surface border border-brand-border rounded-lg shadow-soft;
+  }
+
+  /* Map polygon overlay tint helper */
+  .map-overlay-tint {
+    background-color: rgba(192, 98, 106, 0.15);
+  }
+
+  /* Button hover warm-tint utility */
+  .hover-warm {
+    @apply transition-colors duration-200;
+  }
+  .hover-warm:hover {
+    background-color: rgba(192, 98, 106, 0.08);
+  }
+
+  /* Page transition wrapper */
+  .page-enter {
+    @apply animate-fade-slide-up;
+  }
+}
+
+@keyframes allora-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(192, 98, 106, 0.55), 0 1px 6px rgba(46, 26, 26, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(192, 98, 106, 0), 0 1px 6px rgba(46, 26, 26, 0.4);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(192, 98, 106, 0.4) transparent;
+  }
+}

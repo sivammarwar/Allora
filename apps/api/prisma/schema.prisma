@@ -1,0 +1,557 @@
+// Allora — Multi-Role Local Service & Delivery Platform
+// Prisma schema (PostgreSQL)
+//
+// Conventions:
+// - GeoJSON polygons stored as `Json` (validated server-side with @turf/turf).
+// - Soft-delete is NOT used; use isActive flags where needed.
+// - All money fields use Decimal(10,2) for INR precision.
+// - Timestamps default to now() and auto-update where appropriate.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  AGENT
+  HERO
+  DELIVERY_BOY
+  USER
+  PRODUCT_MANAGER
+  PAYMENT_MANAGER
+}
+
+enum CategoryType {
+  PRODUCT
+  SERVICE
+}
+
+enum PaymentCondition {
+  FIXED
+  DYNAMIC
+}
+
+enum ServiceRadiusKm {
+  KM_2
+  KM_5
+  KM_7
+  KM_10
+}
+
+enum VerificationType {
+  HERO
+  DELIVERY_BOY
+}
+
+enum VerificationStatus {
+  PENDING
+  IN_PROGRESS
+  VERIFIED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum SubOrderStatus {
+  PENDING
+  PACKED
+  ASSIGNED_DELIVERY
+  DELIVERED
+}
+
+enum PaymentMethod {
+  ONLINE
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  VERIFICATION_STATUS
+  ORDER_NEW
+  ORDER_STATUS
+  DELIVERY_ASSIGNED
+  PAYMENT_CONFIRMED
+  GENERIC
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE: USER & AUTH
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  name            String?
+  email           String   @unique
+  phone           String?
+  role            Role     @default(USER)
+  isVerified      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  profileImageUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Profiles (one-to-one per role)
+  agentProfile        AgentProfile?
+  heroProfile         HeroProfile?
+  deliveryBoyProfile  DeliveryBoyProfile?
+
+  // Activity
+  verificationRequests VerificationRequest[] @relation("RequesterVerification")
+  orders               Order[]
+  reviews              Review[]
+  notifications        Notification[]
+
+  // Authoring (PM / PaymentManager actions)
+  categoriesAdded   Category[]      @relation("CategoryAddedBy")
+  productsAdded     Product[]       @relation("ProductAddedBy")
+  paymentsSettled   PaymentRecord[] @relation("PaymentSettledBy")
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model OTPRecord {
+  id        String   @id @default(cuid())
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, used])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AREAS & AGENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Area {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // 20-char alphanumeric
+  polygon   Json     // GeoJSON FeatureCollection / Polygon
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  primaryForAgents    AgentProfile[] @relation("AgentPrimaryArea")
+  agentAreas          AgentArea[]
+  verificationRequests VerificationRequest[] @relation("VerificationRequestArea")
+
+  @@index([name])
+}
+
+model AgentProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryAreaId     String?
+  primaryArea       Area?    @relation("AgentPrimaryArea", fields: [primaryAreaId], references: [id])
+  isVerifiedByAdmin Boolean  @default(false)
+  addedByAdminAt    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  agentAreas              AgentArea[]
+  verifiedHeroes          HeroProfile[]         @relation("HeroVerifiedByAgent")
+  verifiedDeliveryBoys    DeliveryBoyProfile[]  @relation("DeliveryVerifiedByAgent")
+  handledRequests         VerificationRequest[] @relation("AgentVerificationRequests")
+
+  @@index([primaryAreaId])
+}
+
+model AgentArea {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  areaId    String
+  area      Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([agentId, areaId])
+  @@index([areaId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO (Service Provider)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model HeroProfile {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopName            String?
+  serviceName         String?
+  // Heroes can offer services/products under MULTIPLE categories. Set by the
+  // agent during verification (cannot be edited by the hero afterwards).
+  categoryIds         String[]
+  subcategoryIds      String[]         // denormalized; pricing rows are authoritative
+  phone               String
+  address             String
+  locationLat         Float
+  locationLng         Float
+  serviceAreaPolygon  Json?            // GeoJSON polygon drawn by agent
+  serviceRadius       ServiceRadiusKm  @default(KM_5)
+  activeFrom          String?          // "HH:mm"
+  activeTo            String?          // "HH:mm"
+  workingDays         Int[]            // 0..6, Sun=0
+  requiresDelivery    Boolean          @default(false)
+  isVerifiedByAgent   Boolean          @default(false)
+  verifiedByAgentId   String?
+  verifiedByAgent     AgentProfile?    @relation("HeroVerifiedByAgent", fields: [verifiedByAgentId], references: [id])
+  profileImageUrl     String?
+  storePageContent    Json?            // Custom store page HTML and assets for services
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  pricing         HeroSubcategoryPricing[]
+  heroProducts    HeroProduct[]
+  orderItems      OrderItem[]
+  serviceBookings ServiceBooking[]
+  paymentRecords  PaymentRecord[]
+  reviews         Review[]
+
+  @@index([isVerifiedByAgent, isActive])
+  @@index([locationLat, locationLng])
+}
+
+model HeroSubcategoryPricing {
+  id                 String      @id @default(cuid())
+  heroId             String
+  hero               HeroProfile @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  subcategoryId      String
+  subcategory        Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  serviceCharge      Decimal     @db.Decimal(10, 2)
+  deliveryCharge2km  Decimal     @db.Decimal(10, 2) @default(0)
+  deliveryCharge5km  Decimal     @db.Decimal(10, 2) @default(0)
+  deliveryCharge7km  Decimal     @db.Decimal(10, 2) @default(0)
+  deliveryCharge10km Decimal     @db.Decimal(10, 2) @default(0)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([heroId, subcategoryId])
+  @@index([subcategoryId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELIVERY BOY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DeliveryBoyProfile {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone             String
+  address           String
+  locationLat       Float?
+  locationLng       Float?
+  purpose           String?
+  isVerifiedByAgent Boolean       @default(false)
+  verifiedByAgentId String?
+  verifiedByAgent   AgentProfile? @relation("DeliveryVerifiedByAgent", fields: [verifiedByAgentId], references: [id])
+  assignedShopIds   String[]      // HeroProfile ids
+  profileImageUrl   String?
+  // Optional UPI receiving address shown to users on COD orders so they can
+  // pay via UPI on the doorstep instead of handing over cash.
+  upiVpa            String?
+  upiName           String?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  orderItems     OrderItem[]
+  paymentRecords PaymentRecord[]
+
+  @@index([isVerifiedByAgent, isActive])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VERIFICATION REQUESTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model VerificationRequest {
+  id           String             @id @default(cuid())
+  requestType  VerificationType
+  requesterId  String
+  requester    User               @relation("RequesterVerification", fields: [requesterId], references: [id], onDelete: Cascade)
+  agentId      String?
+  agent        AgentProfile?      @relation("AgentVerificationRequests", fields: [agentId], references: [id])
+  areaId       String?
+  area         Area?              @relation("VerificationRequestArea", fields: [areaId], references: [id])
+  status       VerificationStatus @default(PENDING)
+  details      Json               // name, serviceName, shopName, phone, address, categoryIds, subcategoryIds, locationLat, locationLng, profileImageUrl, purpose
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([status, areaId])
+  @@index([requesterId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATALOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Category {
+  id                       String           @id @default(cuid())
+  name                     String
+  type                     CategoryType
+  imageUrl                 String?
+  isActive                 Boolean          @default(true)
+  addedByProductManagerId  String?
+  addedByProductManager    User?            @relation("CategoryAddedBy", fields: [addedByProductManagerId], references: [id])
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  products                 Product[]
+  subcategories            Subcategory[]
+
+  @@index([type, isActive])
+}
+
+model Subcategory {
+  id              String   @id @default(cuid())
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name            String
+  // Icon name from Lucide set (e.g. "Pizza", "Sparkles"). Stored in imageUrl for back-compat.
+  imageUrl        String?
+  pageContent     Json?    // { html, assets: [{name,url}], css? } — for SERVICE pages
+  isActive        Boolean  @default(true)
+  // Viral section pinning (admin can pin subcategories to viral grid)
+  isPinned        Boolean  @default(false)
+  viralPosition   Int?     // 1-21 for grid position in viral section (null = not in viral grid)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  products        Product[]
+  pricing         HeroSubcategoryPricing[]
+  serviceBookings ServiceBooking[]
+  reviews         Review[]
+  orderItems      OrderItem[]
+
+  @@index([categoryId, isActive])
+  @@index([isPinned, viralPosition])
+}
+
+model Product {
+  id                       String      @id @default(cuid())
+  categoryId               String
+  category                 Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategoryId            String?
+  subcategory              Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  name                     String
+  description              String?
+  imageUrl                 String?
+  basePrice                Decimal     @db.Decimal(10, 2)
+  isReplaceable            Boolean     @default(false)
+  isRefundable             Boolean     @default(false)
+  isReturnable             Boolean     @default(false)
+  returnWindowDays         Int         @default(0)
+  isActive                 Boolean     @default(true)
+  addedByProductManagerId  String?
+  addedByProductManager    User?       @relation("ProductAddedBy", fields: [addedByProductManagerId], references: [id])
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+
+  orderItems   OrderItem[]
+  reviews      Review[]
+  heroProducts HeroProduct[]
+
+  @@index([categoryId, isActive])
+  @@index([subcategoryId, isActive])
+}
+
+model HeroProduct {
+  id                String      @id @default(cuid())
+  heroId            String
+  hero              HeroProfile @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sellingPrice      Decimal     @db.Decimal(10, 2)
+  isAvailable       Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([heroId, productId])
+  @@index([heroId])
+  @@index([productId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS & PAYMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  deliveryCharge  Decimal       @db.Decimal(10, 2) @default(0)
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  deliveryAddress String
+  deliveryLat     Float
+  deliveryLng     Float
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
+  serviceBookings ServiceBooking[]
+  paymentRecords  PaymentRecord[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id                      String              @id @default(cuid())
+  orderId                 String
+  order                   Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  heroId                  String
+  hero                    HeroProfile         @relation(fields: [heroId], references: [id])
+  productId               String?
+  product                 Product?            @relation(fields: [productId], references: [id])
+  subcategoryId           String?
+  subcategory             Subcategory?        @relation(fields: [subcategoryId], references: [id])
+  quantity                Int                 @default(1)
+  unitPrice               Decimal             @db.Decimal(10, 2)
+  deliveryCharge          Decimal             @db.Decimal(10, 2) @default(0)
+  subOrderStatus          SubOrderStatus      @default(PENDING)
+  assignedDeliveryBoyId   String?
+  assignedDeliveryBoy     DeliveryBoyProfile? @relation(fields: [assignedDeliveryBoyId], references: [id])
+  deliveryBoyConfirmedAt  DateTime?
+  deliveredAt             DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([orderId])
+  @@index([heroId, subOrderStatus])
+  @@index([assignedDeliveryBoyId, subOrderStatus])
+}
+
+model ServiceBooking {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  heroId          String
+  hero            HeroProfile   @relation(fields: [heroId], references: [id])
+  subcategoryId   String
+  subcategory     Subcategory   @relation(fields: [subcategoryId], references: [id])
+  charge          Decimal       @db.Decimal(10, 2)
+  transportCharge Decimal       @db.Decimal(10, 2) @default(0)
+  status          BookingStatus @default(PENDING)
+  scheduledAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([heroId, status])
+}
+
+model PaymentRecord {
+  id                       String              @id @default(cuid())
+  orderId                  String
+  order                    Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  date                     DateTime            @db.Date
+  heroId                   String
+  hero                     HeroProfile         @relation(fields: [heroId], references: [id])
+  deliveryBoyId            String?
+  deliveryBoy              DeliveryBoyProfile? @relation(fields: [deliveryBoyId], references: [id])
+  amountToHero             Decimal             @db.Decimal(10, 2)
+  amountToDeliveryBoy      Decimal             @db.Decimal(10, 2) @default(0)
+  platformFee              Decimal             @db.Decimal(10, 2) @default(0)
+  isSettled                Boolean             @default(false)
+  settledAt                DateTime?
+  settledByPaymentManagerId String?
+  settledByPaymentManager  User?               @relation("PaymentSettledBy", fields: [settledByPaymentManagerId], references: [id])
+  notes                    String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  @@index([date, isSettled])
+  @@index([heroId, date])
+  @@index([deliveryBoyId, date])
+  @@index([orderId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS & NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Review {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heroId        String
+  hero          HeroProfile  @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+  productId     String?
+  product       Product?     @relation(fields: [productId], references: [id])
+  rating        Int          // 1..5
+  reviewText    String?
+  createdAt     DateTime     @default(now())
+
+  @@index([heroId, createdAt])
+  @@index([subcategoryId, createdAt])
+  @@index([productId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETTINGS (singleton table — global config)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model GlobalSetting {
+  id                 String   @id @default("global")
+  userVisibilityRadiusKm Int  @default(5) // 1..10, set by ADMIN
+  updatedAt          DateTime @updatedAt
+}

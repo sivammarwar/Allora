@@ -1,0 +1,93 @@
+import http from "http";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import cookieParser from "cookie-parser";
+
+import { env, isProd } from "./env";
+import { logger } from "./lib/logger";
+import { generalLimiter } from "./middleware/rateLimit";
+import { errorHandler, notFound } from "./middleware/error";
+import apiRouter from "./routes";
+import { initSocket } from "./socket";
+import { redis } from "./lib/redis";
+import { prisma } from "./lib/prisma";
+
+const app = express();
+
+app.set("trust proxy", 1);
+
+// ── Security ──────────────────────────────────────────────
+app.use(
+  helmet({
+    contentSecurityPolicy: isProd ? undefined : false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+app.use(
+  cors({
+    origin: env.WEB_ORIGIN,
+    credentials: true,
+  })
+);
+
+// ── Body / cookies ────────────────────────────────────────
+// Razorpay webhook must read the raw body for signature verification —
+// reserve it before the JSON parser. The webhook route is registered
+// in a later pass; the verify hook is already exported in lib/razorpay.
+app.use(
+  express.json({
+    limit: "1mb",
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    },
+  })
+);
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+// ── Request timeout ───────────────────────────────────────
+// Increase timeout for image uploads (2 minutes)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/upload")) {
+    res.setTimeout(120000); // 2 minutes for uploads
+  } else {
+    res.setTimeout(30000); // 30 seconds for other requests
+  }
+  next();
+});
+
+// ── Logging ───────────────────────────────────────────────
+app.use((req, _res, next) => {
+  if (req.path !== "/api/health") {
+    logger.info(`${req.method} ${req.path}`);
+  }
+  next();
+});
+
+// ── Rate limiting (general) ───────────────────────────────
+app.use(generalLimiter);
+
+// ── Routes ────────────────────────────────────────────────
+app.use("/api", apiRouter);
+app.use(notFound);
+app.use(errorHandler);
+
+// ── HTTP + Socket.io server ───────────────────────────────
+const server = http.createServer(app);
+initSocket(server);
+
+const port = env.PORT;
+server.listen(port, () => {
+  logger.info(`Allora API ready → http://localhost:${port} (${env.NODE_ENV})`);
+});
+
+// ── Graceful shutdown ─────────────────────────────────────
+async function shutdown(signal: string) {
+  logger.info(`Received ${signal}, shutting down…`);
+  server.close();
+  await Promise.allSettled([prisma.$disconnect(), redis.quit()]);
+  process.exit(0);
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
