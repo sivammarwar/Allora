@@ -117,11 +117,11 @@ function ShopHeader({ search, setSearch }: { search: string; setSearch: (s: stri
   const isVerified = me?.state === "verified";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40" style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%)" }}>
+    <header className="fixed top-0 left-0 right-0 z-40" style={{ background: "linear-gradient(135deg, #C0626A 0%, #A05252 55%, #8B4A4A 100%)" }}>
       {/* Decorative blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }} />
-        <div className="absolute top-2 left-1/2 w-16 h-16 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }} />
+        <div className="absolute top-2 left-1/3 w-20 h-20 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #FFE0E3 0%, transparent 70%)" }} />
       </div>
 
       {showSearch ? (
@@ -185,7 +185,7 @@ function ShopHeader({ search, setSearch }: { search: string; setSearch: (s: stri
             >
               <ShoppingCart size={17} className="text-white" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none border-2 border-transparent" style={{ borderColor: "#7c3aed" }}>
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none border-2 border-transparent" style={{ borderColor: "#A05252" }}>
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               )}
