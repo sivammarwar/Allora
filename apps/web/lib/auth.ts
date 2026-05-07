@@ -23,8 +23,8 @@ export function useCurrentUser() {
 
 export function useSendOtp() {
   return useMutation({
-    mutationFn: (input: { email: string; role?: Role }) =>
-      api.post<{ ok: true }>("/api/auth/send-otp", input),
+    mutationFn: (input: { email: string; role?: Role; forceOtp?: boolean }) =>
+      api.post<{ ok: true; hasPassword: boolean }>("/api/auth/send-otp", input),
   });
 }
 

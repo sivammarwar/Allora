@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Eye, EyeOff, KeyRound, ShieldCheck, Lock } from "lucide-react";
 import {
-  useCheckPassword,
   useLoginPassword,
   useSendOtp,
   useVerifyOtp,
@@ -43,24 +42,23 @@ export function RoleLogin({ role, title, subtitle }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [isReset, setIsReset] = useState(false); // true when resetting password
 
-  const checkPassword = useCheckPassword();
   const loginPassword = useLoginPassword();
   const sendOtp = useSendOtp();
   const verifyOtp = useVerifyOtp();
   const setPasswordMutation = useSetPassword();
 
-  // Step 1: user submits email
+  // Step 1: user submits email — single call to send-otp which returns hasPassword flag
   const onContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = emailSchema.safeParse(email.trim());
     if (!parsed.success) { toast.error("Enter a valid email"); return; }
     try {
-      const { hasPassword } = await checkPassword.mutateAsync(email.trim().toLowerCase());
+      const { hasPassword } = await sendOtp.mutateAsync({ email: email.trim().toLowerCase(), role });
       if (hasPassword) {
+        // User has a password — show password login, no OTP was sent
         setStep("password");
       } else {
-        // First-time user — send OTP automatically
-        await sendOtp.mutateAsync({ email: email.trim().toLowerCase(), role });
+        // No password yet — OTP was just sent
         toast.success("Verification code sent. Check your inbox.");
         setIsReset(false);
         setStep("otp");
@@ -92,10 +90,10 @@ export function RoleLogin({ role, title, subtitle }: Props) {
     }
   };
 
-  // Step 2b (reset): send OTP to reset password
+  // Step 2b (reset): force-send OTP to reset password
   const onStartReset = async () => {
     try {
-      await sendOtp.mutateAsync({ email: email.trim().toLowerCase(), role });
+      await sendOtp.mutateAsync({ email: email.trim().toLowerCase(), role, forceOtp: true });
       toast.success("Reset code sent. Check your inbox.");
       setIsReset(true);
       setOtp("");
@@ -138,7 +136,7 @@ export function RoleLogin({ role, title, subtitle }: Props) {
   };
 
   const pending =
-    checkPassword.isPending || loginPassword.isPending ||
+    loginPassword.isPending ||
     sendOtp.isPending || verifyOtp.isPending || setPasswordMutation.isPending;
 
   return (

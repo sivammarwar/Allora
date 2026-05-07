@@ -55,6 +55,7 @@ const sendOtpSchema = z.object({
   role: z
     .enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER", "SECRET_SHOP"])
     .optional(),
+  forceOtp: z.boolean().optional(), // true when resetting password
 });
 
 router.post(
@@ -93,6 +94,12 @@ router.post(
         return res.status(403).json({ error: "Account is disabled." });
       }
 
+      // If user already has a password and this isn't a forced reset, skip OTP
+      // and let the client show the password login step instead.
+      if (user.passwordHash && !req.body.forceOtp) {
+        return res.json({ ok: true, hasPassword: true });
+      }
+
       const otp = await issueOtp(email);
       
       // Always log OTP for debugging
@@ -110,7 +117,7 @@ router.post(
         logger.warn(`[auth] SMTP skipped - OTP for ${email}: ${otp}`);
       }
 
-      res.json({ ok: true, message: "OTP sent" });
+      res.json({ ok: true, hasPassword: false, message: "OTP sent" });
     } catch (err) {
       next(err);
     }
