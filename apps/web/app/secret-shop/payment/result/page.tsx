@@ -14,16 +14,24 @@ interface StatusResponse {
   orderId: string;
 }
 
+function readPendingTxn(): string | null {
+  try { return sessionStorage.getItem("allora_pending_txn"); } catch { return null; }
+}
+function clearPendingTxn() {
+  try { sessionStorage.removeItem("allora_pending_txn"); } catch {}
+}
+
 export default function PaymentResultPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const txn = params.get("txn");
+  const txnFromUrl = params.get("txn");
+  const [txn] = useState<string | null>(() => txnFromUrl ?? readPendingTxn());
   const [status, setStatus] = useState<Status>("loading");
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!txn) {
-      setStatus("failed");
+      setStatus("pending");
       return;
     }
 
@@ -37,9 +45,11 @@ export default function PaymentResultPage() {
         );
         setOrderId(data.orderId);
         if (data.paymentStatus === "PAID") {
+          clearPendingTxn();
           setStatus("paid");
           setTimeout(() => router.push("/secret-shop/orders"), 3000);
         } else if (data.paymentStatus === "FAILED") {
+          clearPendingTxn();
           setStatus("failed");
         } else {
           attempts++;
@@ -122,9 +132,10 @@ export default function PaymentResultPage() {
         <CardContent className="py-16 text-center space-y-4">
           <Loader2 size={36} className="mx-auto text-amber-500" />
           <div>
-            <p className="text-xl font-bold text-brand-text">Payment Pending</p>
+            <p className="text-xl font-bold text-brand-text">Confirming Payment…</p>
             <p className="text-sm text-brand-textMuted mt-1">
-              We haven't received confirmation yet. Your order is on hold.
+              If you completed the payment on PhonePe, tap <strong>Check Status</strong> below.
+              Your order will appear in Orders once confirmed.
             </p>
           </div>
           <div className="flex gap-3">
@@ -138,7 +149,7 @@ export default function PaymentResultPage() {
                 window.location.reload();
               }}
             >
-              Refresh
+              Check Status
             </Button>
           </div>
         </CardContent>

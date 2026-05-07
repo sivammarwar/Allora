@@ -28,10 +28,11 @@ export default function SecretShopCartPage() {
       });
 
       if (paymentMode === "ONLINE") {
-        const { redirectUrl } = await api.post<{ redirectUrl: string }>(
+        const { redirectUrl, merchantTransactionId } = await api.post<{ redirectUrl: string; merchantTransactionId: string }>(
           "/api/secret-shop/payment/initiate",
           { orderId: order.id }
         );
+        try { sessionStorage.setItem("allora_pending_txn", merchantTransactionId); } catch {}
         return { redirectUrl, orderId: order.id };
       }
 
@@ -42,6 +43,7 @@ export default function SecretShopCartPage() {
       qc.invalidateQueries({ queryKey: ["secret-shop", "orders"] });
       if (redirectUrl) {
         window.location.href = redirectUrl;
+        return;
       } else {
         toast.success("Order placed! Pay on delivery.");
         router.push("/secret-shop/orders");
