@@ -22,6 +22,8 @@ interface SecretOrder {
   status: string;
   totalAmount: number;
   notes: string | null;
+  paymentMode: "COD" | "ONLINE";
+  paymentStatus: "PENDING" | "PAID" | "FAILED";
   createdAt: string;
   items: SecretOrderItem[];
 }
@@ -73,6 +75,15 @@ export default function SecretShopPastOrdersPage() {
                     >
                       {STATUS_LABELS[order.status] ?? order.status}
                     </span>
+                    {order.paymentMode === "COD" ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">COD</span>
+                    ) : order.paymentStatus === "PAID" ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-700">Paid · UPI</span>
+                    ) : order.paymentStatus === "FAILED" ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-red-500/10 text-red-600">Payment Failed</span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-600">Payment Pending</span>
+                    )}
                   </div>
                   {(() => {
                     const effectiveTotal = order.items

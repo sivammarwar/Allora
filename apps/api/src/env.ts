@@ -33,6 +33,12 @@ const schema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 
+  PHONEPE_MERCHANT_ID: z.string().optional(),
+  PHONEPE_SALT_KEY: z.string().optional(),
+  PHONEPE_SALT_INDEX: z.string().default("1"),
+  PHONEPE_UAT: z.string().default("true"),
+  API_PUBLIC_URL: z.string().optional(),
+
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
 
   ADMIN_EMAIL: z.string().email().default("admin@allora.app"),

@@ -278,14 +278,10 @@ export default function SecretShopDashboardPage() {
                       {inv.specification}
                     </p>
                   )}
-                  {inv.quantity === 0 ? (
+                  {inv.quantity === 0 && (
                     <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-red-500/10 text-red-600">
                       Out of Stock
                     </span>
-                  ) : (
-                    <p className="text-xs text-brand-textMuted">
-                      {inv.quantity} unit{inv.quantity !== 1 ? "s" : ""} available
-                    </p>
                   )}
                   {inv.quantity > 0 && isAdded ? (
                     <div className="flex items-center gap-2 pt-1">

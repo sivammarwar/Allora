@@ -4,29 +4,48 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Package } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Banknote, Smartphone } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useSecretCart } from "@/lib/secretShopCart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
+type PaymentMode = "COD" | "ONLINE";
 
 export default function SecretShopCartPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { items, inc, dec, remove, clear, total } = useSecretCart();
   const [notes, setNotes] = useState("");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("COD");
 
   const placeOrderMutation = useMutation({
-    mutationFn: () =>
-      api.post("/api/secret-shop/orders", {
+    mutationFn: async () => {
+      const order = await api.post<{ id: string }>("/api/secret-shop/orders", {
         items: items.map((i) => ({ inventoryItemId: i.inventoryItemId, quantity: i.quantity })),
         notes: notes.trim() || null,
-      }),
-    onSuccess: () => {
-      toast.success("Order placed successfully!");
+        paymentMode,
+      });
+
+      if (paymentMode === "ONLINE") {
+        const { redirectUrl } = await api.post<{ redirectUrl: string }>(
+          "/api/secret-shop/payment/initiate",
+          { orderId: order.id }
+        );
+        return { redirectUrl, orderId: order.id };
+      }
+
+      return { redirectUrl: null, orderId: order.id };
+    },
+    onSuccess: ({ redirectUrl }) => {
       clear();
       qc.invalidateQueries({ queryKey: ["secret-shop", "orders"] });
-      router.push("/secret-shop/orders");
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      } else {
+        toast.success("Order placed! Pay on delivery.");
+        router.push("/secret-shop/orders");
+      }
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to place order"),
   });
@@ -108,6 +127,39 @@ export default function SecretShopCartPage() {
         ))}
       </div>
 
+      {/* Payment method */}
+      <Card>
+        <CardContent className="py-5 space-y-3">
+          <p className="text-sm font-medium text-brand-text">Payment Method</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setPaymentMode("COD")}
+              className={`flex flex-col items-center gap-1.5 p-4 rounded-sm border transition-colors ${
+                paymentMode === "COD"
+                  ? "border-brand-primary bg-brand-primary/5 text-brand-primary"
+                  : "border-brand-border bg-brand-surface text-brand-textMuted hover:border-brand-primary/50"
+              }`}
+            >
+              <Banknote size={22} />
+              <span className="text-sm font-medium">Cash on Delivery</span>
+              <span className="text-[11px] opacity-70">Pay when delivered</span>
+            </button>
+            <button
+              onClick={() => setPaymentMode("ONLINE")}
+              className={`flex flex-col items-center gap-1.5 p-4 rounded-sm border transition-colors ${
+                paymentMode === "ONLINE"
+                  ? "border-brand-primary bg-brand-primary/5 text-brand-primary"
+                  : "border-brand-border bg-brand-surface text-brand-textMuted hover:border-brand-primary/50"
+              }`}
+            >
+              <Smartphone size={22} />
+              <span className="text-sm font-medium">UPI / Online</span>
+              <span className="text-[11px] opacity-70">PhonePe, GPay &amp; more</span>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Order total + notes + place order */}
       <Card>
         <CardContent className="py-5 space-y-4">
@@ -132,7 +184,7 @@ export default function SecretShopCartPage() {
             onClick={() => placeOrderMutation.mutate()}
             loading={placeOrderMutation.isPending}
           >
-            Place Order · ₹{total()}
+            {paymentMode === "ONLINE" ? `Pay ₹${total()} via UPI` : `Place Order · ₹${total()} (COD)`}
           </Button>
         </CardContent>
       </Card>

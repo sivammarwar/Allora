@@ -2,11 +2,68 @@ import { Router } from "express";
 import { z } from "zod";
 import type { AgentInventoryItem } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { env } from "../env";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
+import { initiatePayment, getPaymentStatus, verifyCallbackChecksum } from "../lib/phonepe";
 
 const router = Router();
+
+// ─── PUBLIC: PhonePe S2S callback (no auth) ───────────────────────────────────
+router.post("/payment/callback", async (req, res) => {
+  try {
+    const xVerify = req.headers["x-verify"] as string | undefined;
+    const body = req.body as { response?: string };
+    if (!body.response || !xVerify) return res.status(400).json({ ok: false });
+
+    if (!verifyCallbackChecksum(body.response, xVerify)) {
+      return res.status(401).json({ ok: false, error: "Invalid checksum" });
+    }
+
+    const decoded = JSON.parse(
+      Buffer.from(body.response, "base64").toString("utf-8")
+    ) as { data?: { merchantTransactionId?: string; state?: string } };
+
+    const merchantTxnId = decoded.data?.merchantTransactionId;
+    const state = decoded.data?.state;
+    if (!merchantTxnId) return res.status(200).json({ ok: true });
+
+    const paymentStatus = state === "COMPLETED" ? "PAID" : "FAILED";
+
+    const order = await prisma.secretOrder.findFirst({
+      where: { paymentTxnId: merchantTxnId },
+      include: { items: true },
+    });
+
+    if (order) {
+      if (paymentStatus === "FAILED") {
+        await prisma.$transaction(async (tx) => {
+          await tx.secretOrder.update({
+            where: { id: order.id },
+            data: { paymentStatus: "FAILED", status: "CANCELLED" },
+          });
+          for (const item of order.items) {
+            await tx.agentInventoryItem.update({
+              where: { id: item.inventoryItemId },
+              data: { quantity: { increment: item.quantity } },
+            });
+          }
+        });
+      } else {
+        await prisma.secretOrder.update({
+          where: { id: order.id },
+          data: { paymentStatus: "PAID" },
+        });
+      }
+    }
+
+    res.status(200).json({ ok: true });
+  } catch {
+    res.status(200).json({ ok: true });
+  }
+});
+
 router.use(requireAuth);
 
 // ─── Registration request (no profile needed) ────────────────────────────────
@@ -145,6 +202,7 @@ const placeOrderSchema = z.object({
     )
     .min(1),
   notes: z.string().optional().nullable(),
+  paymentMode: z.enum(["COD", "ONLINE"]).default("COD"),
 });
 
 router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema), async (req, res, next) => {
@@ -186,6 +244,8 @@ router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema
       0
     );
 
+    const paymentMode = body.paymentMode ?? "COD";
+
     // Create order + decrement inventory in a transaction
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.secretOrder.create({
@@ -194,6 +254,8 @@ router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema
           agentId: profile.verifiedByAgentId!,
           totalAmount,
           notes: body.notes ?? null,
+          paymentMode,
+          paymentStatus: "PENDING",
           items: {
             create: body.items.map((i) => ({
               inventoryItemId: i.inventoryItemId,
@@ -225,6 +287,84 @@ router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema
     });
 
     res.json(order);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Payment: initiate PhonePe for an ONLINE order ─────────────────────────
+router.post("/payment/initiate", requireRole("SECRET_SHOP"), async (req, res, next) => {
+  try {
+    const profile = await prisma.secretShopProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile?.isVerifiedByAgent) return res.status(403).json({ error: "Not verified" });
+
+    const { orderId } = req.body as { orderId?: string };
+    if (!orderId) return res.status(400).json({ error: "orderId required" });
+
+    const order = await prisma.secretOrder.findFirst({
+      where: { id: orderId, shopId: profile.id, paymentMode: "ONLINE", paymentStatus: "PENDING" },
+    });
+    if (!order) return res.status(404).json({ error: "Order not found or not eligible" });
+
+    const merchantTxnId = `SS${order.id}`;
+    const redirectUrl = `${env.WEB_ORIGIN}/secret-shop/payment/result?txn=${merchantTxnId}`;
+    const callbackUrl = `${env.API_PUBLIC_URL ?? env.NEXT_PUBLIC_API_URL}/api/secret-shop/payment/callback`;
+
+    const result = await initiatePayment({
+      merchantTransactionId: merchantTxnId,
+      merchantUserId: profile.userId,
+      amountRupees: Number(order.totalAmount),
+      redirectUrl,
+      callbackUrl,
+    });
+
+    await prisma.secretOrder.update({
+      where: { id: order.id },
+      data: { paymentTxnId: merchantTxnId },
+    });
+
+    res.json({ redirectUrl: result.redirectUrl, merchantTransactionId: merchantTxnId });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Payment: check status ────────────────────────────────────────────────────
+router.get("/payment/status/:merchantTransactionId", requireRole("SECRET_SHOP"), async (req, res, next) => {
+  try {
+    const profile = await prisma.secretShopProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile?.isVerifiedByAgent) return res.status(403).json({ error: "Not verified" });
+
+    const { merchantTransactionId } = req.params;
+    const order = await prisma.secretOrder.findFirst({
+      where: { paymentTxnId: merchantTransactionId, shopId: profile.id },
+    });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const status = await getPaymentStatus(merchantTransactionId);
+
+    if (status.state === "COMPLETED" && order.paymentStatus !== "PAID") {
+      await prisma.secretOrder.update({
+        where: { id: order.id },
+        data: { paymentStatus: "PAID" },
+      });
+    } else if (status.state === "FAILED" && order.paymentStatus !== "FAILED") {
+      await prisma.$transaction(async (tx) => {
+        await tx.secretOrder.update({
+          where: { id: order.id },
+          data: { paymentStatus: "FAILED", status: "CANCELLED" },
+        });
+        const items = await tx.secretOrderItem.findMany({ where: { orderId: order.id } });
+        for (const item of items) {
+          await tx.agentInventoryItem.update({
+            where: { id: item.inventoryItemId },
+            data: { quantity: { increment: item.quantity } },
+          });
+        }
+      });
+    }
+
+    res.json({ orderId: order.id, paymentStatus: status.state === "COMPLETED" ? "PAID" : status.state === "FAILED" ? "FAILED" : "PENDING", ...status });
   } catch (e) {
     next(e);
   }

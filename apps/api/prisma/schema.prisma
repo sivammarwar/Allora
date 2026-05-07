@@ -69,6 +69,17 @@ enum SecretOrderStatus {
   CANCELLED
 }
 
+enum SecretOrderPaymentMode {
+  COD
+  ONLINE
+}
+
+enum SecretOrderPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -642,16 +653,19 @@ model AgentInventoryItem {
 }
 
 model SecretOrder {
-  id          String            @id @default(cuid())
-  shopId      String
-  shop        SecretShopProfile @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  agentId     String
-  agent       AgentProfile      @relation("AgentSecretOrders", fields: [agentId], references: [id])
-  status      SecretOrderStatus @default(PLACED)
-  totalAmount Decimal           @db.Decimal(10, 2)
-  notes       String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id             String                   @id @default(cuid())
+  shopId         String
+  shop           SecretShopProfile        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent          AgentProfile             @relation("AgentSecretOrders", fields: [agentId], references: [id])
+  status         SecretOrderStatus        @default(PLACED)
+  totalAmount    Decimal                  @db.Decimal(10, 2)
+  notes          String?
+  paymentMode    SecretOrderPaymentMode   @default(COD)
+  paymentStatus  SecretOrderPaymentStatus @default(PENDING)
+  paymentTxnId   String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
 
   items SecretOrderItem[]
 
