@@ -17,6 +17,11 @@ interface HeroProfile {
   subcategoryIds: string[];
 }
 
+interface HeroMeResponse {
+  state: string;
+  profile: HeroProfile;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -127,7 +132,7 @@ function SubcategoryPricingForm({
 export default function HeroServicesPage() {
   const qc = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery<HeroProfile>({
+  const { data: profile, isLoading } = useQuery<HeroMeResponse>({
     queryKey: ["hero", "me"],
     queryFn: () => api.get("/api/hero/me"),
   });

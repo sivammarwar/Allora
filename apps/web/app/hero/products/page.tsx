@@ -34,13 +34,18 @@ interface HeroProduct {
   product: Product;
 }
 
+interface HeroMeResponse {
+  state: string;
+  profile: { categoryIds: string[] };
+}
+
 export default function HeroProductsPage() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<HeroMeResponse>({
     queryKey: ["hero", "me"],
     queryFn: () => api.get("/api/hero/me"),
   });
