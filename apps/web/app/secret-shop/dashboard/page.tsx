@@ -214,36 +214,71 @@ export default function SecretShopDashboardPage() {
         <span className="text-[11px] text-green-600 font-medium">Verified Shop</span>
       </div>
 
-      {/* Category chips */}
+      {/* Category image cards row */}
       {!search && categories.length > 0 && (
-        <div className="overflow-x-auto px-4 pb-2 scrollbar-none">
-          <div className="flex gap-2 w-max pt-1">
-            <button
-              onClick={() => setActiveCat(null)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                activeCat === null ? "bg-brand-primary text-white border-brand-primary" : "bg-white text-gray-600 border-gray-200"
-              }`}
-            >
-              <Tag size={11} /> All
+        <div className="overflow-x-auto px-4 pb-3 pt-1 scrollbar-none">
+          <div className="flex gap-3 w-max">
+            {/* All card */}
+            <button onClick={() => setActiveCat(null)} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${
+                activeCat === null
+                  ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10"
+                  : "bg-gray-100"
+              }`}>
+                <Tag size={22} className={activeCat === null ? "text-brand-primary" : "text-gray-400"} />
+              </div>
+              <span className={`text-[10px] font-semibold text-center leading-tight line-clamp-2 w-full ${activeCat === null ? "text-brand-primary" : "text-gray-600"}`}>All</span>
             </button>
+
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  activeCat === cat.id ? "bg-brand-primary text-white border-brand-primary" : "bg-white text-gray-600 border-gray-200"
-                }`}
+                className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16"
               >
-                {cat.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cat.imageUrl} alt={cat.name} className="w-4 h-4 rounded-full object-cover" />
-                ) : <Tag size={11} />}
-                {cat.name}
+                <div className={`w-16 h-16 rounded-2xl overflow-hidden transition-all ${
+                  activeCat === cat.id
+                    ? "ring-2 ring-brand-primary ring-offset-1"
+                    : ""
+                }`}>
+                  {cat.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 flex items-center justify-center">
+                      <Tag size={20} className="text-brand-primary/60" />
+                    </div>
+                  )}
+                </div>
+                <span className={`text-[10px] font-semibold text-center leading-tight line-clamp-2 w-full ${activeCat === cat.id ? "text-brand-primary" : "text-gray-600"}`}>
+                  {cat.name}
+                </span>
               </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* Active category banner */}
+      {activeCat && !search && (() => {
+        const cat = categories.find((c) => c.id === activeCat);
+        if (!cat) return null;
+        return (
+          <div className="mx-4 mb-3 rounded-2xl overflow-hidden relative h-24 flex items-end">
+            {cat.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cat.imageUrl} alt={cat.name} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/30 to-brand-primary/10" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="relative px-4 py-3 flex items-center justify-between w-full">
+              <span className="text-white font-bold text-base">{cat.name}</span>
+              <button onClick={() => setActiveCat(null)} className="text-white/80 text-xs bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">× Clear</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Content */}
       {itemsLoading ? (
@@ -255,8 +290,11 @@ export default function SecretShopDashboardPage() {
         </div>
       ) : (activeCat || search) ? (
         // Flat grid when filtered
-        <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {filteredItems.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
+        <div className="px-4 pb-4 space-y-3">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-1">{filteredItems.length} product{filteredItems.length !== 1 ? "s" : ""}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filteredItems.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
+          </div>
         </div>
       ) : grouped ? (
         // Grouped rows by category
