@@ -1,35 +1,50 @@
-import crypto from "crypto";
 import { env } from "../env";
 
 const BASE_URL =
   env.PHONEPE_UAT !== "false"
     ? "https://api-preprod.phonepe.com/apis/pg-sandbox"
-    : "https://api.phonepe.com/apis/hermes";
+    : "https://api.phonepe.com/apis/pg";
 
 function isConfigured(): boolean {
-  return Boolean(env.PHONEPE_MERCHANT_ID && env.PHONEPE_SALT_KEY);
+  return Boolean(env.PHONEPE_CLIENT_ID && env.PHONEPE_CLIENT_SECRET);
 }
 
-function xVerifyForPay(base64Payload: string): string {
-  return (
-    crypto
-      .createHash("sha256")
-      .update(base64Payload + "/pg/v1/pay" + env.PHONEPE_SALT_KEY)
-      .digest("hex") +
-    "###" +
-    env.PHONEPE_SALT_INDEX
-  );
-}
+let cachedToken: { token: string; expiresAt: number } | null = null;
 
-function xVerifyForStatus(path: string): string {
-  return (
-    crypto
-      .createHash("sha256")
-      .update(path + env.PHONEPE_SALT_KEY)
-      .digest("hex") +
-    "###" +
-    env.PHONEPE_SALT_INDEX
-  );
+async function getAccessToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt) {
+    return cachedToken.token;
+  }
+
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: env.PHONEPE_CLIENT_ID!,
+    client_secret: env.PHONEPE_CLIENT_SECRET!,
+    client_version: env.PHONEPE_CLIENT_VERSION,
+  });
+
+  const res = await fetch(`${BASE_URL}/v1/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  const data = (await res.json()) as {
+    access_token?: string;
+    expires_in?: number;
+    error?: string;
+  };
+
+  if (!data.access_token) {
+    throw new Error(`PhonePe token error: ${data.error ?? "unknown"}`);
+  }
+
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 - 60_000,
+  };
+
+  return cachedToken.token;
 }
 
 export interface InitiateResult {
@@ -44,89 +59,84 @@ export async function initiatePayment(params: {
   redirectUrl: string;
   callbackUrl: string;
 }): Promise<InitiateResult> {
-  if (!isConfigured()) {
-    throw new Error("PhonePe is not configured");
-  }
+  if (!isConfigured()) throw new Error("PhonePe is not configured");
+
+  const token = await getAccessToken();
 
   const payload = {
-    merchantId: env.PHONEPE_MERCHANT_ID,
-    merchantTransactionId: params.merchantTransactionId,
-    merchantUserId: params.merchantUserId,
+    merchantOrderId: params.merchantTransactionId,
     amount: Math.round(params.amountRupees * 100),
-    redirectUrl: params.redirectUrl,
-    redirectMode: "REDIRECT",
-    callbackUrl: params.callbackUrl,
-    paymentInstrument: { type: "PAY_PAGE" },
+    expireAfter: 1200,
+    returnUrl: params.redirectUrl,
+    paymentFlow: {
+      type: "PG_CHECKOUT",
+      message: "Order payment",
+      merchantUserId: params.merchantUserId,
+    },
   };
 
-  const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-
-  const res = await fetch(`${BASE_URL}/pg/v1/pay`, {
+  const res = await fetch(`${BASE_URL}/checkout/v2/pay`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-VERIFY": xVerifyForPay(base64Payload),
+      Authorization: `O-Bearer ${token}`,
     },
-    body: JSON.stringify({ request: base64Payload }),
+    body: JSON.stringify(payload),
   });
 
   const data = (await res.json()) as {
-    success: boolean;
-    data?: { instrumentResponse?: { redirectInfo?: { url?: string } } };
+    redirectUrl?: string;
+    orderId?: string;
+    state?: string;
     message?: string;
   };
 
-  if (!data.success) {
-    throw new Error(data.message ?? "PhonePe initiation failed");
+  if (!data.redirectUrl) {
+    throw new Error(data.message ?? "PhonePe did not return a redirect URL");
   }
 
-  const redirectUrl = data.data?.instrumentResponse?.redirectInfo?.url;
-  if (!redirectUrl) throw new Error("PhonePe did not return a redirect URL");
-
-  return { success: true, redirectUrl };
+  return { success: true, redirectUrl: data.redirectUrl };
 }
 
-export async function getPaymentStatus(merchantTransactionId: string): Promise<{
+export async function getPaymentStatus(merchantOrderId: string): Promise<{
   success: boolean;
   state: string;
   code: string;
-  paymentInstrument?: { type: string; utr?: string };
 }> {
   if (!isConfigured()) throw new Error("PhonePe is not configured");
 
-  const path = `/pg/v1/status/${env.PHONEPE_MERCHANT_ID}/${merchantTransactionId}`;
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      "X-VERIFY": xVerifyForStatus(path),
-      "X-MERCHANT-ID": env.PHONEPE_MERCHANT_ID!,
-    },
-  });
+  const token = await getAccessToken();
+
+  const res = await fetch(
+    `${BASE_URL}/checkout/v2/order/${merchantOrderId}/status`,
+    {
+      headers: { Authorization: `O-Bearer ${token}` },
+    }
+  );
 
   const data = (await res.json()) as {
-    success: boolean;
-    code: string;
-    data?: { state: string; paymentInstrument?: { type: string; utr?: string } };
+    state?: string;
+    paymentDetails?: { state?: string }[];
+    message?: string;
   };
 
-  return {
-    success: data.success,
-    state: data.data?.state ?? "UNKNOWN",
-    code: data.code,
-    paymentInstrument: data.data?.paymentInstrument,
-  };
+  const state = data.state ?? "UNKNOWN";
+  const success = state === "COMPLETED";
+
+  return { success, state, code: state };
 }
 
-export function verifyCallbackChecksum(
-  base64Body: string,
-  receivedChecksum: string
-): boolean {
+export async function verifyCallbackToken(authHeader: string): Promise<boolean> {
   if (!isConfigured()) return false;
-  const expected =
-    crypto
-      .createHash("sha256")
-      .update(base64Body + env.PHONEPE_SALT_KEY)
-      .digest("hex") +
-    "###" +
-    env.PHONEPE_SALT_INDEX;
-  return expected === receivedChecksum;
+  try {
+    const token = authHeader.replace(/^O-Bearer\s+/i, "");
+    const res = await fetch(`${BASE_URL}/v1/oauth/token/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

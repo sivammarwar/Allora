@@ -34,8 +34,9 @@ const schema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 
   PHONEPE_MERCHANT_ID: z.string().optional(),
-  PHONEPE_SALT_KEY: z.string().optional(),
-  PHONEPE_SALT_INDEX: z.string().default("1"),
+  PHONEPE_CLIENT_ID: z.string().optional(),
+  PHONEPE_CLIENT_SECRET: z.string().optional(),
+  PHONEPE_CLIENT_VERSION: z.string().default("1"),
   PHONEPE_UAT: z.string().default("true"),
   API_PUBLIC_URL: z.string().optional(),
 

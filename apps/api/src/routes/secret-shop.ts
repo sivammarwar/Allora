@@ -6,27 +6,22 @@ import { env } from "../env";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
-import { initiatePayment, getPaymentStatus, verifyCallbackChecksum } from "../lib/phonepe";
+import { initiatePayment, getPaymentStatus, verifyCallbackToken } from "../lib/phonepe";
 
 const router = Router();
 
 // ─── PUBLIC: PhonePe S2S callback (no auth) ───────────────────────────────────
 router.post("/payment/callback", async (req, res) => {
   try {
-    const xVerify = req.headers["x-verify"] as string | undefined;
-    const body = req.body as { response?: string };
-    if (!body.response || !xVerify) return res.status(400).json({ ok: false });
-
-    if (!verifyCallbackChecksum(body.response, xVerify)) {
-      return res.status(401).json({ ok: false, error: "Invalid checksum" });
+    const authHeader = req.headers["authorization"] as string | undefined;
+    if (authHeader) {
+      const valid = await verifyCallbackToken(authHeader);
+      if (!valid) return res.status(401).json({ ok: false, error: "Invalid token" });
     }
 
-    const decoded = JSON.parse(
-      Buffer.from(body.response, "base64").toString("utf-8")
-    ) as { data?: { merchantTransactionId?: string; state?: string } };
-
-    const merchantTxnId = decoded.data?.merchantTransactionId;
-    const state = decoded.data?.state;
+    const body = req.body as { merchantOrderId?: string; state?: string };
+    const merchantTxnId = body.merchantOrderId;
+    const state = body.state;
     if (!merchantTxnId) return res.status(200).json({ ok: true });
 
     const paymentStatus = state === "COMPLETED" ? "PAID" : "FAILED";
