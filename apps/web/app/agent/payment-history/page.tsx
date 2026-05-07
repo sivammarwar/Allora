@@ -227,12 +227,12 @@ export default function AgentPaymentHistoryPage() {
                     ))}
                   </div>
 
-                  {/* COD payment action row */}
-                  {order.paymentMode === "COD" && order.status === "DELIVERED" && (
+                  {/* Payment action row — COD always, ONLINE only if payment still pending */}
+                  {order.status === "DELIVERED" && (order.paymentMode === "COD" || order.paymentStatus === "PENDING") && (
                     <div className="flex items-center justify-between rounded-sm border border-brand-border px-3 py-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Banknote size={14} className="text-brand-textMuted" />
-                        <span className="text-brand-text">COD Payment</span>
+                        <span className="text-brand-text">{order.paymentMode === "COD" ? "COD Payment" : "Payment"}</span>
                         <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                           order.paymentStatus === "PAID"
                             ? "bg-green-500/10 text-green-700"
@@ -240,6 +240,9 @@ export default function AgentPaymentHistoryPage() {
                         }`}>
                           {order.paymentStatus === "PAID" ? "Done" : "Pending"}
                         </span>
+                        {order.paymentMode === "ONLINE" && order.paymentStatus === "PENDING" && (
+                          <span className="text-xs text-brand-textMuted">(manual override)</span>
+                        )}
                         {order.paymentStatus === "PAID" && (
                           <Lock size={11} className="text-brand-textMuted" />
                         )}

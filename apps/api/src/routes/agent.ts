@@ -813,13 +813,14 @@ router.patch("/secret-orders/:id/cod-payment", async (req, res, next) => {
     const { collected } = req.body as { collected: boolean };
     const order = await prisma.secretOrder.findUnique({
       where: { id: req.params.id },
-      select: { agentId: true, paymentMode: true, status: true },
+      select: { agentId: true, paymentMode: true, status: true, paymentStatus: true },
     });
     if (!order || order.agentId !== profile.id) {
       return res.status(404).json({ error: "Order not found" });
     }
-    if (order.paymentMode !== "COD") {
-      return res.status(400).json({ error: "Only COD orders can be updated this way" });
+    // Allow COD always; allow ONLINE only if payment is still PENDING (gateway missed the webhook)
+    if (order.paymentMode !== "COD" && order.paymentStatus !== "PENDING") {
+      return res.status(400).json({ error: "Payment already confirmed via gateway" });
     }
     if (order.status !== "DELIVERED") {
       return res.status(400).json({ error: "Order must be delivered first" });
