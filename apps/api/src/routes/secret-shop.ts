@@ -302,7 +302,9 @@ router.post("/payment/initiate", requireRole("SECRET_SHOP"), async (req, res, ne
     if (!order) return res.status(404).json({ error: "Order not found or not eligible" });
 
     const merchantTxnId = `SS${order.id}`;
-    const redirectUrl = `${env.WEB_ORIGIN}/secret-shop/payment/result?txn=${merchantTxnId}`;
+    const origins = env.WEB_ORIGIN.split(",").map((o) => o.trim());
+    const webOrigin = origins.find((o) => o.startsWith("https://")) ?? origins[0];
+    const redirectUrl = `${webOrigin}/secret-shop/payment/result?txn=${merchantTxnId}`;
     const callbackUrl = `${env.API_PUBLIC_URL ?? env.NEXT_PUBLIC_API_URL}/api/secret-shop/payment/callback`;
 
     const result = await initiatePayment({

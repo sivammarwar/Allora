@@ -68,6 +68,7 @@ export async function initiatePayment(params: {
     amount: Math.round(params.amountRupees * 100),
     expireAfter: 1200,
     returnUrl: params.redirectUrl,
+    notificationUrl: params.callbackUrl,
     paymentFlow: {
       type: "PG_CHECKOUT",
       message: "Order payment",

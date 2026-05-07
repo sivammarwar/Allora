@@ -28,7 +28,7 @@ export default function PaymentResultPage() {
     }
 
     let attempts = 0;
-    const maxAttempts = 8;
+    const maxAttempts = 15;
 
     const poll = async () => {
       try {
@@ -38,6 +38,7 @@ export default function PaymentResultPage() {
         setOrderId(data.orderId);
         if (data.paymentStatus === "PAID") {
           setStatus("paid");
+          setTimeout(() => router.push("/secret-shop/orders"), 3000);
         } else if (data.paymentStatus === "FAILED") {
           setStatus("failed");
         } else {
@@ -49,7 +50,12 @@ export default function PaymentResultPage() {
           }
         }
       } catch {
-        setStatus("failed");
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000);
+        } else {
+          setStatus("pending");
+        }
       }
     };
 
@@ -78,7 +84,7 @@ export default function PaymentResultPage() {
             <CheckCircle2 size={48} className="mx-auto text-green-500" />
             <div>
               <p className="text-xl font-bold text-brand-text">Payment Successful!</p>
-              <p className="text-sm text-brand-textMuted mt-1">Your order has been placed and paid.</p>
+              <p className="text-sm text-brand-textMuted mt-1">Your order has been placed. Redirecting to orders…</p>
             </div>
             <Button className="w-full" onClick={() => router.push("/secret-shop/orders")}>
               View My Orders
