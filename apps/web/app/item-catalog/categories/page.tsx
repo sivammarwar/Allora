@@ -108,11 +108,11 @@ export default function ItemCatalogCategoriesPage() {
               )}
               <CardContent className="p-3 space-y-2">
                 <p className="font-medium text-brand-text text-sm truncate">{c.name}</p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(c)}>
+                <div className="flex flex-col gap-1.5">
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => openEdit(c)}>
                     <Pencil size={11} className="mr-1" /> Edit
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 text-brand-error border-brand-error/30"
+                  <Button size="sm" variant="outline" className="w-full text-brand-error border-brand-error/30"
                     onClick={() => deleteMut.mutate(c.id)} loading={deleteMut.isPending}>
                     <Trash2 size={11} className="mr-1" /> Remove
                   </Button>
