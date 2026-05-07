@@ -319,6 +319,38 @@ export default function AgentInventoryPage() {
         </Card>
       )}
 
+      {/* Inventory value summary */}
+      {!isLoading && inventory.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card>
+            <CardContent className="py-3 px-4 space-y-0.5">
+              <p className="text-xs text-brand-textMuted">Total Items</p>
+              <p className="text-xl font-bold text-brand-text">{inventory.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-3 px-4 space-y-0.5">
+              <p className="text-xs text-brand-textMuted">Stock Value</p>
+              <p className="text-xl font-bold text-brand-primary">
+                ₹{inventory.reduce((s, r) => s + r.quantity * Number(r.price), 0).toLocaleString("en-IN")}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-3 px-4 space-y-0.5">
+              <p className="text-xs text-brand-textMuted">Total Units</p>
+              <p className="text-xl font-bold text-brand-text">{inventory.reduce((s, r) => s + r.quantity, 0)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-3 px-4 space-y-0.5">
+              <p className="text-xs text-brand-textMuted">Out of Stock</p>
+              <p className="text-xl font-bold text-red-500">{inventory.filter((r) => r.quantity === 0).length}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-textMuted" />

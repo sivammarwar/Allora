@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Package, Banknote } from "lucide-react";
+import { CreditCard, Package, Banknote, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -47,10 +48,27 @@ function effectiveTotal(items: SecretOrderItem[]) {
 }
 
 export default function SecretShopPaymentHistoryPage() {
+  const [search, setSearch] = useState("");
   const { data: orders = [], isLoading } = useQuery<SecretOrder[]>({
     queryKey: ["secret-shop", "payment-history"],
     queryFn: () => api.get("/api/secret-shop/orders?all=true"),
   });
+
+  const filtered = search.trim()
+    ? orders.filter((o) => {
+        const q = search.toLowerCase();
+        return (
+          o.id.toLowerCase().includes(q) ||
+          o.status.toLowerCase().includes(q) ||
+          o.paymentMode.toLowerCase().includes(q) ||
+          o.paymentStatus.toLowerCase().includes(q) ||
+          o.items.some((i) =>
+            i.inventoryItem.item.name.toLowerCase().includes(q) ||
+            (i.inventoryItem.item.brandName ?? "").toLowerCase().includes(q)
+          )
+        );
+      })
+    : orders;
 
   const totalPaid = orders
     .filter((o) => o.paymentStatus === "PAID")
@@ -65,6 +83,18 @@ export default function SecretShopPaymentHistoryPage() {
       <div>
         <h1 className="font-heading text-3xl text-brand-text">Payment History</h1>
         <p className="text-brand-textMuted text-sm mt-1">All your basket payments</p>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-textMuted" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by item, status, order ID…"
+          className="w-full pl-9 pr-4 py-2.5 rounded-sm bg-brand-surface border border-brand-border text-sm text-brand-text focus:outline-none focus:border-brand-primary"
+        />
       </div>
 
       {/* Summary cards */}
@@ -98,9 +128,15 @@ export default function SecretShopPaymentHistoryPage() {
             <p className="text-brand-textMuted text-sm">No payment records yet.</p>
           </CardContent>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-brand-textMuted text-sm">No records match your search.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => {
+          {filtered.map((order) => {
             const effective = effectiveTotal(order.items);
             const original = Number(order.totalAmount);
             const hasRejected = effective !== original;
