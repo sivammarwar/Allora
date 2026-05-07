@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ShoppingBag, Clock, ShoppingCart } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Clock, ShoppingCart, CreditCard } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RoleGate } from "@/components/shared/RoleGate";
@@ -14,9 +14,10 @@ const links = [
   { href: "/secret-shop/orders", label: "Orders", icon: ShoppingBag },
   { href: "/secret-shop/past-orders", label: "Past Orders", icon: Clock },
   { href: "/secret-shop/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/secret-shop/payment-history", label: "Payment History", icon: CreditCard },
 ];
 
-const PROTECTED = ["/secret-shop/orders", "/secret-shop/past-orders", "/secret-shop/cart"];
+const PROTECTED = ["/secret-shop/orders", "/secret-shop/past-orders", "/secret-shop/cart", "/secret-shop/payment-history"];
 
 function SecretShopGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";

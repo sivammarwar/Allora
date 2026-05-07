@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShieldCheck, Map, Package, Store, ClipboardList, Warehouse } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Map, Package, Store, ClipboardList, Warehouse, CreditCard } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RoleGate } from "@/components/shared/RoleGate";
@@ -14,6 +14,7 @@ const links = [
   { href: "/agent/inventory", label: "My Inventory", icon: Warehouse },
   { href: "/agent/secret-shops", label: "Verify Secret Shops", icon: Store },
   { href: "/agent/secret-orders", label: "Verified Shops & Orders", icon: ClipboardList },
+  { href: "/agent/payment-history", label: "Payment History", icon: CreditCard },
 ];
 
 export default function AgentLayout({

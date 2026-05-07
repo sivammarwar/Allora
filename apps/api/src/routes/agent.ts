@@ -707,13 +707,14 @@ router.post("/secret-shop-requests/verify", validateBody(verifySecretShopSchema)
 router.get("/secret-orders", async (req, res, next) => {
   try {
     const profile = await getAgentProfile(req.user!.id);
-    const { past } = req.query;
+    const { past, all } = req.query;
     const pastOrders = past === "true";
+    const allOrders = all === "true";
 
     const orders = await prisma.secretOrder.findMany({
       where: {
         agentId: profile.id,
-        ...(pastOrders
+        ...(allOrders ? {} : pastOrders
           ? { status: { in: ["DELIVERED", "CANCELLED"] } }
           : { status: { notIn: ["DELIVERED", "CANCELLED"] } }),
       },

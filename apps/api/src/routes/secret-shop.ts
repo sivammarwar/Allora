@@ -376,13 +376,14 @@ router.get("/orders", requireRole("SECRET_SHOP"), async (req, res, next) => {
       return res.status(403).json({ error: "Not verified yet" });
     }
 
-    const { past } = req.query;
+    const { past, all } = req.query;
     const pastOrders = past === "true";
+    const allOrders = all === "true";
 
     const orders = await prisma.secretOrder.findMany({
       where: {
         shopId: profile.id,
-        ...(pastOrders
+        ...(allOrders ? {} : pastOrders
           ? { status: { in: ["DELIVERED", "CANCELLED"] } }
           : { status: { notIn: ["DELIVERED", "CANCELLED"] } }),
       },
