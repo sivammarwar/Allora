@@ -441,7 +441,7 @@ model HeroProduct {
 model Order {
   id              String        @id @default(cuid())
   userId          String
-  user            User          @relation(fields: [userId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   status          OrderStatus   @default(PENDING)
   paymentMethod   PaymentMethod
   paymentStatus   PaymentStatus @default(PENDING)
@@ -470,7 +470,7 @@ model OrderItem {
   orderId                 String
   order                   Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   heroId                  String
-  hero                    HeroProfile         @relation(fields: [heroId], references: [id])
+  hero                    HeroProfile         @relation(fields: [heroId], references: [id], onDelete: Cascade)
   productId               String?
   product                 Product?            @relation(fields: [productId], references: [id])
   subcategoryId           String?
@@ -496,9 +496,9 @@ model ServiceBooking {
   orderId         String
   order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   heroId          String
-  hero            HeroProfile   @relation(fields: [heroId], references: [id])
+  hero            HeroProfile   @relation(fields: [heroId], references: [id], onDelete: Cascade)
   subcategoryId   String
-  subcategory     Subcategory   @relation(fields: [subcategoryId], references: [id])
+  subcategory     Subcategory   @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
   charge          Decimal       @db.Decimal(10, 2)
   transportCharge Decimal       @db.Decimal(10, 2) @default(0)
   status          BookingStatus @default(PENDING)
@@ -517,7 +517,7 @@ model PaymentRecord {
   order                    Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   date                     DateTime            @db.Date
   heroId                   String
-  hero                     HeroProfile         @relation(fields: [heroId], references: [id])
+  hero                     HeroProfile         @relation(fields: [heroId], references: [id], onDelete: Cascade)
   deliveryBoyId            String?
   deliveryBoy              DeliveryBoyProfile? @relation(fields: [deliveryBoyId], references: [id])
   amountToHero             Decimal             @db.Decimal(10, 2)
@@ -548,9 +548,9 @@ model Review {
   heroId        String
   hero          HeroProfile  @relation(fields: [heroId], references: [id], onDelete: Cascade)
   subcategoryId String?
-  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   productId     String?
-  product       Product?     @relation(fields: [productId], references: [id])
+  product       Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
   rating        Int          // 1..5
   reviewText    String?
   createdAt     DateTime     @default(now())
@@ -678,7 +678,7 @@ model SecretOrderItem {
   orderId         String
   order           SecretOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   inventoryItemId String
-  inventoryItem   AgentInventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItem   AgentInventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   quantity        Int                @default(1)
   unitPrice       Decimal            @db.Decimal(10, 2)
   isPacked        Boolean            @default(false)
