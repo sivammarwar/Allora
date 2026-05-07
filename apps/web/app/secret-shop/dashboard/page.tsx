@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Package, ShieldCheck, Clock, AlertCircle, Plus, Minus, Tag } from "lucide-react";
+import { Package, ShieldCheck, Clock, AlertCircle, Tag } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useSecretCart } from "@/lib/secretShopCart";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,6 +105,12 @@ export default function SecretShopDashboardPage() {
     refetchInterval: 30_000,
   });
 
+  const { data: allCategories = [] } = useQuery<{ id: string; name: string; imageUrl: string | null }[]>({
+    queryKey: ["secret-shop", "categories"],
+    queryFn: () => api.get("/api/secret-shop/categories"),
+    enabled: me?.state === "verified",
+  });
+
   const registerMutation = useMutation({
     mutationFn: () =>
       api.post("/api/secret-shop/register-request", {
@@ -115,14 +121,7 @@ export default function SecretShopDashboardPage() {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to submit"),
   });
 
-  // Derive categories from items
-  const categories = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; imageUrl: string | null }>();
-    for (const inv of items) {
-      if (inv.item.category) map.set(inv.item.category.id, inv.item.category);
-    }
-    return Array.from(map.values());
-  }, [items]);
+  const categories = allCategories;
 
   // Group + filter items
   const filteredItems = useMemo(() => {

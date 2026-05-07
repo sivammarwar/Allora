@@ -145,6 +145,19 @@ router.get("/me", async (req, res, next) => {
   }
 });
 
+// ─── Categories (for nav row) ─────────────────────────────────────────────────
+
+router.get("/categories", requireRole("SECRET_SHOP"), async (req, res, next) => {
+  try {
+    const cats = await prisma.agentCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, imageUrl: true },
+    });
+    res.json(cats);
+  } catch (e) { next(e); }
+});
+
 // ─── Browse agent inventory (requires verified profile) ──────────────────────
 
 router.get("/items", requireRole("SECRET_SHOP"), async (req, res, next) => {
