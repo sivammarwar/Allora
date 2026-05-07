@@ -149,6 +149,7 @@ router.post(
 
       res.json({
         ok: true,
+        accessToken: access,
         user: {
           id: user.id,
           email: user.email,
@@ -182,7 +183,7 @@ router.post("/refresh", async (req, res, next) => {
     const refresh = await signRefreshToken(user.id);
     setAuthCookies(res, access, refresh);
 
-    res.json({ ok: true });
+    res.json({ ok: true, accessToken: access });
   } catch {
     return res.status(401).json({ error: "Invalid refresh token" });
   }

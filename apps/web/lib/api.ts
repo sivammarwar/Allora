@@ -1,7 +1,8 @@
 /**
  * Tiny fetch wrapper that:
  *  - Targets NEXT_PUBLIC_API_URL
- *  - Always sends cookies (credentials: "include") for HTTP-only JWT
+ *  - Sends access token as Authorization Bearer header (stored in memory)
+ *  - Also sends cookies (credentials: "include") as fallback for same-origin
  *  - Auto-refreshes the access token on 401 once, then retries
  *  - Throws ApiError with status + message
  */
@@ -16,6 +17,17 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
   }
+}
+
+// In-memory token store (survives re-renders, cleared on tab close)
+let _accessToken: string | null = null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return _accessToken;
 }
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
@@ -34,17 +46,33 @@ async function tryRefresh(): Promise<boolean> {
         method: "POST",
         credentials: "include",
       });
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (data?.accessToken) setAccessToken(data.accessToken);
+      }
       return r.ok;
     } catch {
       return false;
     } finally {
-      // small delay to coalesce bursts
-      setTimeout(() => {
-        refreshing = null;
-      }, 50);
+      setTimeout(() => { refreshing = null; }, 50);
     }
   })();
   return refreshing;
+}
+
+function buildInit(opts: RequestOptions): RequestInit {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(opts.headers as Record<string, string> || {}),
+  };
+  if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
+  return {
+    ...opts,
+    credentials: "include",
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  };
 }
 
 export async function apiFetch<T = unknown>(
@@ -52,22 +80,15 @@ export async function apiFetch<T = unknown>(
   opts: RequestOptions = {}
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_URL}${path}`;
-  const init: RequestInit = {
-    ...opts,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(opts.headers || {}),
-    },
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-  };
-
+  let init = buildInit(opts);
   let res = await fetch(url, init);
 
   if (res.status === 401 && !opts.skipRefresh && path !== "/api/auth/refresh") {
     const ok = await tryRefresh();
-    if (ok) res = await fetch(url, init);
+    if (ok) {
+      init = buildInit(opts);
+      res = await fetch(url, init);
+    }
   }
 
   const contentType = res.headers.get("content-type") ?? "";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "./api";
+import { api, setAccessToken } from "./api";
 import type { AuthUser, Role } from "./types";
 
 /** Fetches the current authenticated user, or null if unauthenticated. */
@@ -32,8 +32,9 @@ export function useVerifyOtp() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { email: string; otp: string }) =>
-      api.post<{ ok: true; user: AuthUser }>("/api/auth/verify-otp", input),
-    onSuccess: ({ user }) => {
+      api.post<{ ok: true; accessToken?: string; user: AuthUser }>("/api/auth/verify-otp", input),
+    onSuccess: ({ user, accessToken }) => {
+      if (accessToken) setAccessToken(accessToken);
       qc.setQueryData(["auth", "me"], user);
     },
   });
@@ -44,6 +45,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post<{ ok: true }>("/api/auth/logout"),
     onSuccess: () => {
+      setAccessToken(null);
       qc.setQueryData(["auth", "me"], null);
       qc.clear();
     },
