@@ -109,7 +109,10 @@ router.put("/items/:id", validateBody(itemSchema.partial()), async (req, res, ne
 
 router.delete("/items/:id", async (req, res, next) => {
   try {
-    await prisma.agentItem.update({ where: { id: req.params.id }, data: { isActive: false } });
+    await prisma.$transaction([
+      prisma.agentItem.update({ where: { id: req.params.id }, data: { isActive: false } }),
+      prisma.agentInventoryItem.updateMany({ where: { itemId: req.params.id }, data: { isActive: false } }),
+    ]);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

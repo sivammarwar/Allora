@@ -528,16 +528,15 @@ router.get("/inventory", async (req, res, next) => {
       where: {
         agentId: profile.id,
         isActive: true,
-        ...(search
-          ? {
-              item: {
-                OR: [
-                  { name: { contains: String(search), mode: "insensitive" } },
-                  { brandName: { contains: String(search), mode: "insensitive" } },
-                ],
-              },
-            }
-          : {}),
+        item: {
+          isActive: true,
+          ...(search ? {
+            OR: [
+              { name: { contains: String(search), mode: "insensitive" } },
+              { brandName: { contains: String(search), mode: "insensitive" } },
+            ],
+          } : {}),
+        },
       },
       include: { item: true },
       orderBy: { createdAt: "desc" },

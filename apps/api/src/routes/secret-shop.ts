@@ -163,6 +163,7 @@ router.get("/items", requireRole("SECRET_SHOP"), async (req, res, next) => {
         agentId: profile.verifiedByAgentId,
         isActive: true,
         item: {
+          isActive: true,
           ...(categoryId ? { categoryId: String(categoryId) } : {}),
           ...(search ? {
             OR: [
