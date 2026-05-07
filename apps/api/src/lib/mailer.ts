@@ -1,12 +1,20 @@
 import nodemailer, { Transporter } from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../env";
 
+let resend: Resend | null = null;
 let transporter: Transporter | null = null;
+
+function getResend(): Resend | null {
+  if (!env.RESEND_API_KEY) return null;
+  if (!resend) resend = new Resend(env.RESEND_API_KEY);
+  return resend;
+}
 
 function getTransporter(): Transporter | null {
   if (transporter) return transporter;
   if (!env.SMTP_HOST || !env.SMTP_PORT || !env.SMTP_USER || !env.SMTP_PASS) {
-    return null; // graceful degradation
+    return null;
   }
   transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
@@ -23,12 +31,23 @@ export async function sendMail(opts: {
   html: string;
   text?: string;
 }) {
+  const r = getResend();
+  if (r) {
+    const { error } = await r.emails.send({
+      from: env.SMTP_FROM,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text,
+    });
+    if (error) throw new Error(`Resend error: ${error.message}`);
+    return { sent: true };
+  }
+
   const tx = getTransporter();
   if (!tx) {
     // eslint-disable-next-line no-console
-    console.warn(
-      `[mailer] SMTP not configured — would send "${opts.subject}" to ${opts.to}`
-    );
+    console.warn(`[mailer] No email provider — would send "${opts.subject}" to ${opts.to}`);
     return { skipped: true };
   }
   return tx.sendMail({
