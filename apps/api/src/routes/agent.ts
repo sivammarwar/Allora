@@ -615,7 +615,10 @@ router.get("/secret-shop-requests", async (req, res, next) => {
   try {
     const profile = await getAgentProfile(req.user!.id);
     const requests = await prisma.secretShopRequest.findMany({
-      where: { agentId: profile.id, status: { in: ["PENDING", "IN_PROGRESS"] } },
+      where: {
+        OR: [{ agentId: profile.id }, { agentId: null }],
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+      },
       include: { user: { select: { id: true, email: true, name: true } } },
       orderBy: { createdAt: "asc" },
     });
@@ -656,8 +659,13 @@ router.post("/secret-shop-requests/verify", validateBody(verifySecretShopSchema)
       where: { id: requestId },
       include: { user: true },
     });
-    if (!request || request.agentId !== profile.id) {
+    if (!request || (request.agentId !== null && request.agentId !== profile.id)) {
       return res.status(404).json({ error: "Request not found" });
+    }
+    // Auto-assign unassigned request to this agent
+    if (!request.agentId) {
+      await prisma.secretShopRequest.update({ where: { id: requestId }, data: { agentId: profile.id } });
+      request.agentId = profile.id;
     }
 
     if (action === "approve") {
