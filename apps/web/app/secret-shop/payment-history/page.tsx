@@ -71,11 +71,11 @@ export default function SecretShopPaymentHistoryPage() {
     : orders;
 
   const totalPaid = orders
-    .filter((o) => o.paymentStatus === "PAID")
+    .filter((o) => o.paymentMode === "ONLINE" && o.paymentStatus === "PAID")
     .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
 
   const totalCOD = orders
-    .filter((o) => o.paymentMode === "COD" && o.status === "DELIVERED")
+    .filter((o) => o.paymentMode === "COD" && o.paymentStatus === "PAID")
     .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
 
   return (
@@ -113,7 +113,7 @@ export default function SecretShopPaymentHistoryPage() {
         </Card>
         <Card>
           <CardContent className="py-4 px-4 space-y-1">
-            <p className="text-xs text-brand-textMuted">COD Delivered</p>
+            <p className="text-xs text-brand-textMuted">COD Paid</p>
             <p className="text-2xl font-bold text-brand-primary">₹{totalCOD}</p>
           </CardContent>
         </Card>
