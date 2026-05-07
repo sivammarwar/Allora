@@ -348,7 +348,7 @@ export default function AgentSecretOrdersPage() {
                                   <Button
                                     key={nextStatus}
                                     size="sm"
-                                    variant={nextStatus === "CANCELLED" ? "outline" : "default"}
+                                    variant={nextStatus === "CANCELLED" ? "outline" : "primary"}
                                     className={nextStatus === "CANCELLED" ? "text-brand-error border-brand-error/30" : ""}
                                     disabled={blocked || updateStatusMutation.isPending}
                                     title={
