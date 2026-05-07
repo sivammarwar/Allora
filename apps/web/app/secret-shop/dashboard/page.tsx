@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShoppingCart, Search, Package, ShieldCheck, Clock, AlertCircle, Plus, Minus } from "lucide-react";
+import { Package, ShieldCheck, Clock, AlertCircle, Plus, Minus, Tag } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useSecretCart } from "@/lib/secretShopCart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationPicker } from "@/components/maps/LocationPicker";
+import { useSecretShopSearch } from "../layout";
 
 interface InventoryItem {
   id: string;
@@ -18,7 +19,10 @@ interface InventoryItem {
   price: number;
   quantity: number;
   specification: string | null;
-  item: { id: string; name: string; brandName: string | null; imageUrl: string | null };
+  item: {
+    id: string; name: string; brandName: string | null; imageUrl: string | null; buyCount: number;
+    category: { id: string; name: string; imageUrl: string | null } | null;
+  };
 }
 
 interface MeResponse {
@@ -35,10 +39,58 @@ const emptyForm = {
   location: null as { lat: number; lng: number } | null,
 };
 
+// ── Product card ──────────────────────────────────────────────────────────────
+function ProductCard({ inv }: { inv: InventoryItem }) {
+  const { add, items: cartItems } = useSecretCart();
+  const inCart = cartItems.find((c) => c.inventoryItemId === inv.id);
+  const isAdded = !!inCart;
+  const discount = inv.mrp && Number(inv.mrp) > Number(inv.price)
+    ? Math.round((1 - Number(inv.price) / Number(inv.mrp)) * 100) : null;
+
+  return (
+    <div className="w-40 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {inv.item.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={inv.item.imageUrl} alt={inv.item.name} className="w-full h-28 object-cover" />
+      ) : (
+        <div className="w-full h-28 bg-gray-50 flex items-center justify-center">
+          <Package size={24} className="text-gray-300" />
+        </div>
+      )}
+      <div className="p-2.5 space-y-1.5">
+        <div>
+          <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-1">{inv.item.name}</p>
+          {inv.item.brandName && <p className="text-[10px] text-gray-400 leading-tight">{inv.item.brandName}</p>}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-bold text-brand-primary">₹{Number(inv.price)}</span>
+          {discount && <span className="text-[10px] text-green-600 font-semibold">{discount}% off</span>}
+        </div>
+        {inv.quantity === 0 ? (
+          <span className="block text-center text-[10px] font-semibold text-red-500 bg-red-50 rounded-lg py-1">Out of stock</span>
+        ) : isAdded ? (
+          <div className="flex items-center justify-between bg-brand-primary/10 rounded-lg px-1">
+            <button onClick={() => useSecretCart.getState().dec(inv.id)} className="w-7 h-7 flex items-center justify-center text-brand-primary font-bold text-lg">−</button>
+            <span className="text-xs font-bold text-brand-primary">{inCart?.quantity}</span>
+            <button onClick={() => useSecretCart.getState().inc(inv.id)} disabled={(inCart?.quantity ?? 0) >= inv.quantity} className="w-7 h-7 flex items-center justify-center text-brand-primary font-bold text-lg disabled:opacity-40">+</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => add({ inventoryItemId: inv.id, name: inv.item.name, brandName: inv.item.brandName, imageUrl: inv.item.imageUrl, unitPrice: Number(inv.price), availableQty: inv.quantity })}
+            className="w-full py-1 rounded-lg bg-brand-primary text-white text-[11px] font-semibold"
+          >
+            Add
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SecretShopDashboardPage() {
   const qc = useQueryClient();
-  const { add, items: cartItems } = useSecretCart();
-  const [search, setSearch] = useState("");
+  const { search } = useSecretShopSearch();
+  const [activeCat, setActiveCat] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   const { data: me, isLoading: meLoading, isError: meError } = useQuery<MeResponse>({
@@ -56,106 +108,85 @@ export default function SecretShopDashboardPage() {
   const registerMutation = useMutation({
     mutationFn: () =>
       api.post("/api/secret-shop/register-request", {
-        shopName: form.shopName,
-        phone: form.phone,
-        address: form.address,
-        purpose: form.purpose || null,
-        locationLat: form.location?.lat ?? 0,
-        locationLng: form.location?.lng ?? 0,
+        shopName: form.shopName, phone: form.phone, address: form.address,
+        purpose: form.purpose || null, locationLat: form.location?.lat ?? 0, locationLng: form.location?.lng ?? 0,
       }),
-    onSuccess: () => {
-      toast.success("Verification request submitted!");
-      qc.invalidateQueries({ queryKey: ["secret-shop", "me"] });
-      setForm(emptyForm);
-    },
+    onSuccess: () => { toast.success("Verification request submitted!"); qc.invalidateQueries({ queryKey: ["secret-shop", "me"] }); setForm(emptyForm); },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to submit"),
   });
 
-  const handleRegister = () => {
-    if (!form.shopName || !form.phone || !form.address) {
-      toast.error("Shop name, phone and address are required");
-      return;
+  // Derive categories from items
+  const categories = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; imageUrl: string | null }>();
+    for (const inv of items) {
+      if (inv.item.category) map.set(inv.item.category.id, inv.item.category);
     }
-    registerMutation.mutate();
-  };
+    return Array.from(map.values());
+  }, [items]);
 
-  const cartCount = cartItems.reduce((s, x) => s + x.quantity, 0);
-  const cartIds = new Set(cartItems.map((c) => c.inventoryItemId));
+  // Group + filter items
+  const filteredItems = useMemo(() => {
+    if (activeCat) return items.filter((i) => i.item.category?.id === activeCat);
+    return items;
+  }, [items, activeCat]);
 
-  if (meLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
+  const grouped = useMemo(() => {
+    if (activeCat || search) return null;
+    const map = new Map<string, InventoryItem[]>();
+    const uncategorised: InventoryItem[] = [];
+    for (const inv of items) {
+      const cat = inv.item.category;
+      if (cat) {
+        if (!map.has(cat.id)) map.set(cat.id, []);
+        map.get(cat.id)!.push(inv);
+      } else {
+        uncategorised.push(inv);
+      }
+    }
+    return { map, uncategorised };
+  }, [items, activeCat, search]);
 
-  // ── Needs to register (also covers API error / unauthenticated) ────────────
+  if (meLoading) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />
+    </div>
+  );
+
   if (!me || meError || me?.state === "needs_request") {
     return (
-      <div className="page-enter max-w-lg mx-auto space-y-6">
+      <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">Welcome</h1>
-          <p className="text-brand-textMuted text-sm mt-1">
-            Submit a verification request to start ordering from your agent.
-          </p>
+          <h1 className="font-heading text-2xl text-brand-text">Welcome</h1>
+          <p className="text-brand-textMuted text-sm mt-1">Submit a verification request to start ordering.</p>
         </div>
-
         <Card>
-          <CardContent className="py-6 space-y-4">
-            <Input
-              label="Shop name *"
-              value={form.shopName}
-              onChange={(e) => setForm({ ...form, shopName: e.target.value })}
-            />
-            <Input
-              label="Phone *"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-            <Input
-              label="Address *"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-            />
+          <CardContent className="py-5 space-y-4">
+            <Input label="Shop name *" value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} />
+            <Input label="Phone *" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <Input label="Address *" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-brand-text">
-                Purpose / Notes
-              </label>
-              <textarea
-                value={form.purpose}
-                onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                rows={3}
+              <label className="mb-1.5 block text-sm font-medium text-brand-text">Purpose / Notes</label>
+              <textarea value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} rows={3}
                 className="w-full p-3 rounded-sm bg-brand-surface border border-brand-border text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-                placeholder="Tell the agent about your shop..."
-              />
+                placeholder="Tell the regional officer about your shop..." />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-brand-text">
-                Shop location
-              </label>
-              <LocationPicker
-                value={form.location}
-                onChange={(loc) => setForm({ ...form, location: loc })}
-              />
+              <label className="mb-1.5 block text-sm font-medium text-brand-text">Shop location</label>
+              <LocationPicker value={form.location} onChange={(loc) => setForm({ ...form, location: loc })} />
             </div>
-            <Button
-              className="w-full"
-              onClick={handleRegister}
-              loading={registerMutation.isPending}
-            >
-              Submit Verification Request
-            </Button>
+            <Button className="w-full" onClick={() => {
+              if (!form.shopName || !form.phone || !form.address) { toast.error("Shop name, phone and address are required"); return; }
+              registerMutation.mutate();
+            }} loading={registerMutation.isPending}>Submit Verification Request</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // ── Pending ────────────────────────────────────────────────────────────────
   if (me?.state === "pending") {
     return (
-      <div className="page-enter max-w-lg mx-auto space-y-6">
+      <div className="px-4 py-6 max-w-lg mx-auto">
         <Card>
           <CardContent className="py-10 text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
@@ -163,15 +194,10 @@ export default function SecretShopDashboardPage() {
             </div>
             <h2 className="font-heading text-xl text-brand-text">Verification Pending</h2>
             <p className="text-brand-textMuted text-sm">
-              Your request for <strong className="text-brand-text">{me.request?.shopName}</strong> has
-              been sent to an agent and is under review. You will be able to browse items once approved.
-            </p>
-            <p className="text-xs text-brand-textMuted">
-              Submitted {me.request ? new Date(me.request.createdAt).toLocaleString("en-IN") : "—"}
+              Your request for <strong className="text-brand-text">{me.request?.shopName}</strong> is under review.
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-amber-500/10 text-amber-600 text-xs">
-              <AlertCircle size={12} />
-              Status: {me.request?.status}
+              <AlertCircle size={12} /> Status: {me.request?.status}
             </div>
           </CardContent>
         </Card>
@@ -179,154 +205,98 @@ export default function SecretShopDashboardPage() {
     );
   }
 
-  // ── Verified — browse items ────────────────────────────────────────────────
+  // ── Verified dashboard ─────────────────────────────────────────────────────
   return (
-    <div className="page-enter space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck size={16} className="text-green-500" />
-            <span className="text-xs text-green-600 font-medium">Verified Shop</span>
-          </div>
-          <h1 className="font-heading text-3xl text-brand-text">
-            {me?.profile?.shopName ?? "Allora"}
-          </h1>
-          <p className="text-brand-textMuted text-sm mt-1">
-            Browse items from your agent and add them to your cart
-          </p>
-        </div>
-        <a
-          href="/secret-shop/cart"
-          className="relative inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-brand-primary text-white text-sm font-medium"
-        >
-          <ShoppingCart size={16} />
-          Cart
-          {cartCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-brand-error text-white text-xs flex items-center justify-center">
-              {cartCount}
-            </span>
-          )}
-        </a>
+    <div className="space-y-0">
+      {/* Verified badge */}
+      <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+        <ShieldCheck size={13} className="text-green-500" />
+        <span className="text-[11px] text-green-600 font-medium">Verified Shop</span>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-textMuted" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search items by name or brand..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-sm bg-brand-surface border border-brand-border text-sm text-brand-text focus:outline-none focus:border-brand-primary"
-        />
-      </div>
-
-      {/* Items */}
-      {itemsLoading ? (
-        <div className="text-center py-10 text-brand-textMuted text-sm">Loading...</div>
-      ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-brand-textMuted text-sm">
-            <Package size={28} className="mx-auto mb-3 text-brand-textMuted" />
-            {search ? "No items match your search." : "Your agent has not added any items yet."}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((inv) => {
-            const inCart = cartItems.find((c) => c.inventoryItemId === inv.id);
-            const isAdded = cartIds.has(inv.id);
-            const discount = inv.mrp && Number(inv.mrp) > Number(inv.price)
-              ? Math.round((1 - Number(inv.price) / Number(inv.mrp)) * 100)
-              : null;
-            return (
-              <Card key={inv.id} className="overflow-hidden">
-                {inv.item.imageUrl ? (
+      {/* Category chips */}
+      {!search && categories.length > 0 && (
+        <div className="overflow-x-auto px-4 pb-2 scrollbar-none">
+          <div className="flex gap-2 w-max pt-1">
+            <button
+              onClick={() => setActiveCat(null)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                activeCat === null ? "bg-brand-primary text-white border-brand-primary" : "bg-white text-gray-600 border-gray-200"
+              }`}
+            >
+              <Tag size={11} /> All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  activeCat === cat.id ? "bg-brand-primary text-white border-brand-primary" : "bg-white text-gray-600 border-gray-200"
+                }`}
+              >
+                {cat.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={inv.item.imageUrl} alt={inv.item.name} className="w-full h-40 object-cover" />
-                ) : (
-                  <div className="w-full h-40 bg-brand-bg flex items-center justify-center">
-                    <Package size={32} className="text-brand-textMuted" />
-                  </div>
-                )}
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-medium text-brand-text">{inv.item.name}</h3>
-                      {inv.item.brandName && (
-                        <p className="text-xs text-brand-textMuted">{inv.item.brandName}</p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-lg font-bold text-brand-primary leading-tight">
-                        ₹{Number(inv.price)}
-                      </p>
-                      {discount && (
-                        <p className="text-xs text-brand-textMuted line-through leading-tight">
-                          ₹{Number(inv.mrp)}
-                        </p>
-                      )}
-                      {discount && (
-                        <p className="text-[11px] font-semibold text-green-600 leading-tight">
-                          {discount}% off
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {inv.specification && (
-                    <p className="text-xs text-brand-textMuted line-clamp-2">
-                      {inv.specification}
-                    </p>
-                  )}
-                  {inv.quantity === 0 && (
-                    <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-red-500/10 text-red-600">
-                      Out of Stock
-                    </span>
-                  )}
-                  {inv.quantity > 0 && isAdded ? (
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        onClick={() => useSecretCart.getState().dec(inv.id)}
-                        className="w-8 h-8 rounded-sm bg-brand-surface border border-brand-border flex items-center justify-center text-brand-text hover:bg-brand-bg"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <span className="flex-1 text-center font-medium text-brand-text">
-                        {inCart?.quantity ?? 0}
-                      </span>
-                      <button
-                        onClick={() => useSecretCart.getState().inc(inv.id)}
-                        disabled={(inCart?.quantity ?? 0) >= inv.quantity}
-                        className="w-8 h-8 rounded-sm bg-brand-surface border border-brand-border flex items-center justify-center text-brand-text hover:bg-brand-bg disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-                  ) : inv.quantity > 0 ? (
-                    <Button
-                      size="sm"
-                      className="w-full mt-1"
-                      onClick={() =>
-                        add({
-                          inventoryItemId: inv.id,
-                          name: inv.item.name,
-                          brandName: inv.item.brandName,
-                          imageUrl: inv.item.imageUrl,
-                          unitPrice: Number(inv.price),
-                          availableQty: inv.quantity,
-                        })
-                      }
-                    >
-                      <ShoppingCart size={13} className="mr-1.5" />
-                      Add to Cart
-                    </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <img src={cat.imageUrl} alt={cat.name} className="w-4 h-4 rounded-full object-cover" />
+                ) : <Tag size={11} />}
+                {cat.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Content */}
+      {itemsLoading ? (
+        <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>
+      ) : filteredItems.length === 0 ? (
+        <div className="text-center py-16 px-4">
+          <Package size={36} className="mx-auto mb-3 text-gray-200" />
+          <p className="text-gray-400 text-sm">{search ? "No products match your search." : "No products available yet."}</p>
+        </div>
+      ) : (activeCat || search) ? (
+        // Flat grid when filtered
+        <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {filteredItems.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
+        </div>
+      ) : grouped ? (
+        // Grouped rows by category
+        <div className="space-y-5 py-3">
+          {Array.from(grouped.map.entries()).map(([catId, catItems]) => {
+            const cat = catItems[0]?.item.category;
+            return (
+              <div key={catId}>
+                <div className="flex items-center justify-between px-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    {cat?.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cat.imageUrl} alt={cat.name} className="w-5 h-5 rounded-full object-cover" />
+                    ) : <Tag size={13} className="text-brand-primary" />}
+                    <span className="text-sm font-bold text-gray-800">{cat?.name}</span>
+                  </div>
+                  <button onClick={() => setActiveCat(catId)} className="text-xs text-brand-primary font-medium">See all</button>
+                </div>
+                <div className="overflow-x-auto pl-4 scrollbar-none">
+                  <div className="flex gap-3 pr-4 w-max">
+                    {catItems.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {grouped.uncategorised.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between px-4 mb-2">
+                <span className="text-sm font-bold text-gray-800">Other Products</span>
+              </div>
+              <div className="overflow-x-auto pl-4 scrollbar-none">
+                <div className="flex gap-3 pr-4 w-max">
+                  {grouped.uncategorised.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

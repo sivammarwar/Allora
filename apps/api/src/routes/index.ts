@@ -10,6 +10,7 @@ import userRouter from "./user";
 import paymentsRouter from "./payments";
 import payRouter from "./pay";
 import secretShopRouter from "./secret-shop";
+import itemCatalogRouter from "./item-catalog";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/user", userRouter);
 router.use("/payments", paymentsRouter);
 router.use("/pay", payRouter);
 router.use("/secret-shop", secretShopRouter);
+router.use("/item-catalog", itemCatalogRouter);
 
 export default router;

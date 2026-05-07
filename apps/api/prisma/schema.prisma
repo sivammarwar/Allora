@@ -29,6 +29,7 @@ enum Role {
   PRODUCT_MANAGER
   PAYMENT_MANAGER
   SECRET_SHOP
+  ITEM_CATALOG
 }
 
 enum CategoryType {
@@ -619,18 +620,35 @@ model SecretShopRequest {
   @@index([userId])
 }
 
+model AgentCategory {
+  id        String      @id @default(cuid())
+  name      String
+  imageUrl  String?
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  items AgentItem[]
+
+  @@index([isActive])
+}
+
 model AgentItem {
-  id            String    @id @default(cuid())
+  id            String         @id @default(cuid())
+  categoryId    String?
+  category      AgentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   name          String
   brandName     String?
   imageUrl      String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isActive      Boolean        @default(true)
+  buyCount      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   inventoryItems AgentInventoryItem[]
 
   @@index([isActive])
+  @@index([categoryId])
 }
 
 model AgentInventoryItem {

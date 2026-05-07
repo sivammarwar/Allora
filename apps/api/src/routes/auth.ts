@@ -53,7 +53,7 @@ function clearAuthCookies(res: import("express").Response) {
 const sendOtpSchema = z.object({
   email: z.string().email().transform((s) => s.toLowerCase()),
   role: z
-    .enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER", "SECRET_SHOP"])
+    .enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER", "SECRET_SHOP", "ITEM_CATALOG"])
     .optional(),
   forceOtp: z.boolean().optional(), // true when resetting password
 });

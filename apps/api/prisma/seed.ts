@@ -31,6 +31,11 @@ const seedUsers: Array<{ email: string; role: Role; name: string }> = [
     role: "PAYMENT_MANAGER",
     name: "Payment Manager",
   },
+  {
+    email: (process.env.ITEM_CATALOG_EMAIL ?? "catalog@allora.app").toLowerCase(),
+    role: "ITEM_CATALOG",
+    name: "Item Catalog Manager",
+  },
 ];
 
 async function main() {

@@ -156,27 +156,32 @@ router.get("/items", requireRole("SECRET_SHOP"), async (req, res, next) => {
       return res.status(403).json({ error: "Not verified yet" });
     }
 
-    const { search } = req.query;
+    const { search, categoryId } = req.query;
 
     const rows = await prisma.agentInventoryItem.findMany({
       where: {
         agentId: profile.verifiedByAgentId,
         isActive: true,
-        ...(search
-          ? {
-              item: {
-                OR: [
-                  { name: { contains: String(search), mode: "insensitive" } },
-                  { brandName: { contains: String(search), mode: "insensitive" } },
-                ],
-              },
-            }
-          : {}),
+        item: {
+          ...(categoryId ? { categoryId: String(categoryId) } : {}),
+          ...(search ? {
+            OR: [
+              { name: { contains: String(search), mode: "insensitive" } },
+              { brandName: { contains: String(search), mode: "insensitive" } },
+              { category: { name: { contains: String(search), mode: "insensitive" } } },
+            ],
+          } : {}),
+        },
       },
       include: {
-        item: { select: { id: true, name: true, brandName: true, imageUrl: true } },
+        item: {
+          select: {
+            id: true, name: true, brandName: true, imageUrl: true, buyCount: true,
+            category: { select: { id: true, name: true, imageUrl: true } },
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { item: { buyCount: "desc" } },
     });
 
     res.json(rows);
@@ -270,11 +275,16 @@ router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema
         },
       });
 
-      // Decrement each inventory item's quantity
+      // Decrement inventory quantity + increment buyCount on the AgentItem
       for (const reqItem of body.items) {
+        const invItem = invMap.get(reqItem.inventoryItemId)!;
         await tx.agentInventoryItem.update({
           where: { id: reqItem.inventoryItemId },
           data: { quantity: { decrement: reqItem.quantity } },
+        });
+        await tx.agentItem.update({
+          where: { id: invItem.itemId },
+          data: { buyCount: { increment: reqItem.quantity } },
         });
       }
 
@@ -285,6 +295,121 @@ router.post("/orders", requireRole("SECRET_SHOP"), validateBody(placeOrderSchema
   } catch (e) {
     next(e);
   }
+});
+
+// ─── Edit a PLACED order (add/remove items — only while status = PLACED) ────
+
+const editOrderSchema = z.object({
+  items: z.array(z.object({
+    inventoryItemId: z.string(),
+    quantity: z.number().int().min(0),
+  })).min(1),
+  notes: z.string().optional().nullable(),
+});
+
+router.put("/orders/:id", requireRole("SECRET_SHOP"), validateBody(editOrderSchema), async (req, res, next) => {
+  try {
+    const profile = await prisma.secretShopProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile?.isVerifiedByAgent) return res.status(403).json({ error: "Not verified yet" });
+
+    const order = await prisma.secretOrder.findFirst({
+      where: { id: req.params.id, shopId: profile.id },
+      include: { items: true },
+    });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "PLACED") return res.status(400).json({ error: "Order can only be edited while in PLACED status" });
+
+    const body = req.body as z.infer<typeof editOrderSchema>;
+    const newItems = body.items.filter((i) => i.quantity > 0);
+    if (newItems.length === 0) return res.status(400).json({ error: "Order must have at least one item" });
+
+    const inventoryIds = newItems.map((i) => i.inventoryItemId);
+    const invItems = await prisma.agentInventoryItem.findMany({
+      where: { id: { in: inventoryIds }, agentId: profile.verifiedByAgentId!, isActive: true },
+    });
+    if (invItems.length !== inventoryIds.length) return res.status(400).json({ error: "Some items unavailable" });
+
+    const invMap = new Map(invItems.map((i) => [i.id, i]));
+
+    // Restore old quantities first, then apply new
+    const updated = await prisma.$transaction(async (tx) => {
+      // Restore old inventory
+      for (const oldItem of order.items) {
+        await tx.agentInventoryItem.update({
+          where: { id: oldItem.inventoryItemId },
+          data: { quantity: { increment: oldItem.quantity } },
+        });
+      }
+      // Delete old order items
+      await tx.secretOrderItem.deleteMany({ where: { orderId: order.id } });
+
+      // Check new stock
+      for (const newItem of newItems) {
+        const inv = invMap.get(newItem.inventoryItemId)!;
+        if (inv.quantity < newItem.quantity) {
+          throw new Error(`Insufficient stock for item ${inv.itemId}`);
+        }
+      }
+
+      const priceMap = new Map(invItems.map((i) => [i.id, Number(i.price)]));
+      const totalAmount = newItems.reduce((s, i) => s + (priceMap.get(i.inventoryItemId) ?? 0) * i.quantity, 0);
+
+      // Create new items + decrement inventory
+      for (const newItem of newItems) {
+        await tx.secretOrderItem.create({
+          data: {
+            orderId: order.id,
+            inventoryItemId: newItem.inventoryItemId,
+            quantity: newItem.quantity,
+            unitPrice: priceMap.get(newItem.inventoryItemId) ?? 0,
+          },
+        });
+        await tx.agentInventoryItem.update({
+          where: { id: newItem.inventoryItemId },
+          data: { quantity: { decrement: newItem.quantity } },
+        });
+      }
+
+      return tx.secretOrder.update({
+        where: { id: order.id },
+        data: { totalAmount, notes: body.notes ?? order.notes },
+        include: { items: { include: { inventoryItem: { include: { item: true } } } } },
+      });
+    });
+
+    res.json(updated);
+  } catch (e: any) {
+    if (e?.message?.startsWith("Insufficient")) return res.status(400).json({ error: e.message });
+    next(e);
+  }
+});
+
+// ─── Cancel a PLACED order ────────────────────────────────────────────────────
+
+router.post("/orders/:id/cancel", requireRole("SECRET_SHOP"), async (req, res, next) => {
+  try {
+    const profile = await prisma.secretShopProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile?.isVerifiedByAgent) return res.status(403).json({ error: "Not verified yet" });
+
+    const order = await prisma.secretOrder.findFirst({
+      where: { id: req.params.id, shopId: profile.id },
+      include: { items: true },
+    });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "PLACED") return res.status(400).json({ error: "Only PLACED orders can be cancelled" });
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        await tx.agentInventoryItem.update({
+          where: { id: item.inventoryItemId },
+          data: { quantity: { increment: item.quantity } },
+        });
+      }
+      await tx.secretOrder.update({ where: { id: order.id }, data: { status: "CANCELLED" } });
+    });
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 // ─── Payment: initiate PhonePe for an ONLINE order ─────────────────────────
