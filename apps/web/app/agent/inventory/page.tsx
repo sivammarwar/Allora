@@ -151,7 +151,7 @@ export default function AgentInventoryPage() {
     <div className="page-enter space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">My Inventory</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl text-brand-text">My Inventory</h1>
           <p className="text-brand-textMuted text-sm mt-1">
             Set your prices, stock quantities and specifications for each item
           </p>

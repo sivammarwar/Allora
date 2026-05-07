@@ -112,7 +112,7 @@ export default function AgentItemsPage() {
     <div className="page-enter space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">Item Catalog</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl text-brand-text">Item Catalog</h1>
           <p className="text-brand-textMuted text-sm mt-1">
             Global catalog — name &amp; image only. Set prices &amp; stock in My Inventory.
           </p>

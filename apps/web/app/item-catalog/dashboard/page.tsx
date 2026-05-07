@@ -17,7 +17,7 @@ export default function ItemCatalogDashboard() {
   return (
     <div className="page-enter space-y-6">
       <div>
-        <h1 className="font-heading text-3xl text-brand-text">Item Catalog</h1>
+        <h1 className="font-heading text-2xl sm:text-3xl text-brand-text">Item Catalog</h1>
         <p className="text-brand-textMuted text-sm mt-1">Manage the global product catalog for all regional officers</p>
       </div>
       <div className="grid grid-cols-2 gap-4">

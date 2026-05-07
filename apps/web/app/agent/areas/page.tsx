@@ -56,7 +56,7 @@ export default function AgentAreasPage() {
     <div className="page-enter space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">My areas</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl text-brand-text">My areas</h1>
           <p className="text-brand-textMuted text-sm mt-1">
             Areas you cover. Verification requests in these areas are routed to you.
           </p>

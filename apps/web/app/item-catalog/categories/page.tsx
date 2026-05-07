@@ -63,7 +63,7 @@ export default function ItemCatalogCategoriesPage() {
     <div className="page-enter space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">Categories</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl text-brand-text">Categories</h1>
           <p className="text-brand-textMuted text-sm mt-1">Organise items into named categories with images</p>
         </div>
         <Button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}>
