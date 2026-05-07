@@ -24,9 +24,13 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+const allowedOrigins = env.WEB_ORIGIN.split(",").map((o) => o.trim());
 app.use(
   cors({
-    origin: env.WEB_ORIGIN,
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: ${origin} not allowed`));
+    },
     credentials: true,
   })
 );

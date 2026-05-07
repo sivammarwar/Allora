@@ -26,11 +26,13 @@ router.get("/categories", requireAuth, async (_req, res, next) => {
     if (!productCategory) {
       productCategory = await prisma.category.create({
         data: { name: "Product", type: "PRODUCT", isActive: true },
+        include: { subcategories: true },
       });
     }
     if (!serviceCategory) {
       serviceCategory = await prisma.category.create({
         data: { name: "Service", type: "SERVICE", isActive: true },
+        include: { subcategories: true },
       });
     }
 
@@ -499,7 +501,7 @@ router.get("/subcategories/:id", async (req, res, next) => {
       );
       heroOptions.push({
         id: h.id,
-        serviceName: h.serviceName,
+        serviceName: h.serviceName ?? "",
         shopName: h.shopName,
         requiresDelivery: h.requiresDelivery,
         locationLat: h.locationLat,
@@ -571,7 +573,7 @@ router.get("/subcategories/:id", async (req, res, next) => {
       .filter((p) => heroProducts.some((hp) => hp.productId === p.id))
       .map((p) => {
         const hp = heroProducts.find((x) => x.productId === p.id)!;
-        const price = hp.customPrice ?? p.basePrice;
+        const price = (hp as typeof hp & { customPrice?: unknown }).customPrice ?? p.basePrice;
         return { ...p, displayPrice: price };
       });
 
@@ -622,7 +624,6 @@ router.post("/checkout", validateBody(checkoutSchema), async (req, res, next) =>
     const heroIds = Array.from(new Set(body.items.map((i) => i.heroId)));
     const heroes = await prisma.heroProfile.findMany({
       where: { id: { in: heroIds }, isVerifiedByAgent: true, isActive: true },
-      include: { category: true },
     });
     if (heroes.length !== heroIds.length) {
       return res.status(400).json({ error: "Invalid heroes in cart" });
@@ -659,7 +660,7 @@ router.post("/checkout", validateBody(checkoutSchema), async (req, res, next) =>
 
       for (const item of body.items) {
         const hero = heroes.find((h) => h.id === item.heroId)!;
-        const isService = hero.category.type === "SERVICE";
+        const isService = Boolean(item.subcategoryId && !item.productId);
 
         const oi = await tx.orderItem.create({
           data: {
