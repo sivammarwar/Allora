@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser, useLogout } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { User, MapPin, Phone, Mail, ShieldCheck, LogOut, FileText, Info, MessageCircle } from "lucide-react";
+import { User, MapPin, Map, Phone, Mail, ShieldCheck, LogOut, FileText, Info, MessageCircle } from "lucide-react";
 
 interface MeResponse {
   state: string;
@@ -13,7 +13,10 @@ interface MeResponse {
     phone: string | null;
     address: string | null;
     isVerifiedByAgent: boolean;
-    verifiedByAgent?: { user?: { name: string | null } } | null;
+    verifiedByAgent?: {
+      user?: { name: string | null };
+      agentAreas?: { area: { name: string } }[];
+    } | null;
   };
 }
 
@@ -72,15 +75,20 @@ export default function SecretShopProfilePage() {
             </div>
           </div>
         )}
-        {profile?.verifiedByAgent?.user?.name && (
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <ShieldCheck size={16} className="text-gray-400 flex-shrink-0" />
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Regional Officer</p>
-              <p className="text-sm font-medium text-gray-800">{profile.verifiedByAgent.user.name}</p>
+        {profile?.verifiedByAgent && (() => {
+          const areaName = profile.verifiedByAgent.agentAreas?.[0]?.area?.name;
+          const display = areaName ?? profile.verifiedByAgent.user?.name;
+          if (!display) return null;
+          return (
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <Map size={16} className="text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Service Area</p>
+                <p className="text-sm font-medium text-gray-800">{display}</p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Links */}

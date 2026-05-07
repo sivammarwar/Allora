@@ -121,7 +121,14 @@ router.get("/me", async (req, res, next) => {
       where: { userId: req.user!.id },
       include: {
         verifiedByAgent: {
-          select: { id: true, user: { select: { name: true } } },
+          select: {
+            id: true,
+            user: { select: { name: true } },
+            agentAreas: {
+              take: 1,
+              include: { area: { select: { name: true } } },
+            },
+          },
         },
       },
     });
