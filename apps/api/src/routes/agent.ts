@@ -798,6 +798,34 @@ router.patch("/secret-orders/:orderId/items/:itemId", validateBody(itemStatusSch
   }
 });
 
+// ─── COD payment collection status ──────────────────────────────────────────
+router.patch("/secret-orders/:id/cod-payment", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { collected } = req.body as { collected: boolean };
+    const order = await prisma.secretOrder.findUnique({
+      where: { id: req.params.id },
+      select: { agentId: true, paymentMode: true, status: true },
+    });
+    if (!order || order.agentId !== profile.id) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    if (order.paymentMode !== "COD") {
+      return res.status(400).json({ error: "Only COD orders can be updated this way" });
+    }
+    if (order.status !== "DELIVERED") {
+      return res.status(400).json({ error: "Order must be delivered first" });
+    }
+    const updated = await prisma.secretOrder.update({
+      where: { id: req.params.id },
+      data: { paymentStatus: collected ? "PAID" : "PENDING" },
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 // ─── Verified Heroes list ────────────────────────────────────────────────────
 router.get("/verified-heroes", async (req, res, next) => {
   try {

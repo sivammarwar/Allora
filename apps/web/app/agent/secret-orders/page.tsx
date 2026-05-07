@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Store, Package, ChevronDown, Check, X } from "lucide-react";
+import { Store, Package, ChevronDown, Check, X, Banknote, CircleCheck, CircleX } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export default function AgentSecretOrdersPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<"active" | "past">("active");
   const [expandedShop, setExpandedShop] = useState<string | null>(null);
+  const [pendingCodPayment, setPendingCodPayment] = useState<string | null>(null);
 
   const { data: shops = [] } = useQuery<VerifiedShop[]>({
     queryKey: ["agent", "verified-secret-shops"],
@@ -84,11 +85,26 @@ export default function AgentSecretOrdersPage() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
+    mutationFn: ({ id, status, paymentMode }: { id: string; status: string; paymentMode?: string }) =>
       api.put(`/api/agent/secret-orders/${id}/status`, { status }),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       toast.success("Order status updated");
       qc.invalidateQueries({ queryKey: ["agent", "secret-orders"] });
+      if (vars.status === "DELIVERED" && vars.paymentMode === "COD") {
+        setPendingCodPayment(vars.id);
+      }
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
+  });
+
+  const codPaymentMutation = useMutation({
+    mutationFn: ({ id, collected }: { id: string; collected: boolean }) =>
+      api.patch(`/api/agent/secret-orders/${id}/cod-payment`, { collected }),
+    onSuccess: (_, vars) => {
+      toast.success(vars.collected ? "Payment marked as collected" : "Marked as not yet collected");
+      setPendingCodPayment(null);
+      qc.invalidateQueries({ queryKey: ["agent", "secret-orders"] });
+      qc.invalidateQueries({ queryKey: ["agent", "payment-history"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
   });
@@ -338,6 +354,58 @@ export default function AgentSecretOrdersPage() {
                             {new Date(order.createdAt).toLocaleString("en-IN")}
                           </p>
 
+                          {/* COD payment prompt after delivery */}
+                          {pendingCodPayment === order.id && order.paymentMode === "COD" && (
+                            <div className="rounded-sm border border-amber-300 bg-amber-50 p-3 space-y-2">
+                              <div className="flex items-center gap-2 text-amber-700 text-sm font-medium">
+                                <Banknote size={16} />
+                                <span>Did you collect the payment?</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  className="flex-1 gap-1"
+                                  loading={codPaymentMutation.isPending}
+                                  onClick={() => codPaymentMutation.mutate({ id: order.id, collected: true })}
+                                >
+                                  <CircleCheck size={13} /> Yes, collected
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 gap-1"
+                                  loading={codPaymentMutation.isPending}
+                                  onClick={() => codPaymentMutation.mutate({ id: order.id, collected: false })}
+                                >
+                                  <CircleX size={13} /> Not yet
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Editable COD payment toggle for delivered orders */}
+                          {order.status === "DELIVERED" && order.paymentMode === "COD" && pendingCodPayment !== order.id && (
+                            <div className="flex items-center justify-between rounded-sm border border-brand-border px-3 py-2">
+                              <div className="flex items-center gap-2 text-sm text-brand-text">
+                                <Banknote size={14} className="text-brand-textMuted" />
+                                <span>COD Payment</span>
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${order.paymentStatus === "PAID" ? "bg-green-500/10 text-green-700" : "bg-amber-500/10 text-amber-600"}`}>
+                                  {order.paymentStatus === "PAID" ? "Collected" : "Pending"}
+                                </span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7 px-2"
+                                loading={codPaymentMutation.isPending}
+                                onClick={() => codPaymentMutation.mutate({ id: order.id, collected: order.paymentStatus !== "PAID" })}
+                              >
+                                {order.paymentStatus === "PAID" ? "Mark unpaid" : "Mark collected"}
+                              </Button>
+                            </div>
+                          )}
+
                           {NEXT_STATUSES[order.status] && (
                             <div className="flex gap-2 flex-wrap items-center">
                               {NEXT_STATUSES[order.status].map((nextStatus) => {
@@ -359,7 +427,7 @@ export default function AgentSecretOrdersPage() {
                                         : undefined
                                     }
                                     onClick={() =>
-                                      updateStatusMutation.mutate({ id: order.id, status: nextStatus })
+                                      updateStatusMutation.mutate({ id: order.id, status: nextStatus, paymentMode: order.paymentMode })
                                     }
                                   >
                                     {nextStatus === "PACKED" && needsAllPacked
