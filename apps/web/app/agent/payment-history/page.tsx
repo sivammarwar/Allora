@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Package, Banknote, Store, Search } from "lucide-react";
-import { api } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { CreditCard, Package, Banknote, Store, Search, Lock } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface SecretOrderItem {
   id: string;
@@ -49,10 +51,21 @@ function effectiveTotal(items: SecretOrderItem[]) {
 }
 
 export default function AgentPaymentHistoryPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const { data: orders = [], isLoading } = useQuery<SecretOrder[]>({
     queryKey: ["agent", "payment-history"],
     queryFn: () => api.get("/api/agent/secret-orders?all=true"),
+  });
+
+  const codPaymentMutation = useMutation({
+    mutationFn: ({ id, collected }: { id: string; collected: boolean }) =>
+      api.patch(`/api/agent/secret-orders/${id}/cod-payment`, { collected }),
+    onSuccess: (_, vars) => {
+      toast.success(vars.collected ? "Marked as payment done" : "Marked as pending");
+      qc.invalidateQueries({ queryKey: ["agent", "payment-history"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
   });
 
   const filtered = search.trim()
@@ -205,6 +218,37 @@ export default function AgentPaymentHistoryPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* COD payment action row */}
+                  {order.paymentMode === "COD" && order.status === "DELIVERED" && (
+                    <div className="flex items-center justify-between rounded-sm border border-brand-border px-3 py-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Banknote size={14} className="text-brand-textMuted" />
+                        <span className="text-brand-text">COD Payment</span>
+                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                          order.paymentStatus === "PAID"
+                            ? "bg-green-500/10 text-green-700"
+                            : "bg-amber-500/10 text-amber-600"
+                        }`}>
+                          {order.paymentStatus === "PAID" ? "Done" : "Pending"}
+                        </span>
+                        {order.paymentStatus === "PAID" && (
+                          <Lock size={11} className="text-brand-textMuted" />
+                        )}
+                      </div>
+                      {order.paymentStatus !== "PAID" && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          className="text-xs h-7 px-3"
+                          loading={codPaymentMutation.isPending}
+                          onClick={() => codPaymentMutation.mutate({ id: order.id, collected: true })}
+                        >
+                          Mark as Done
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Footer */}
                   <div className="flex items-center justify-between text-xs text-brand-textMuted pt-1 border-t border-brand-border">
