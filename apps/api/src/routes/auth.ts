@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import type { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import {
@@ -232,6 +233,84 @@ router.get("/me", requireAuth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ──────────────────────────────────────────────────────────
+// GET /api/auth/check-password?email=...
+// Returns whether user has set a password yet (public)
+// ──────────────────────────────────────────────────────────
+router.get("/check-password", async (req, res, next) => {
+  try {
+    const email = String(req.query.email ?? "").toLowerCase().trim();
+    if (!email) return res.status(400).json({ error: "email required" });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { passwordHash: true, isActive: true },
+    });
+    // Don't reveal if email exists; just return hasPassword flag
+    res.json({ hasPassword: !!(user?.passwordHash) });
+  } catch (e) { next(e); }
+});
+
+// ──────────────────────────────────────────────────────────
+// POST /api/auth/login-password
+// Login with email + password (after password has been set)
+// ──────────────────────────────────────────────────────────
+const loginPasswordSchema = z.object({
+  email: z.string().email().transform((s) => s.toLowerCase()),
+  password: z.string().min(1),
+});
+
+router.post("/login-password", authLimiter, validateBody(loginPasswordSchema), async (req, res, next) => {
+  try {
+    const { email, password } = req.body as z.infer<typeof loginPasswordSchema>;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    if (!user.passwordHash) {
+      return res.status(400).json({ error: "no_password", message: "No password set. Please sign in with OTP first." });
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    const access = signAccessToken({ id: user.id, role: user.role, email: user.email });
+    const refresh = await signRefreshToken(user.id);
+    setAuthCookies(res, access, refresh);
+    res.json({
+      ok: true,
+      accessToken: access,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified,
+        profileImageUrl: user.profileImageUrl,
+      },
+    });
+  } catch (e) { next(e); }
+});
+
+// ──────────────────────────────────────────────────────────
+// POST /api/auth/set-password  (requires auth)
+// Called after OTP verify to set or reset password
+// ──────────────────────────────────────────────────────────
+const setPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/set-password", requireAuth, validateBody(setPasswordSchema), async (req, res, next) => {
+  try {
+    const { password } = req.body as z.infer<typeof setPasswordSchema>;
+    const hash = await bcrypt.hash(password, 12);
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { passwordHash: hash, isVerified: true },
+    });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 export default router;
