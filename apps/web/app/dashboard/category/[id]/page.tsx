@@ -140,6 +140,7 @@ export default function UserCategoryPage({
   }
 
   return (
+    <>
     <div className="page-enter space-y-6">
       <Button variant="ghost" size="sm" onClick={() => router.back()}>
         <ArrowLeft size={14} />
@@ -267,5 +268,6 @@ export default function UserCategoryPage({
       )}
     </div>
     <CartFloatingButton />
+    </>
   );
 }
