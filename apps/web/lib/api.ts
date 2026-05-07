@@ -19,11 +19,22 @@ export class ApiError extends Error {
   }
 }
 
-// In-memory token store (survives re-renders, cleared on tab close)
-let _accessToken: string | null = null;
+// Token store — persisted in sessionStorage so page refreshes within the same
+// tab don't force a re-login. Cleared when the tab is closed.
+const TOKEN_KEY = "allora_access_token";
+
+function readStoredToken(): string | null {
+  try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+
+let _accessToken: string | null = readStoredToken();
 
 export function setAccessToken(token: string | null) {
   _accessToken = token;
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch { /* ignore */ }
 }
 
 export function getAccessToken(): string | null {
