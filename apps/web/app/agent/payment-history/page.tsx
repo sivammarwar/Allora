@@ -86,17 +86,15 @@ export default function AgentPaymentHistoryPage() {
       })
     : orders;
 
-  const totalCollected = orders
-    .filter((o) => o.paymentStatus === "PAID" || (o.paymentMode === "COD" && o.status === "DELIVERED"))
-    .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
-
   const totalOnline = orders
-    .filter((o) => o.paymentStatus === "PAID")
+    .filter((o) => o.paymentMode === "ONLINE" && o.paymentStatus === "PAID")
     .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
 
   const totalCOD = orders
-    .filter((o) => o.paymentMode === "COD" && o.status === "DELIVERED")
+    .filter((o) => o.paymentMode === "COD" && o.paymentStatus === "PAID")
     .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
+
+  const totalCollected = totalOnline + totalCOD;
 
   return (
     <div className="page-enter space-y-6">
