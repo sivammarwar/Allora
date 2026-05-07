@@ -147,7 +147,7 @@ router.get("/me", async (req, res, next) => {
 
 // ─── Categories (for nav row) ─────────────────────────────────────────────────
 
-router.get("/categories", requireRole("SECRET_SHOP"), async (req, res, next) => {
+router.get("/categories", async (req, res, next) => {
   try {
     const cats = await prisma.agentCategory.findMany({
       where: { isActive: true },
