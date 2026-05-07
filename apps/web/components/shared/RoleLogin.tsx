@@ -66,7 +66,7 @@ export function RoleLogin({ role, title, subtitle }: Props) {
         setStep("otp");
       }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+      toast.error(err instanceof ApiError ? err.message : (err instanceof Error ? err.message : "Something went wrong"));
     }
   };
 

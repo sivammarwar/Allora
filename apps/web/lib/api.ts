@@ -72,8 +72,9 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 function buildInit(opts: RequestOptions): RequestInit {
+  const method = (opts.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(method !== "GET" && method !== "HEAD" ? { "Content-Type": "application/json" } : {}),
     Accept: "application/json",
     ...(opts.headers as Record<string, string> || {}),
   };
