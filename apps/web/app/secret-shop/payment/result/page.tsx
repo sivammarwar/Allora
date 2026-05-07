@@ -47,7 +47,7 @@ export default function PaymentResultPage() {
         if (data.paymentStatus === "PAID") {
           clearPendingTxn();
           setStatus("paid");
-          setTimeout(() => router.push("/secret-shop/orders"), 3000);
+          setTimeout(() => router.push("/secret-shop/dashboard"), 3000);
         } else if (data.paymentStatus === "FAILED") {
           clearPendingTxn();
           setStatus("failed");
@@ -94,10 +94,10 @@ export default function PaymentResultPage() {
             <CheckCircle2 size={48} className="mx-auto text-green-500" />
             <div>
               <p className="text-xl font-bold text-brand-text">Payment Successful!</p>
-              <p className="text-sm text-brand-textMuted mt-1">Your order has been placed. Redirecting to orders…</p>
+              <p className="text-sm text-brand-textMuted mt-1">Your order has been placed. Redirecting to dashboard…</p>
             </div>
-            <Button className="w-full" onClick={() => router.push("/secret-shop/orders")}>
-              View My Orders
+            <Button className="w-full" onClick={() => router.push("/secret-shop/dashboard")}>
+              Go to Dashboard
             </Button>
           </CardContent>
         </Card>
@@ -139,8 +139,8 @@ export default function PaymentResultPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={() => router.push("/secret-shop/orders")}>
-              View Orders
+            <Button variant="outline" className="flex-1" onClick={() => router.push("/secret-shop/dashboard")}>
+              Go to Dashboard
             </Button>
             <Button
               className="flex-1"

@@ -94,6 +94,10 @@ export default function AgentPaymentHistoryPage() {
     .filter((o) => o.paymentMode === "COD" && o.paymentStatus === "PAID")
     .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
 
+  const totalCODPending = orders
+    .filter((o) => o.paymentMode === "COD" && o.paymentStatus === "PENDING" && o.status === "DELIVERED")
+    .reduce((sum, o) => sum + effectiveTotal(o.items), 0);
+
   const totalCollected = totalOnline + totalCOD;
 
   return (
@@ -104,7 +108,7 @@ export default function AgentPaymentHistoryPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card>
           <CardContent className="py-4 px-4 space-y-1">
             <p className="text-xs text-brand-textMuted">Total Baskets</p>
@@ -127,6 +131,12 @@ export default function AgentPaymentHistoryPage() {
           <CardContent className="py-4 px-4 space-y-1">
             <p className="text-xs text-brand-textMuted">COD</p>
             <p className="text-2xl font-bold text-brand-primary">₹{totalCOD}</p>
+          </CardContent>
+        </Card>
+        <Card className={totalCODPending > 0 ? "border-amber-400" : ""}>
+          <CardContent className="py-4 px-4 space-y-1">
+            <p className="text-xs text-brand-textMuted">COD Pending</p>
+            <p className={`text-2xl font-bold ${totalCODPending > 0 ? "text-amber-600" : "text-brand-textMuted"}`}>₹{totalCODPending}</p>
           </CardContent>
         </Card>
       </div>
