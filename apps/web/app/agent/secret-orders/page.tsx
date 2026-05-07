@@ -88,10 +88,13 @@ export default function AgentSecretOrdersPage() {
     mutationFn: ({ id, status, paymentMode }: { id: string; status: string; paymentMode?: string }) =>
       api.put(`/api/agent/secret-orders/${id}/status`, { status }),
     onSuccess: (_, vars) => {
-      toast.success("Order status updated");
-      qc.invalidateQueries({ queryKey: ["agent", "secret-orders"] });
       if (vars.status === "DELIVERED" && vars.paymentMode === "COD") {
+        toast.success("Order delivered — did you collect payment?");
         setPendingCodPayment(vars.id);
+        // Do NOT invalidate yet — keep the order in view so the prompt is visible
+      } else {
+        toast.success("Order status updated");
+        qc.invalidateQueries({ queryKey: ["agent", "secret-orders"] });
       }
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
@@ -103,6 +106,7 @@ export default function AgentSecretOrdersPage() {
     onSuccess: (_, vars) => {
       toast.success(vars.collected ? "Payment marked as collected" : "Marked as not yet collected");
       setPendingCodPayment(null);
+      // Invalidate NOW after agent has responded
       qc.invalidateQueries({ queryKey: ["agent", "secret-orders"] });
       qc.invalidateQueries({ queryKey: ["agent", "payment-history"] });
     },
