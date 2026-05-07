@@ -82,7 +82,7 @@ export default function SecretShopDashboardPage() {
   const cartCount = cartItems.reduce((s, x) => s + x.quantity, 0);
   const cartIds = new Set(cartItems.map((c) => c.inventoryItemId));
 
-  if (meLoading) {
+  if (meLoading || !me) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="h-8 w-8 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />
@@ -91,7 +91,7 @@ export default function SecretShopDashboardPage() {
   }
 
   // ── Needs to register ──────────────────────────────────────────────────────
-  if (me?.state === "needs_request") {
+  if (me?.state === "needs_request" || me?.state === undefined) {
     return (
       <div className="page-enter max-w-lg mx-auto space-y-6">
         <div>
