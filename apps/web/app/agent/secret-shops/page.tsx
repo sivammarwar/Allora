@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldX, Store, Clock } from "lucide-react";
+import { ShieldCheck, ShieldX, Store, Clock, MapPin } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ interface SecretShopRequest {
   shopName: string;
   phone: string;
   address: string;
+  locationLat: number;
+  locationLng: number;
   purpose: string | null;
   status: string;
   createdAt: string;
@@ -74,7 +76,20 @@ export default function AgentSecretShopsPage() {
                     <p className="text-sm text-brand-textMuted">
                       {req.user.name || req.user.email} · {req.phone}
                     </p>
-                    <p className="text-sm text-brand-textMuted">{req.address}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm text-brand-textMuted">{req.address}</p>
+                      {req.locationLat !== 0 && req.locationLng !== 0 && (
+                        <a
+                          href={`https://www.google.com/maps?q=${req.locationLat},${req.locationLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs text-brand-primary hover:underline font-medium"
+                        >
+                          <MapPin size={11} /> View on Map
+                        </a>
+                      )}
+                    </div>
                     {req.purpose && (
                       <p className="text-xs text-brand-textMuted italic">{req.purpose}</p>
                     )}
