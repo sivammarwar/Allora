@@ -152,20 +152,20 @@ export default function ItemCatalogItemsPage() {
           <Package size={28} className="mx-auto mb-3 text-brand-textMuted" />No items found.
         </CardContent></Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt={item.name} className="w-full h-40 lg:h-56 object-cover" />
+                <img src={item.imageUrl} alt={item.name} className="w-full h-40 object-cover" />
               ) : (
-                <div className="w-full h-40 lg:h-56 bg-brand-bg flex items-center justify-center">
+                <div className="w-full h-40 bg-brand-bg flex items-center justify-center">
                   <Package size={32} className="text-brand-textMuted" />
                 </div>
               )}
-              <CardContent className="p-4 lg:p-5 space-y-2">
+              <CardContent className="p-4 space-y-2">
                 <div>
-                  <h3 className="font-medium text-brand-text lg:text-lg">{item.name}</h3>
+                  <h3 className="font-medium text-brand-text">{item.name}</h3>
                   {item.brandName && <p className="text-xs text-brand-textMuted">{item.brandName}</p>}
                   {item.category && (
                     <span className="inline-flex items-center gap-1 text-xs text-brand-primary mt-1">

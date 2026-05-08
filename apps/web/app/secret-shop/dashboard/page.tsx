@@ -48,22 +48,22 @@ function ProductCard({ inv }: { inv: InventoryItem }) {
     ? Math.round((1 - Number(inv.price) / Number(inv.mrp)) * 100) : null;
 
   return (
-    <div className="w-40 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="w-40 lg:w-56 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {inv.item.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={inv.item.imageUrl} alt={inv.item.name} className="w-full h-28 object-cover" />
+        <img src={inv.item.imageUrl} alt={inv.item.name} className="w-full h-28 lg:h-40 object-cover" />
       ) : (
-        <div className="w-full h-28 bg-gray-50 flex items-center justify-center">
+        <div className="w-full h-28 lg:h-40 bg-gray-50 flex items-center justify-center">
           <Package size={24} className="text-gray-300" />
         </div>
       )}
-      <div className="p-2.5 space-y-1.5">
+      <div className="p-2.5 lg:p-4 space-y-1.5 lg:space-y-2">
         <div>
-          <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-1">{inv.item.name}</p>
-          {inv.item.brandName && <p className="text-[10px] text-gray-400 leading-tight">{inv.item.brandName}</p>}
+          <p className="text-xs lg:text-sm font-semibold text-gray-800 leading-tight line-clamp-1">{inv.item.name}</p>
+          {inv.item.brandName && <p className="text-[10px] lg:text-xs text-gray-400 leading-tight">{inv.item.brandName}</p>}
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-sm font-bold text-brand-primary">₹{Number(inv.price)}</span>
+          <span className="text-sm lg:text-base font-bold text-brand-primary">₹{Number(inv.price)}</span>
           {discount && <span className="text-[10px] text-green-600 font-semibold">{discount}% off</span>}
         </div>
         {inv.quantity === 0 ? (
@@ -226,8 +226,8 @@ export default function SecretShopDashboardPage() {
                 ))
               : null}
             {!catsLoading && categories.length > 0 && (
-              <button onClick={() => setActiveCat(null)} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${activeCat === null ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10" : "bg-gray-100"}`}>
+              <button onClick={() => setActiveCat(null)} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16 lg:w-20">
+                <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex items-center justify-center transition-all ${activeCat === null ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10" : "bg-gray-100"}`}>
                   <Tag size={22} className={activeCat === null ? "text-brand-primary" : "text-gray-400"} />
                 </div>
                 <span className={`text-[10px] font-semibold text-center leading-tight w-full ${activeCat === null ? "text-brand-primary" : "text-gray-600"}`}>All</span>
@@ -237,9 +237,9 @@ export default function SecretShopDashboardPage() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
-                className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16"
+                className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16 lg:w-20"
               >
-                <div className={`w-16 h-16 rounded-2xl overflow-hidden transition-all ${activeCat === cat.id ? "ring-2 ring-brand-primary ring-offset-1" : ""}`}>
+                <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden transition-all ${activeCat === cat.id ? "ring-2 ring-brand-primary ring-offset-1" : ""}`}>
                   {cat.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
@@ -291,7 +291,7 @@ export default function SecretShopDashboardPage() {
         // Flat grid when filtered
         <div className="px-4 pb-4 space-y-3">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-1">{filteredItems.length} product{filteredItems.length !== 1 ? "s" : ""}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-5">
             {filteredItems.map((inv) => <ProductCard key={inv.id} inv={inv} />)}
           </div>
         </div>
