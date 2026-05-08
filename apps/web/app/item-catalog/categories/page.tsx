@@ -95,19 +95,19 @@ export default function ItemCatalogCategoriesPage() {
       ) : cats.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-brand-textMuted text-sm">No categories yet.</CardContent></Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {cats.map((c) => (
             <Card key={c.id} className="overflow-hidden">
               {c.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.imageUrl} alt={c.name} className="w-full h-32 object-cover" />
+                <img src={c.imageUrl} alt={c.name} className="w-full h-32 lg:h-48 object-cover" />
               ) : (
-                <div className="w-full h-32 bg-brand-bg flex items-center justify-center">
+                <div className="w-full h-32 lg:h-48 bg-brand-bg flex items-center justify-center">
                   <Tag size={28} className="text-brand-textMuted" />
                 </div>
               )}
-              <CardContent className="p-3 space-y-2">
-                <p className="font-medium text-brand-text text-sm truncate">{c.name}</p>
+              <CardContent className="p-3 lg:p-4 space-y-2">
+                <p className="font-medium text-brand-text text-sm lg:text-base truncate">{c.name}</p>
                 <div className="flex flex-col gap-1.5">
                   <Button size="sm" variant="outline" className="w-full" onClick={() => openEdit(c)}>
                     <Pencil size={11} className="mr-1" /> Edit
