@@ -44,7 +44,7 @@ function BottomNav() {
   const tabs = [
     { href: "/secret-shop/dashboard", label: "Home", icon: Home },
     { href: "/secret-shop/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/secret-shop/cart", label: "Cart", icon: ShoppingCart, highlight: true },
+    { href: "/secret-shop/cart", label: "Cart", icon: ShoppingCart },
     { href: "/secret-shop/payment-history", label: "Payments", icon: CreditCard },
     { href: "/secret-shop/profile", label: "Profile", icon: User },
   ];
@@ -59,22 +59,15 @@ function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-0.5 relative transition-colors ${
-                tab.highlight
-                  ? "bg-brand-primary rounded-2xl px-5 py-2.5 -mt-4 shadow-lg shadow-brand-primary/30"
-                  : "px-3 py-2"
-              }`}
+              className="flex flex-col items-center gap-0.5 relative transition-colors px-3 py-2"
             >
+              {active && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-brand-primary" />
+              )}
               <div className="relative">
                 <Icon
-                  size={tab.highlight ? 22 : 20}
-                  className={
-                    tab.highlight
-                      ? "text-white"
-                      : active
-                      ? "text-brand-primary"
-                      : "text-gray-400"
-                  }
+                  size={20}
+                  className={active ? "text-brand-primary" : "text-gray-400"}
                 />
                 {tab.href === "/secret-shop/cart" && cartCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
@@ -82,11 +75,7 @@ function BottomNav() {
                   </span>
                 )}
               </div>
-              <span
-                className={`text-[10px] font-medium leading-none ${
-                  tab.highlight ? "text-white" : active ? "text-brand-primary" : "text-gray-400"
-                }`}
-              >
+              <span className={`text-[10px] font-medium leading-none ${active ? "text-brand-primary" : "text-gray-400"}`}>
                 {tab.label}
               </span>
             </Link>
@@ -117,52 +106,45 @@ function ShopHeader({ search, setSearch }: { search: string; setSearch: (s: stri
   const isVerified = me?.state === "verified";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40" style={{ background: "linear-gradient(135deg, #C0626A 0%, #A05252 55%, #8B4A4A 100%)" }}>
-      {/* Decorative blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }} />
-        <div className="absolute top-2 left-1/3 w-20 h-20 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #FFE0E3 0%, transparent 70%)" }} />
-      </div>
+    <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
 
       {showSearch ? (
         /* ── Search mode ── */
         <div className="relative flex items-center gap-2 px-4 h-16">
           <div className="flex-1 relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products, brands, categories…"
-              className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm text-white placeholder-white/50 focus:outline-none"
-              style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.25)" }}
+              className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-gray-100 border border-gray-200"
             />
           </div>
           <button
             onClick={() => { setShowSearch(false); setSearch(""); }}
-            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.15)" }}
+            className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
           >
-            <X size={17} className="text-white" />
+            <X size={17} className="text-gray-500" />
           </button>
         </div>
       ) : (
         /* ── Default mode ── */
         <div className="relative flex items-center gap-3 px-4 h-16">
           {/* Store icon */}
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.18)" }}>
-            <Store size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-brand-primary/10">
+            <Store size={20} className="text-brand-primary" />
           </div>
 
           {/* Text */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium leading-none mb-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <p className="text-[11px] font-medium leading-none mb-0.5 text-gray-400">
               {greeting()} 👋
             </p>
-            <h1 className="text-[15px] font-bold text-white leading-tight truncate flex items-center gap-1.5">
+            <h1 className="text-[15px] font-bold text-gray-900 leading-tight truncate flex items-center gap-1.5">
               {shopName}
               {isVerified && (
-                <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.9)" }}>
+                <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-green-50 text-green-600">
                   ✓ Verified
                 </span>
               )}
@@ -173,19 +155,17 @@ function ShopHeader({ search, setSearch }: { search: string; setSearch: (s: stri
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setShowSearch(true)}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              className="w-9 h-9 rounded-2xl bg-gray-100 flex items-center justify-center"
             >
-              <Search size={17} className="text-white" />
+              <Search size={17} className="text-gray-500" />
             </button>
             <Link
               href="/secret-shop/cart"
-              className="relative w-9 h-9 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              className="relative w-9 h-9 rounded-2xl bg-brand-primary/10 flex items-center justify-center"
             >
-              <ShoppingCart size={17} className="text-white" />
+              <ShoppingCart size={17} className="text-brand-primary" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none border-2 border-transparent" style={{ borderColor: "#A05252" }}>
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1 h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none border-2 border-white">
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               )}
@@ -194,8 +174,6 @@ function ShopHeader({ search, setSearch }: { search: string; setSearch: (s: stri
         </div>
       )}
 
-      {/* Bottom fade edge */}
-      <div className="h-1 w-full" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.08), transparent)" }} />
     </header>
   );
 }
