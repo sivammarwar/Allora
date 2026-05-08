@@ -208,9 +208,9 @@ export default function SecretShopDashboardPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-amber-500/10 text-amber-600 text-xs">
               <AlertCircle size={12} /> Status: {me.request?.status}
             </div>
-            {me.request?.agent?.agentAreas?.[0]?.area?.name && (
+            {me.request?.agent && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-brand-primary/10 text-brand-primary text-xs">
-                <MapPin size={12} /> Area: {me.request.agent.agentAreas[0].area.name}
+                <MapPin size={12} /> Area: {me.request.agent.agentAreas?.[0]?.area?.name ?? "Assigned"}
               </div>
             )}
           </CardContent>
