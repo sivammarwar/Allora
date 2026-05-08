@@ -46,7 +46,7 @@ export default function MainInventoryLoginPage() {
     e.preventDefault();
     try {
       const { user } = await loginPassword.mutateAsync({ email: email.trim().toLowerCase(), password });
-      if (user.role !== "ADMIN" && user.email !== ALLOWED_EMAIL) {
+      if (user.email !== ALLOWED_EMAIL) {
         toast.error("Access denied for this account.");
         return;
       }
@@ -74,7 +74,7 @@ export default function MainInventoryLoginPage() {
     if (otp.length !== 6) return;
     try {
       const { user } = await verifyOtp.mutateAsync({ email: email.trim().toLowerCase(), otp });
-      if (user.role !== "ADMIN" && user.email !== ALLOWED_EMAIL) {
+      if (user.email !== ALLOWED_EMAIL) {
         toast.error("Access denied for this account.");
         return;
       }

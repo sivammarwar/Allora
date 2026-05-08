@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Download, Package } from "lucide-react";
+import { Search, Download, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface InventoryItem {
@@ -40,6 +40,14 @@ function downloadCSV(agent: AgentGroup) {
 
 export default function MainInventoryPage() {
   const [search, setSearch] = useState("");
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+
+  const toggleOpen = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const { data: agents = [], isLoading } = useQuery<AgentGroup[]>({
     queryKey: ["main-inventory"],
@@ -78,25 +86,32 @@ export default function MainInventoryPage() {
         {!isLoading && filtered.length === 0 && (
           <div className="text-center py-16 text-gray-400 text-sm">No results found.</div>
         )}
-        {filtered.map((agent) => (
+        {filtered.map((agent) => {
+          const isOpen = openIds.has(agent.agentId);
+          return (
           <div key={agent.agentId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+            {/* Accordion header — click to expand/collapse */}
+            <button
+              onClick={() => toggleOpen(agent.agentId)}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+            >
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{agent.agentName}</p>
-                <p className="text-xs text-blue-600 font-medium">📍 {agent.areaName}</p>
+                <p className="text-xs text-blue-600 font-medium mt-0.5">📍 {agent.areaName}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-xs text-gray-400">{agent.items.length} items</span>
                 <button
-                  onClick={() => downloadCSV(agent)}
+                  onClick={(e) => { e.stopPropagation(); downloadCSV(agent); }}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                 >
                   <Download size={12} /> CSV
                 </button>
+                {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </div>
-            </div>
+            </button>
 
-            {agent.items.length === 0 ? (
+            {isOpen && (agent.items.length === 0 ? (
               <div className="flex items-center gap-2 px-4 py-6 text-gray-400 text-sm">
                 <Package size={16} /> No inventory items
               </div>
@@ -157,9 +172,10 @@ export default function MainInventoryPage() {
                   ))}
                 </div>
               </>
-            )}
+            ))}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
