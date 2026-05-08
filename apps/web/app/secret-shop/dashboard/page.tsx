@@ -230,7 +230,7 @@ export default function SecretShopDashboardPage() {
                 <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center transition-all ${activeCat === null ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10" : "bg-gray-100"}`}>
                   <Tag size={22} className={activeCat === null ? "text-brand-primary" : "text-gray-400"} />
                 </div>
-                <span className={`text-[10px] lg:text-xs font-semibold text-center leading-tight w-full ${activeCat === null ? "text-brand-primary" : "text-gray-600"}`}>All</span>
+                <span className={`text-xs font-semibold text-center leading-tight w-full ${activeCat === null ? "text-brand-primary" : "text-gray-600"}`}>All</span>
               </button>
             )}
             {!catsLoading && categories.map((cat) => (
@@ -249,7 +249,7 @@ export default function SecretShopDashboardPage() {
                     </div>
                   )}
                 </div>
-                <span className={`text-[10px] lg:text-xs font-semibold text-center leading-tight line-clamp-2 w-full ${activeCat === cat.id ? "text-brand-primary" : "text-gray-600"}`}>
+                <span className={`text-xs font-semibold text-center leading-tight line-clamp-2 w-full ${activeCat === cat.id ? "text-brand-primary" : "text-gray-600"}`}>
                   {cat.name}
                 </span>
               </button>
