@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldX, Store, Clock, MapPin } from "lucide-react";
+import { ShieldCheck, ShieldX, Store, Clock, MapPin, Pencil, X, Check } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,11 +23,24 @@ interface SecretShopRequest {
 
 export default function AgentSecretShopsPage() {
   const qc = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAddress, setEditAddress] = useState("");
 
   const { data: requests = [], isLoading } = useQuery<SecretShopRequest[]>({
     queryKey: ["agent", "secret-shop-requests"],
     queryFn: () => api.get("/api/agent/secret-shop-requests"),
     refetchInterval: 30000,
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: ({ id, address }: { id: string; address: string }) =>
+      api.patch(`/api/agent/secret-shop-requests/${id}/address`, { address }),
+    onSuccess: () => {
+      toast.success("Address updated");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["agent", "secret-shop-requests"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to update address"),
   });
 
   const verifyMutation = useMutation({
@@ -76,20 +90,50 @@ export default function AgentSecretShopsPage() {
                     <p className="text-sm text-brand-textMuted">
                       {req.user.name || req.user.email} · {req.phone}
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm text-brand-textMuted">{req.address}</p>
-                      {req.locationLat !== 0 && req.locationLng !== 0 && (
-                        <a
-                          href={`https://www.google.com/maps?q=${req.locationLat},${req.locationLng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-xs text-brand-primary hover:underline font-medium"
+                    {editingId === req.id ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          autoFocus
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          className="flex-1 text-sm px-2.5 py-1.5 rounded border border-brand-primary/40 bg-brand-surface focus:outline-none focus:border-brand-primary text-brand-text"
+                        />
+                        <button
+                          onClick={() => updateAddressMutation.mutate({ id: req.id, address: editAddress })}
+                          disabled={updateAddressMutation.isPending || !editAddress.trim()}
+                          className="w-7 h-7 flex items-center justify-center rounded bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-50"
                         >
-                          <MapPin size={11} /> View on Map
-                        </a>
-                      )}
-                    </div>
+                          <Check size={13} />
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm text-brand-textMuted">{req.address}</p>
+                        <button
+                          onClick={() => { setEditingId(req.id); setEditAddress(req.address); }}
+                          className="inline-flex items-center gap-1 text-xs text-brand-textMuted hover:text-brand-primary font-medium"
+                        >
+                          <Pencil size={10} /> Edit
+                        </button>
+                        {req.locationLat !== 0 && req.locationLng !== 0 && (
+                          <a
+                            href={`https://www.google.com/maps?q=${req.locationLat},${req.locationLng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-xs text-brand-primary hover:underline font-medium"
+                          >
+                            <MapPin size={11} /> View on Map
+                          </a>
+                        )}
+                      </div>
+                    )}
                     {req.purpose && (
                       <p className="text-xs text-brand-textMuted italic">{req.purpose}</p>
                     )}

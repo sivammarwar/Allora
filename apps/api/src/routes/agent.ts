@@ -644,6 +644,27 @@ router.get("/verified-secret-shops", async (req, res, next) => {
   }
 });
 
+router.patch("/secret-shop-requests/:id/address", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { address } = req.body as { address?: string };
+    if (!address || !address.trim()) return res.status(400).json({ error: "Address is required" });
+
+    const request = await prisma.secretShopRequest.findUnique({ where: { id: req.params.id } });
+    if (!request || (request.agentId !== null && request.agentId !== profile.id)) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    const updated = await prisma.secretShopRequest.update({
+      where: { id: req.params.id },
+      data: { address: address.trim(), agentId: request.agentId ?? profile.id },
+    });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 const verifySecretShopSchema = z.object({
   requestId: z.string(),
   action: z.enum(["approve", "reject"]),
