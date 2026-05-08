@@ -171,7 +171,11 @@ export default function SecretShopDashboardPage() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-brand-text">Shop location</label>
-              <LocationPicker value={form.location} onChange={(loc) => setForm({ ...form, location: loc })} />
+              <LocationPicker
+                value={form.location}
+                onChange={(loc) => setForm((f) => ({ ...f, location: loc }))}
+                onAddressChange={(addr) => setForm((f) => ({ ...f, address: addr }))}
+              />
             </div>
             <Button className="w-full" onClick={() => {
               if (!form.shopName || !form.phone || !form.address) { toast.error("Shop name, phone and address are required"); return; }
