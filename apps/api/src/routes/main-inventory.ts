@@ -29,7 +29,7 @@ router.get("/", async (_req, res, next) => {
               },
             },
           },
-          orderBy: { item: { name: "asc" } },
+          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { createdAt: "asc" },
