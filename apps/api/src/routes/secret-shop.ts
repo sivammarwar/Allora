@@ -156,7 +156,6 @@ router.get("/me", async (req, res, next) => {
       return res.json({ state: "needs_request" });
     }
 
-    console.log("[/me pending] request.agentId:", request?.agentId, "agent:", JSON.stringify(request?.agent));
     return res.json({ state: "pending", request });
   } catch (e) {
     next(e);
