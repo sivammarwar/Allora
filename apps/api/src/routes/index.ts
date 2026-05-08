@@ -11,6 +11,7 @@ import paymentsRouter from "./payments";
 import payRouter from "./pay";
 import secretShopRouter from "./secret-shop";
 import itemCatalogRouter from "./item-catalog";
+import mainInventoryRouter from "./main-inventory";
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use("/payments", paymentsRouter);
 router.use("/pay", payRouter);
 router.use("/secret-shop", secretShopRouter);
 router.use("/item-catalog", itemCatalogRouter);
+router.use("/main-inventory", mainInventoryRouter);
 
 export default router;
