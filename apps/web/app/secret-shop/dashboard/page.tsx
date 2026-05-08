@@ -219,15 +219,15 @@ export default function SecretShopDashboardPage() {
           <div className="flex gap-3 w-max">
             {catsLoading
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-200 animate-pulse" />
-                    <div className="w-10 h-2 rounded bg-gray-200 animate-pulse" />
+                  <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20">
+                    <div className="w-20 h-20 rounded-2xl bg-gray-200 animate-pulse" />
+                    <div className="w-12 h-2 rounded bg-gray-200 animate-pulse" />
                   </div>
                 ))
               : null}
             {!catsLoading && categories.length > 0 && (
-              <button onClick={() => setActiveCat(null)} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16 lg:w-20">
-                <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex items-center justify-center transition-all ${activeCat === null ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10" : "bg-gray-100"}`}>
+              <button onClick={() => setActiveCat(null)} className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20 lg:w-24">
+                <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center transition-all ${activeCat === null ? "ring-2 ring-brand-primary ring-offset-1 bg-brand-primary/10" : "bg-gray-100"}`}>
                   <Tag size={22} className={activeCat === null ? "text-brand-primary" : "text-gray-400"} />
                 </div>
                 <span className={`text-[10px] font-semibold text-center leading-tight w-full ${activeCat === null ? "text-brand-primary" : "text-gray-600"}`}>All</span>
@@ -237,9 +237,9 @@ export default function SecretShopDashboardPage() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCat(activeCat === cat.id ? null : cat.id)}
-                className="flex-shrink-0 flex flex-col items-center gap-1.5 w-16 lg:w-20"
+                className="flex-shrink-0 flex flex-col items-center gap-1.5 w-20 lg:w-24"
               >
-                <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden transition-all ${activeCat === cat.id ? "ring-2 ring-brand-primary ring-offset-1" : ""}`}>
+                <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-2xl overflow-hidden transition-all ${activeCat === cat.id ? "ring-2 ring-brand-primary ring-offset-1" : ""}`}>
                   {cat.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
