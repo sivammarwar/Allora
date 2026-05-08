@@ -142,7 +142,7 @@ router.get("/me", async (req, res, next) => {
       orderBy: { createdAt: "desc" },
       include: {
         agent: {
-          select: {
+          include: {
             agentAreas: {
               take: 1,
               include: { area: { select: { name: true } } },
