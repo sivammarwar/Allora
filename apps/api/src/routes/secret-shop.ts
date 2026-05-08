@@ -140,6 +140,16 @@ router.get("/me", async (req, res, next) => {
     const request = await prisma.secretShopRequest.findFirst({
       where: { userId: req.user!.id },
       orderBy: { createdAt: "desc" },
+      include: {
+        agent: {
+          select: {
+            agentAreas: {
+              take: 1,
+              include: { area: { select: { name: true } } },
+            },
+          },
+        },
+      },
     });
 
     if (!request) {

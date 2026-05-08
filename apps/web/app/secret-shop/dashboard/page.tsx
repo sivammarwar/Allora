@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Package, ShieldCheck, Clock, AlertCircle, Tag } from "lucide-react";
+import { Package, ShieldCheck, Clock, AlertCircle, Tag, MapPin } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useSecretCart } from "@/lib/secretShopCart";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +27,13 @@ interface InventoryItem {
 
 interface MeResponse {
   state: "needs_request" | "pending" | "verified";
-  request?: { id: string; status: string; shopName: string; createdAt: string };
+  request?: {
+    id: string;
+    status: string;
+    shopName: string;
+    createdAt: string;
+    agent?: { agentAreas: { area: { name: string } }[] } | null;
+  };
   profile?: { id: string; shopName: string; isVerifiedByAgent: boolean };
 }
 
@@ -202,6 +208,11 @@ export default function SecretShopDashboardPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-amber-500/10 text-amber-600 text-xs">
               <AlertCircle size={12} /> Status: {me.request?.status}
             </div>
+            {me.request?.agent?.agentAreas?.[0]?.area?.name && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-brand-primary/10 text-brand-primary text-xs">
+                <MapPin size={12} /> Area: {me.request.agent.agentAreas[0].area.name}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
