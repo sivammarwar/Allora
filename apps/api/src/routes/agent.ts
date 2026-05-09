@@ -948,9 +948,6 @@ router.post(
   async (req, res, next) => {
     try {
       const profile = await getAgentProfile(req.user!.id);
-      if (!profile.isVerifiedByAdmin)
-        return res.status(403).json({ error: "Not yet verified by admin" });
-
       const { subcategoryId, baseServiceCharge, transportChargePerKm } =
         req.body as z.infer<typeof priceControlSchema>;
 
