@@ -468,17 +468,51 @@ router.get("/subcategories/:id", async (req, res, next) => {
       pricing: PricingRow;
     };
 
+    // Load agent price-control entries for this subcategory, keyed by agentId
+    const agentIds = [...new Set(
+      (matching as MatchingHero[]).map((h) => h.verifiedByAgentId).filter(Boolean) as string[]
+    )];
+    const agentPriceControls = agentIds.length
+      ? await prisma.agentSubcategoryPricing.findMany({
+          where: { agentId: { in: agentIds }, subcategoryId: sub.id },
+        })
+      : [];
+    const agentPriceMap = new Map(agentPriceControls.map((a) => [a.agentId, a]));
+
     const heroOptions: HeroOption[] = [];
     for (const h of matching as MatchingHero[]) {
-      const pricing =
-        h.pricing.find((p: PricingRow) => p.subcategoryId === sub.id) ?? null;
-      // Heroes missing pricing for this subcategory are not bookable — drop them.
-      if (!pricing) continue;
-      const distanceKm = turf.distance(
+      const distanceKm = +turf.distance(
         userPt,
         turf.point([h.locationLng, h.locationLat]),
         { units: "kilometers" }
-      );
+      ).toFixed(2);
+
+      const agentPrice = h.verifiedByAgentId ? agentPriceMap.get(h.verifiedByAgentId) : null;
+
+      let pricing: PricingRow | null;
+      if (agentPrice) {
+        // Agent has overridden pricing for this subcategory — synthesize a pricing row
+        const perKm = Number(agentPrice.transportChargePerKm);
+        pricing = {
+          id: agentPrice.id,
+          heroId: h.id,
+          subcategoryId: sub.id,
+          serviceCharge: agentPrice.baseServiceCharge,
+          deliveryCharge2km: String((perKm * 2).toFixed(2)),
+          deliveryCharge5km: String((perKm * 5).toFixed(2)),
+          deliveryCharge7km: String((perKm * 7).toFixed(2)),
+          deliveryCharge10km: String((perKm * 10).toFixed(2)),
+          createdAt: agentPrice.createdAt,
+          updatedAt: agentPrice.updatedAt,
+          subcategory: { id: sub.id, name: sub.name, category: { name: sub.category.name, type: sub.category.type as "PRODUCT" | "SERVICE" } },
+        } as unknown as PricingRow;
+      } else {
+        pricing = h.pricing.find((p: PricingRow) => p.subcategoryId === sub.id) ?? null;
+      }
+
+      // Heroes with neither agent pricing nor their own pricing are not bookable
+      if (!pricing) continue;
+
       heroOptions.push({
         id: h.id,
         serviceName: h.serviceName ?? "",
@@ -487,7 +521,7 @@ router.get("/subcategories/:id", async (req, res, next) => {
         locationLat: h.locationLat,
         locationLng: h.locationLng,
         profileImageUrl: h.profileImageUrl,
-        distanceKm: +distanceKm.toFixed(2),
+        distanceKm,
         pricing,
       });
     }

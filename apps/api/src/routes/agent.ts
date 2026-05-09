@@ -906,6 +906,117 @@ router.get("/verified-delivery-boys", async (req, res, next) => {
   }
 });
 
+// ─── Price Control ─────────────────────────────────────────────────────────
+const priceControlSchema = z.object({
+  subcategoryId: z.string().min(1),
+  baseServiceCharge: z.number().nonnegative(),
+  transportChargePerKm: z.number().nonnegative().default(0),
+});
+
+const priceControlUpdateSchema = z.object({
+  baseServiceCharge: z.number().nonnegative(),
+  transportChargePerKm: z.number().nonnegative().default(0),
+});
+
+const priceControlInclude = {
+  subcategory: {
+    select: {
+      id: true,
+      name: true,
+      category: { select: { id: true, name: true, type: true } },
+    },
+  },
+} as const;
+
+router.get("/price-control", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const entries = await prisma.agentSubcategoryPricing.findMany({
+      where: { agentId: profile.id },
+      include: priceControlInclude,
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(entries);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post(
+  "/price-control",
+  validateBody(priceControlSchema),
+  async (req, res, next) => {
+    try {
+      const profile = await getAgentProfile(req.user!.id);
+      if (!profile.isVerifiedByAdmin)
+        return res.status(403).json({ error: "Not yet verified by admin" });
+
+      const { subcategoryId, baseServiceCharge, transportChargePerKm } =
+        req.body as z.infer<typeof priceControlSchema>;
+
+      const sub = await prisma.subcategory.findUnique({
+        where: { id: subcategoryId },
+        include: { category: true },
+      });
+      if (!sub || !sub.isActive)
+        return res.status(404).json({ error: "Subcategory not found" });
+      if (sub.category.type !== "SERVICE")
+        return res
+          .status(400)
+          .json({ error: "Only SERVICE subcategories can be price-controlled" });
+
+      const entry = await prisma.agentSubcategoryPricing.upsert({
+        where: { agentId_subcategoryId: { agentId: profile.id, subcategoryId } },
+        update: { baseServiceCharge, transportChargePerKm },
+        create: { agentId: profile.id, subcategoryId, baseServiceCharge, transportChargePerKm },
+        include: priceControlInclude,
+      });
+      res.json(entry);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.put(
+  "/price-control/:id",
+  validateBody(priceControlUpdateSchema),
+  async (req, res, next) => {
+    try {
+      const profile = await getAgentProfile(req.user!.id);
+      const existing = await prisma.agentSubcategoryPricing.findFirst({
+        where: { id: req.params.id, agentId: profile.id },
+      });
+      if (!existing) return res.status(404).json({ error: "Not found" });
+
+      const { baseServiceCharge, transportChargePerKm } =
+        req.body as z.infer<typeof priceControlUpdateSchema>;
+      const updated = await prisma.agentSubcategoryPricing.update({
+        where: { id: req.params.id },
+        data: { baseServiceCharge, transportChargePerKm },
+        include: priceControlInclude,
+      });
+      res.json(updated);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.delete("/price-control/:id", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const existing = await prisma.agentSubcategoryPricing.findFirst({
+      where: { id: req.params.id, agentId: profile.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    await prisma.agentSubcategoryPricing.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // ─── Stats ─────────────────────────────────────────────────────────────────
 router.get("/stats", async (req, res, next) => {
   try {

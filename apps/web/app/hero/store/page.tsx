@@ -29,12 +29,19 @@ interface SubcategoryMeta {
   category: { name: string; type: "PRODUCT" | "SERVICE" };
 }
 
+interface AgentPriceEntry {
+  subcategoryId: string;
+  baseServiceCharge: string;
+  transportChargePerKm: string;
+}
+
 interface PricingResponse {
   heroId: string;
   subcategoryIds: string[];
   requiresDelivery: boolean;
   pricing: PricingRow[];
   subcategories: SubcategoryMeta[];
+  agentPricing: AgentPriceEntry[];
 }
 
 interface HeroProduct {
@@ -90,6 +97,7 @@ export default function HeroStorePage() {
 
   const requiresDelivery = pricingData?.requiresDelivery ?? false;
   const subMap = new Map((pricingData?.subcategories ?? []).map((s) => [s.id, s]));
+  const agentPriceMap = new Map((pricingData?.agentPricing ?? []).map((a) => [a.subcategoryId, a]));
   const hasProductSubs = (pricingData?.subcategories ?? []).some(
     (s) => s.category.type === "PRODUCT"
   );
@@ -169,6 +177,7 @@ export default function HeroStorePage() {
                 (p) => p.subcategoryId === subId
               );
               const meta = subMap.get(subId);
+              const agentPrice = agentPriceMap.get(subId);
               return (
                 <PricingEditor
                   key={subId}
@@ -177,6 +186,7 @@ export default function HeroStorePage() {
                   categoryType={meta?.category.type ?? existing?.subcategory.category.type ?? "SERVICE"}
                   requiresDelivery={requiresDelivery}
                   initial={existing}
+                  agentPrice={agentPrice}
                   onSaved={() =>
                     qc.invalidateQueries({ queryKey: ["hero", "pricing"] })
                   }
@@ -346,6 +356,7 @@ function PricingEditor({
   categoryType,
   requiresDelivery,
   initial,
+  agentPrice,
   onSaved,
 }: {
   subcategoryId: string;
@@ -353,8 +364,37 @@ function PricingEditor({
   categoryType: "PRODUCT" | "SERVICE";
   requiresDelivery: boolean;
   initial?: PricingRow;
+  agentPrice?: AgentPriceEntry;
   onSaved: () => void;
 }) {
+  if (agentPrice) {
+    return (
+      <Card>
+        <CardContent className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="font-heading text-base text-brand-text">{subcategoryName}</h3>
+              <p className="text-xs text-brand-textMuted">{categoryType}</p>
+            </div>
+            <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary">
+              Set by agent
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Base service charge</p>
+              <p className="font-semibold text-brand-text">{formatINR(Number(agentPrice.baseServiceCharge))}</p>
+            </div>
+            <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Transport per km</p>
+              <p className="font-semibold text-brand-text">{formatINR(Number(agentPrice.transportChargePerKm))}/km</p>
+            </div>
+          </div>
+          <p className="text-xs text-brand-textMuted">Your agent controls pricing for this service. Contact them to change it.</p>
+        </CardContent>
+      </Card>
+    );
+  }
   const [serviceCharge, setServiceCharge] = useState(
     Number(initial?.serviceCharge ?? 0)
   );

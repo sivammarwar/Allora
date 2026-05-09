@@ -214,6 +214,7 @@ model AgentProfile {
   verifiedSecretShops     SecretShopProfile[]   @relation("SecretShopVerifiedByAgent")
   inventoryItems          AgentInventoryItem[]
   secretOrders            SecretOrder[]         @relation("AgentSecretOrders")
+  priceControls           AgentSubcategoryPricing[]
 
   @@index([primaryAreaId])
 }
@@ -384,6 +385,7 @@ model Subcategory {
 
   products        Product[]
   pricing         HeroSubcategoryPricing[]
+  agentPricing    AgentSubcategoryPricing[]
   serviceBookings ServiceBooking[]
   reviews         Review[]
   orderItems      OrderItem[]
@@ -618,6 +620,21 @@ model SecretShopRequest {
 
   @@index([status, agentId])
   @@index([userId])
+}
+
+model AgentSubcategoryPricing {
+  id                   String       @id @default(cuid())
+  agentId              String
+  agent                AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  subcategoryId        String
+  subcategory          Subcategory  @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  baseServiceCharge    Decimal      @db.Decimal(10, 2)
+  transportChargePerKm Decimal      @db.Decimal(10, 2) @default(0)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([agentId, subcategoryId])
+  @@index([agentId])
 }
 
 model AgentCategory {
