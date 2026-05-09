@@ -3,12 +3,10 @@ import {
   ArrowRight,
   MapPin,
   ShoppingBag,
-  Truck,
   Store,
   ShieldCheck,
   Sparkles,
   Wallet,
-  Clock,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -42,7 +40,7 @@ export default function HomePage() {
       <section className="container py-16 sm:py-24 page-enter">
         <div className="max-w-3xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-brand-primary mb-5">
-            Local services · delivered in 50 minutes
+            Local services · on demand
           </p>
           <h1 className="font-heading text-4xl sm:text-6xl text-brand-text leading-tight">
             Your neighborhood,
@@ -70,13 +68,6 @@ export default function HomePage() {
               Become a hero
             </Link>
             <Link
-              href="/delivery/login"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-sm border border-brand-border text-brand-text hover:bg-brand-surface transition-colors font-medium"
-            >
-              <Truck size={16} />
-              Drive with us
-            </Link>
-            <Link
               href="/secret-shop/login"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-sm border border-brand-border text-brand-text hover:bg-brand-surface transition-colors font-medium"
             >
@@ -91,12 +82,8 @@ export default function HomePage() {
               Agent-verified shops
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Clock size={14} className="text-brand-primary" />
-              50-min delivery
-            </span>
-            <span className="inline-flex items-center gap-1.5">
               <Wallet size={14} className="text-brand-primary" />
-              UPI &amp; Cash on delivery
+              UPI &amp; Cash payment
             </span>
           </div>
         </div>
@@ -109,7 +96,7 @@ export default function HomePage() {
             How it works
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl text-brand-text">
-            Three taps. One delivery.
+            Three taps. Done.
           </h2>
         </div>
         <ol className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -127,9 +114,9 @@ export default function HomePage() {
           />
           <Step
             n="03"
-            icon={<Truck size={18} />}
-            title="Track in real time"
-            body="A delivery partner picks up, brings it home in under an hour. Live ETA, live status."
+            icon={<ShieldCheck size={18} />}
+            title="Get it done"
+            body="Your verified hero completes the service. Rate the experience and book again in one tap."
           />
         </ol>
       </section>
@@ -154,11 +141,6 @@ export default function HomePage() {
             title="Heroes"
             blurb="Run your shop digitally. Set pricing, manage products, accept orders."
             href="/hero/login"
-          />
-          <Role
-            title="Delivery partners"
-            blurb="Earn per delivery. Live job feed. Transparent payout from the Payment Manager."
-            href="/delivery/login"
           />
           <Role
             title="Operators"
@@ -211,7 +193,7 @@ export default function HomePage() {
 
       <footer className="border-t border-brand-border">
         <div className="container py-8 flex flex-wrap items-center justify-between gap-3 text-sm text-brand-textMuted">
-          <p>© {new Date().getFullYear()} Allora. Local, delivered.</p>
+          <p>© {new Date().getFullYear()} Allora. Local, on demand.</p>
           <p className="font-mono text-[11px] uppercase tracking-widest">
             Made for India
           </p>
