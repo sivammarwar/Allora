@@ -13,23 +13,6 @@ router.use(requireAuth, requireRole("PRODUCT_MANAGER", "ADMIN"));
 // ─── Categories ────────────────────────────────────────────────────────────
 router.get("/categories", async (_req, res, next) => {
   try {
-    // Ensure Product and Service categories exist
-    const existing = await prisma.category.findMany({
-      where: { name: { in: ["Product", "Service"] } },
-    });
-    const existingNames = existing.map((c) => c.name);
-
-    if (!existingNames.includes("Product")) {
-      await prisma.category.create({
-        data: { name: "Product", type: "PRODUCT", isActive: true },
-      });
-    }
-    if (!existingNames.includes("Service")) {
-      await prisma.category.create({
-        data: { name: "Service", type: "SERVICE", isActive: true },
-      });
-    }
-
     const rows = await prisma.category.findMany({
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { subcategories: true } } },
