@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Loader2, Receipt, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
+import { MapPin, Loader2, Receipt, ChevronDown, ChevronRight, Sparkles, CalendarClock } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,12 @@ export default function UserDashboardPage() {
             <Button variant="outline" size="sm">
               <Receipt size={14} />
               My orders
+            </Button>
+          </Link>
+          <Link href="/dashboard/bookings">
+            <Button variant="outline" size="sm">
+              <CalendarClock size={14} />
+              Bookings
             </Button>
           </Link>
           <Button variant="ghost" size="sm" onClick={requestLocation} loading={locating}>

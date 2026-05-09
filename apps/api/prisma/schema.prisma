@@ -116,6 +116,13 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum ServiceRequestStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
+
 enum NotificationType {
   VERIFICATION_STATUS
   ORDER_NEW
@@ -134,6 +141,7 @@ model User {
   name            String?
   email           String   @unique
   phone           String?
+  gender          String?  // MALE | FEMALE | OTHER
   role            Role     @default(USER)
   isVerified      Boolean  @default(false)
   isActive        Boolean  @default(true)
@@ -152,6 +160,7 @@ model User {
   verificationRequests VerificationRequest[] @relation("RequesterVerification")
   secretShopRequests   SecretShopRequest[]
   orders               Order[]
+  serviceRequests      ServiceRequest[]
   reviews              Review[]
   notifications        Notification[]
 
@@ -215,6 +224,8 @@ model AgentProfile {
   inventoryItems          AgentInventoryItem[]
   secretOrders            SecretOrder[]         @relation("AgentSecretOrders")
   priceControls           AgentSubcategoryPricing[]
+  slotConfig              AgentSlotConfig?
+  serviceRequests         ServiceRequest[]
 
   @@index([primaryAreaId])
 }
@@ -261,6 +272,8 @@ model HeroProfile {
   profileImageUrl     String?
   storePageContent    Json?            // Custom store page HTML and assets for services
   isActive            Boolean          @default(true)
+  isAvailable         Boolean          @default(true)
+  gender              String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -270,6 +283,8 @@ model HeroProfile {
   serviceBookings ServiceBooking[]
   paymentRecords  PaymentRecord[]
   reviews         Review[]
+  slots           HeroSlot[]
+  serviceRequests ServiceRequest[]
 
   @@index([isVerifiedByAgent, isActive])
   @@index([locationLat, locationLng])
@@ -389,6 +404,7 @@ model Subcategory {
   serviceBookings ServiceBooking[]
   reviews         Review[]
   orderItems      OrderItem[]
+  serviceRequests ServiceRequest[]
 
   @@index([categoryId, isActive])
   @@index([isPinned, viralPosition])
@@ -620,6 +636,67 @@ model SecretShopRequest {
 
   @@index([status, agentId])
   @@index([userId])
+}
+
+model AgentSlotConfig {
+  id            String       @id @default(cuid())
+  agentId       String       @unique
+  agent         AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  slotStartHour Int          @default(6)
+  slotEndHour   Int          @default(20)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model HeroSlot {
+  id           String      @id @default(cuid())
+  heroId       String
+  hero         HeroProfile @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  date         DateTime    @db.Date
+  hour         Int         // 6..19  (6 = 6:00 AM, 19 = 7:00 PM)
+  isBooked     Boolean     @default(false)
+  isBusyByHero Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  serviceRequest ServiceRequest?
+
+  @@unique([heroId, date, hour])
+  @@index([heroId, date])
+}
+
+model ServiceRequest {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subcategoryId   String
+  subcategory     Subcategory          @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  agentId         String
+  agent           AgentProfile         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  heroId          String?
+  hero            HeroProfile?         @relation(fields: [heroId], references: [id])
+  slotId          String?              @unique
+  slot            HeroSlot?            @relation(fields: [slotId], references: [id])
+  status          ServiceRequestStatus @default(PENDING)
+  charge          Decimal              @db.Decimal(10, 2)
+  discountPercent Decimal              @db.Decimal(5, 2)  @default(0)
+  transportCharge Decimal              @db.Decimal(10, 2) @default(0)
+  userName        String
+  userPhone       String
+  userGender      String?
+  userAddress     String
+  userLat         Float?
+  userLng         Float?
+  scheduledDate   DateTime             @db.Date
+  scheduledHour   Int
+  completedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([heroId, status])
+  @@index([agentId, scheduledDate])
+  @@index([subcategoryId, scheduledDate, scheduledHour])
 }
 
 model AgentSubcategoryPricing {

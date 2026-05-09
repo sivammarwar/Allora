@@ -84,6 +84,31 @@ export function initSocket(httpServer: HttpServer): IOServer {
     );
   });
 
+  // ─── /service namespace ───────────────────────────────────────────────────
+  const nService = io.of("/service");
+  nService.use(authMiddleware);
+  nService.on("connection", (socket) => {
+    const u = (socket.data as any).user;
+    socket.join(`user:${u.id}`);
+
+    // Hero joins their hero room to receive booking broadcasts
+    socket.on("hero:join", (heroId: string) => {
+      if (typeof heroId === "string" && heroId.length) {
+        socket.join(`hero:${heroId}`);
+      }
+    });
+
+    // Users/heroes watch slots for a subcategory (for real-time availability)
+    socket.on("slots:watch", (key: string) => {
+      if (typeof key === "string" && key.length) {
+        socket.join(`slots:${key}`);
+      }
+    });
+    socket.on("slots:unwatch", (key: string) => {
+      if (typeof key === "string") socket.leave(`slots:${key}`);
+    });
+  });
+
   return io;
 }
 
@@ -92,8 +117,14 @@ export function getIO(): IOServer {
   return io;
 }
 
-/** Emit a notification event to a specific user across both namespaces. */
+/** Emit a notification event to a specific user via /notifications namespace. */
 export function emitToUser(userId: string, event: string, data: unknown) {
   if (!io) return;
   io.of("/notifications").to(`user:${userId}`).emit(event, data);
+}
+
+/** Emit a service event to a specific user or hero via /service namespace. */
+export function emitService(room: string, event: string, data: unknown) {
+  if (!io) return;
+  io.of("/service").to(room).emit(event, data);
 }

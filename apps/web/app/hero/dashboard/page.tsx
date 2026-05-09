@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Clock, RefreshCw, Package, FileText } from "lucide-react";
+import { Loader2, ShieldCheck, Clock, RefreshCw, Package, FileText, Bell, CalendarClock, IndianRupee, ToggleLeft, ToggleRight } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,18 @@ export default function HeroDashboardPage() {
 // ─── Hero Verified Dashboard ─────────────────────────────────────────────────
 function HeroVerifiedDashboard({ profile }: { profile: any }) {
   const router = useRouter();
+  const qc = useQueryClient();
+
+  const { data: availData } = useQuery<{ isAvailable: boolean }>({ queryKey: ["hero", "me"], queryFn: () => api.get("/api/hero/me").then((d: any) => ({ isAvailable: d.profile?.isAvailable ?? true })) });
+  const isAvailable = availData?.isAvailable ?? profile?.isAvailable ?? true;
+
+  const toggleAvail = useMutation({
+    mutationFn: (v: boolean) => api.put("/api/hero/availability", { isAvailable: v }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["hero", "me"] }),
+  });
+
+  const { data: incoming = [] } = useQuery<any[]>({ queryKey: ["hero", "service-requests", "incoming"], queryFn: () => api.get("/api/hero/service-requests/incoming"), refetchInterval: 30000 });
+
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["public", "categories"],
     queryFn: () => api.get<Category[]>("/api/user/categories"),
@@ -148,6 +160,42 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
         </CardContent>
       </Card>
 
+      {/* Availability toggle */}
+      <Card className={`border ${isAvailable ? "border-brand-success/40 bg-brand-success/5" : "border-red-400/40 bg-red-50/30"}`}>
+        <CardContent className="py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-medium text-brand-text text-sm">
+              {isAvailable ? "You are available" : "You are unavailable"}
+            </p>
+            <p className="text-xs text-brand-textMuted mt-0.5">
+              {isAvailable ? "Users can send you booking requests." : "Booking requests are paused for you."}
+            </p>
+          </div>
+          <button
+            onClick={() => toggleAvail.mutate(!isAvailable)}
+            disabled={toggleAvail.isPending}
+            className="flex-shrink-0"
+          >
+            {isAvailable ? (
+              <ToggleRight size={36} className="text-brand-success" />
+            ) : (
+              <ToggleLeft size={36} className="text-red-400" />
+            )}
+          </button>
+        </CardContent>
+      </Card>
+
+      {incoming.length > 0 && (
+        <Card className="border-brand-primary/30 bg-brand-primary/5 cursor-pointer hover:border-brand-primary/60 transition-colors" onClick={() => router.push("/hero/requests")}>
+          <CardContent className="py-4 flex items-center gap-3">
+            <Bell size={20} className="text-brand-primary flex-shrink-0" />
+            <p className="text-sm font-medium text-brand-text">
+              {incoming.length} new booking request{incoming.length > 1 ? "s" : ""} waiting for you
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Verified Categories */}
       <Card>
         <CardContent className="py-6 space-y-4">
@@ -168,7 +216,7 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Products card hidden */}
 
         {verifiedServiceCategories.length > 0 && (
@@ -189,6 +237,30 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
             </CardContent>
           </Card>
         )}
+
+        <Card className="cursor-pointer hover:border-brand-primary/50 transition-colors" onClick={() => router.push("/hero/slots")}>
+          <CardContent className="py-6 space-y-3">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-primary/10 text-brand-primary">
+              <CalendarClock size={24} />
+            </div>
+            <div>
+              <h2 className="font-heading text-lg text-brand-text">My Slots</h2>
+              <p className="text-sm text-brand-textMuted">Manage your weekly time slots</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:border-brand-primary/50 transition-colors" onClick={() => router.push("/hero/earnings")}>
+          <CardContent className="py-6 space-y-3">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-primary/10 text-brand-primary">
+              <IndianRupee size={24} />
+            </div>
+            <div>
+              <h2 className="font-heading text-lg text-brand-text">Earnings</h2>
+              <p className="text-sm text-brand-textMuted">View service history & earnings</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

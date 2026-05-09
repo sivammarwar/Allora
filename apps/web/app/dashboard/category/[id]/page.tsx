@@ -19,11 +19,18 @@ interface Category {
   type: "PRODUCT" | "SERVICE";
 }
 
+interface AgentPricing {
+  baseServiceCharge: string;
+  discountPercent: string;
+  transportChargePerKm: string;
+}
+
 interface Subcategory {
   id: string;
   name: string;
   imageUrl: string | null;
   category: { id: string; name: string; type: "PRODUCT" | "SERVICE" };
+  agentPricing?: AgentPricing | null;
 }
 
 interface Product {
@@ -98,11 +105,18 @@ export default function UserCategoryPage({
     queryFn: () => api.get<Category>(`/api/user/categories/${id}`),
   });
 
+  const { data: agentData } = useQuery<{ agentId: string | null }>({
+    queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
+    queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
+    enabled: !!loc,
+  });
+  const agentId = agentData?.agentId ?? null;
+
   const { data: subs = [], isLoading: subsLoading } = useQuery<Subcategory[]>({
-    queryKey: ["user", "subcategories", id, loc?.lat, loc?.lng],
+    queryKey: ["user", "subcategories", id, loc?.lat, loc?.lng, agentId],
     queryFn: () =>
       api.get(
-        `/api/user/categories/${id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}`
+        `/api/user/categories/${id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}${agentId ? `&agentId=${agentId}` : ""}`
       ),
     enabled: !!loc && category?.type === "SERVICE",
   });
@@ -243,25 +257,39 @@ export default function UserCategoryPage({
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {subs.map((s) => (
-                <Link key={s.id} href={`/dashboard/subcategory/${s.id}`}>
-                  <Card className="hover:shadow-soft-lg transition-shadow overflow-hidden">
-                    {s.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={s.imageUrl}
-                        alt=""
-                        className="w-full aspect-[4/3] object-cover"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[4/3] bg-brand-bg" />
-                    )}
-                    <CardContent className="py-3">
-                      <p className="font-medium text-brand-text truncate">{s.name}</p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+              {subs.map((s) => {
+                const p = s.agentPricing;
+                const base = p ? Number(p.baseServiceCharge) : null;
+                const disc = p ? Number(p.discountPercent) : 0;
+                const discounted = base !== null ? base * (1 - disc / 100) : null;
+                return (
+                  <Link key={s.id} href={`/dashboard/subcategory/${s.id}${agentId ? `?agentId=${agentId}` : ""}`}>
+                    <Card className="hover:shadow-soft-lg transition-shadow overflow-hidden">
+                      {s.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.imageUrl} alt="" className="w-full aspect-[4/3] object-cover" />
+                      ) : (
+                        <div className="w-full aspect-[4/3] bg-brand-bg flex items-center justify-center">
+                          <span className="text-3xl text-brand-primary opacity-40">✦</span>
+                        </div>
+                      )}
+                      <CardContent className="py-3 space-y-1">
+                        <p className="font-medium text-brand-text truncate">{s.name}</p>
+                        {discounted !== null && (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              {disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">₹{base}</span>}
+                              <span className="text-sm font-semibold text-brand-primary">₹{discounted.toFixed(0)}</span>
+                              {disc > 0 && <span className="text-[9px] bg-green-100 text-green-700 px-1 py-0.5 rounded">{disc}% off</span>}
+                            </div>
+                            <p className="text-[10px] text-brand-textMuted">+₹{Number(p!.transportChargePerKm)}/km transport</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </>

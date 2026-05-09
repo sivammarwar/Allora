@@ -1045,4 +1045,32 @@ router.get("/stats", async (req, res, next) => {
   }
 });
 
+// ─── Slot Config ─────────────────────────────────────────────────────────────
+router.get("/slot-config", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const cfg = await prisma.agentSlotConfig.findUnique({ where: { agentId: profile.id } });
+    res.json(cfg ?? { slotStartHour: 6, slotEndHour: 20 });
+  } catch (e) { next(e); }
+});
+
+const slotConfigSchema = z.object({
+  slotStartHour: z.number().int().min(0).max(23),
+  slotEndHour: z.number().int().min(1).max(24),
+});
+router.put("/slot-config", validateBody(slotConfigSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { slotStartHour, slotEndHour } = req.body as z.infer<typeof slotConfigSchema>;
+    if (slotStartHour >= slotEndHour)
+      return res.status(400).json({ error: "Start hour must be before end hour" });
+    const cfg = await prisma.agentSlotConfig.upsert({
+      where: { agentId: profile.id },
+      update: { slotStartHour, slotEndHour },
+      create: { agentId: profile.id, slotStartHour, slotEndHour },
+    });
+    res.json(cfg);
+  } catch (e) { next(e); }
+});
+
 export default router;

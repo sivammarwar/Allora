@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
-import { emitToUser } from "../socket";
+import { emitToUser, emitService } from "../socket";
 import { v2 as cloudinary } from "cloudinary";
 
 const router = Router();
@@ -670,6 +670,232 @@ router.post("/store-page", upload.array("assets", 10), async (req, res, next) =>
   } catch (e) {
     next(e);
   }
+});
+
+// ─── Availability toggle ─────────────────────────────────────────────────────
+router.put("/availability", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    const { isAvailable } = req.body as { isAvailable: boolean };
+    const updated = await prisma.heroProfile.update({
+      where: { id: profile.id },
+      data: { isAvailable: Boolean(isAvailable) },
+      select: { isAvailable: true },
+    });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// ─── Slots ────────────────────────────────────────────────────────────────────
+// GET /api/hero/slots?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get("/slots", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+
+    const from = req.query.from ? new Date(req.query.from as string) : new Date();
+    const to = req.query.to
+      ? new Date(req.query.to as string)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // Get agent slot config for time range
+    let slotStartHour = 6, slotEndHour = 20;
+    if (profile.verifiedByAgentId) {
+      const cfg = await prisma.agentSlotConfig.findUnique({ where: { agentId: profile.verifiedByAgentId } });
+      if (cfg) { slotStartHour = cfg.slotStartHour; slotEndHour = cfg.slotEndHour; }
+    }
+
+    // Get existing slot records
+    const existing = await prisma.heroSlot.findMany({
+      where: { heroId: profile.id, date: { gte: from, lte: to } },
+      include: { serviceRequest: { select: { id: true, status: true, userName: true, userPhone: true, scheduledHour: true } } },
+    });
+
+    res.json({ slots: existing, slotStartHour, slotEndHour });
+  } catch (e) { next(e); }
+});
+
+// POST /api/hero/slots/busy  — mark/unmark a slot as manually busy
+const slotBusySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hour: z.number().int().min(0).max(23),
+  isBusy: z.boolean(),
+});
+router.post("/slots/busy", validateBody(slotBusySchema), async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    const { date, hour, isBusy } = req.body as z.infer<typeof slotBusySchema>;
+    const dateObj = new Date(date);
+
+    const slot = await prisma.heroSlot.upsert({
+      where: { heroId_date_hour: { heroId: profile.id, date: dateObj, hour } },
+      update: { isBusyByHero: isBusy },
+      create: { heroId: profile.id, date: dateObj, hour, isBusyByHero: isBusy },
+    });
+
+    // Notify users watching this subcategory's slots in real time
+    const subcategoryIds = profile.subcategoryIds;
+    for (const subId of subcategoryIds) {
+      const key = `${subId}:${date}`;
+      emitService(`slots:${key}`, "slot:updated", { date, hour, isBooked: slot.isBooked, isBusy: slot.isBusyByHero });
+    }
+    res.json(slot);
+  } catch (e) { next(e); }
+});
+
+// ─── Service Requests (Hero side) ────────────────────────────────────────────
+// GET /api/hero/service-requests?status=PENDING|ACCEPTED|COMPLETED|CANCELLED
+router.get("/service-requests", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    const status = (req.query.status as string | undefined)?.toUpperCase();
+    const where: any = { heroId: profile.id };
+    if (status) where.status = status;
+    const requests = await prisma.serviceRequest.findMany({
+      where,
+      include: {
+        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        user: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(requests);
+  } catch (e) { next(e); }
+});
+
+// GET /api/hero/service-requests/incoming — requests broadcast to this hero (PENDING, not yet accepted)
+router.get("/service-requests/incoming", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile || !profile.isVerifiedByAgent) return res.json([]);
+    const agentId = profile.verifiedByAgentId!;
+
+    const incoming = await prisma.serviceRequest.findMany({
+      where: {
+        agentId,
+        status: "PENDING",
+        subcategoryId: { in: profile.subcategoryIds },
+        heroId: null,
+      },
+      include: {
+        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        user: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(incoming);
+  } catch (e) { next(e); }
+});
+
+// POST /api/hero/service-requests/:id/accept
+router.post("/service-requests/:id/accept", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile || !profile.isVerifiedByAgent) return res.status(403).json({ error: "Not verified" });
+    if (!profile.isAvailable) return res.status(400).json({ error: "You are currently unavailable" });
+
+    const request = await prisma.serviceRequest.findUnique({ where: { id: req.params.id } });
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (request.status !== "PENDING") return res.status(409).json({ error: "Request already accepted or closed" });
+    if (request.agentId !== profile.verifiedByAgentId)
+      return res.status(403).json({ error: "Not in your area" });
+    if (!profile.subcategoryIds.includes(request.subcategoryId))
+      return res.status(403).json({ error: "Not your subcategory" });
+
+    // Atomically: lock slot + accept request in a transaction
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.heroSlot.findUnique({
+        where: { heroId_date_hour: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour } },
+      });
+      if (existing && (existing.isBooked || existing.isBusyByHero)) {
+        throw new Error("SLOT_TAKEN");
+      }
+      const slot = await tx.heroSlot.upsert({
+        where: { heroId_date_hour: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour } },
+        update: { isBooked: true },
+        create: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour, isBooked: true },
+      });
+      return tx.serviceRequest.update({
+        where: { id: request.id },
+        data: { heroId: profile.id, slotId: slot.id, status: "ACCEPTED" },
+        include: {
+          hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, user: { select: { name: true } } } },
+          subcategory: { select: { id: true, name: true } },
+        },
+      });
+    });
+
+    // Notify user
+    emitService(`user:${request.userId}`, "service_request:accepted", updated);
+
+    // Get all other eligible heroes and notify them the booking is taken
+    const otherHeroes = await prisma.heroProfile.findMany({
+      where: {
+        verifiedByAgentId: profile.verifiedByAgentId!,
+        subcategoryIds: { has: request.subcategoryId },
+        isVerifiedByAgent: true,
+        isAvailable: true,
+        id: { not: profile.id },
+      },
+      select: { userId: true },
+    });
+    for (const h of otherHeroes) {
+      emitService(`user:${h.userId}`, "service_request:taken", { requestId: request.id });
+    }
+
+    // Notify slot watchers
+    const dateStr = request.scheduledDate.toISOString().split("T")[0];
+    emitService(`slots:${request.subcategoryId}:${dateStr}`, "slot:updated", {
+      date: dateStr, hour: request.scheduledHour, isBooked: true, isBusy: false,
+    });
+
+    res.json(updated);
+  } catch (e: any) {
+    if (e?.message === "SLOT_TAKEN") return res.status(409).json({ error: "Your slot for this time is already taken" });
+    next(e);
+  }
+});
+
+// POST /api/hero/service-requests/:id/complete
+router.post("/service-requests/:id/complete", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    const request = await prisma.serviceRequest.findFirst({
+      where: { id: req.params.id, heroId: profile.id },
+    });
+    if (!request) return res.status(404).json({ error: "Not found" });
+    if (request.status !== "ACCEPTED") return res.status(400).json({ error: "Not accepted" });
+    const updated = await prisma.serviceRequest.update({
+      where: { id: request.id },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+    emitService(`user:${request.userId}`, "service_request:completed", { requestId: request.id });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// ─── Earnings ─────────────────────────────────────────────────────────────────
+router.get("/earnings", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    const requests = await prisma.serviceRequest.findMany({
+      where: { heroId: profile.id, status: { in: ["ACCEPTED", "COMPLETED"] } },
+      include: { subcategory: { select: { name: true } } },
+      orderBy: { scheduledDate: "desc" },
+    });
+    const totalEarnings = requests.reduce((sum, r) => {
+      const base = Number(r.charge);
+      const disc = Number(r.discountPercent);
+      const discounted = base * (1 - disc / 100);
+      return sum + discounted + Number(r.transportCharge);
+    }, 0);
+    res.json({ totalEarnings, history: requests });
+  } catch (e) { next(e); }
 });
 
 export default router;

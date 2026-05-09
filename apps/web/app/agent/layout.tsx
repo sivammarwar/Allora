@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShieldCheck, Map, Store, ClipboardList, Warehouse, CreditCard, BadgeDollarSign } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Map, Store, ClipboardList, Warehouse, CreditCard, BadgeDollarSign, Clock } from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RoleGate } from "@/components/shared/RoleGate";
@@ -15,6 +15,7 @@ const links = [
   { href: "/agent/secret-shops", label: "Verify Secret Shops", icon: Store },
   { href: "/agent/secret-orders", label: "Verified Shops & Orders", icon: ClipboardList },
   { href: "/agent/price-control", label: "Price Control", icon: BadgeDollarSign },
+  { href: "/agent/slot-config", label: "Slot Hours", icon: Clock },
   { href: "/agent/payment-history", label: "Payment History", icon: CreditCard },
 ];
 
@@ -26,6 +27,7 @@ const mobileNav = [
   { href: "/agent/secret-shops",    label: "Shops",     icon: Store },
   { href: "/agent/secret-orders",   label: "Orders",    icon: ClipboardList },
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
+  { href: "/agent/slot-config",     label: "Slots",     icon: Clock },
   { href: "/agent/payment-history", label: "Payments",  icon: CreditCard },
 ];
 

@@ -11,7 +11,7 @@ const sockets = new Map<string, Socket>();
  * Get (or lazily create) a Socket.io connection to a namespace.
  * Auth is via the existing access_token HTTP-only cookie (sent automatically).
  */
-export function getSocket(namespace: "/notifications" | "/tracking"): Socket {
+export function getSocket(namespace: "/notifications" | "/tracking" | "/service"): Socket {
   let s = sockets.get(namespace);
   if (s && s.connected) return s;
   s = io(`${API_URL}${namespace}`, {

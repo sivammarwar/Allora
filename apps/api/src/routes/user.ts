@@ -6,7 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
 import { getRazorpay } from "../lib/razorpay";
-import { emitToUser } from "../socket";
+import { emitToUser, emitService } from "../socket";
 
 const router = Router();
 
@@ -250,6 +250,42 @@ const locationQuery = z.object({
   lng: z.coerce.number().gte(-180).lte(180),
 });
 
+// ─── Resolve agent for user's location ──────────────────────────────────────
+router.get("/my-agent", requireAuth, requireRole("USER"), async (req, res, next) => {
+  try {
+    const parsed = locationQuery.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: "lat & lng required" });
+    const { lat, lng } = parsed.data;
+
+    const areas = await prisma.area.findMany();
+    const userPoint = turf.point([lng, lat]);
+    const matchingAreaIds: string[] = [];
+    for (const area of areas) {
+      try {
+        const g = area.polygon as any;
+        let poly: any;
+        if (g.type === "FeatureCollection") poly = g.features?.[0];
+        else if (g.type === "Feature") poly = g;
+        else if (g.type === "Polygon" || g.type === "MultiPolygon") poly = { type: "Feature", geometry: g, properties: {} };
+        if (poly && turf.booleanPointInPolygon(userPoint, poly)) matchingAreaIds.push(area.id);
+      } catch { /* skip */ }
+    }
+    if (matchingAreaIds.length === 0) return res.json({ agentId: null });
+
+    const agentAreas = await prisma.agentArea.findMany({
+      where: { areaId: { in: matchingAreaIds } },
+      select: { agentId: true },
+    });
+    const agentId = agentAreas[0]?.agentId ?? null;
+
+    if (!agentId) return res.json({ agentId: null });
+
+    // Return slot config too
+    const slotCfg = await prisma.agentSlotConfig.findUnique({ where: { agentId } });
+    res.json({ agentId, slotStartHour: slotCfg?.slotStartHour ?? 6, slotEndHour: slotCfg?.slotEndHour ?? 20 });
+  } catch (e) { next(e); }
+});
+
 // ─── Categories visible to this user ───────────────────────────────────────
 router.get("/categories", async (req, res, next) => {
   try {
@@ -313,6 +349,18 @@ router.get("/categories/:id/subcategories", async (req, res, next) => {
       orderBy: { name: "asc" },
       include: { category: { select: { id: true, name: true, type: true } } },
     });
+
+    // If agentId provided, attach agent pricing for SERVICE subcategories
+    const agentId = req.query.agentId as string | undefined;
+    if (agentId) {
+      const pricings = await (prisma as any).agentSubcategoryPricing.findMany({
+        where: { agentId, subcategoryId: { in: subcategoryIds } },
+      });
+      const pricingMap = new Map<string, any>(pricings.map((p: any) => [p.subcategoryId, p]));
+      const subsWithPricing = subs.map((s: any) => ({ ...s, agentPricing: pricingMap.get(s.id) ?? null }));
+      return res.json(subsWithPricing);
+    }
+
     res.json(subs);
   } catch (e) {
     next(e);
@@ -421,12 +469,12 @@ router.get("/subcategories/:id", async (req, res, next) => {
     const agentIds = [...new Set(
       (matching as MatchingHero[]).map((h) => h.verifiedByAgentId).filter(Boolean) as string[]
     )];
-    const agentPriceControls = agentIds.length
-      ? await prisma.agentSubcategoryPricing.findMany({
+    const agentPriceControls: any[] = agentIds.length
+      ? await (prisma as any).agentSubcategoryPricing.findMany({
           where: { agentId: { in: agentIds }, subcategoryId: sub.id },
         })
       : [];
-    const agentPriceMap = new Map(agentPriceControls.map((a) => [a.agentId, a]));
+    const agentPriceMap = new Map<string, any>(agentPriceControls.map((a: any) => [a.agentId, a]));
 
     const heroOptions: HeroOption[] = [];
     for (const h of matching as MatchingHero[]) {
@@ -1003,6 +1051,200 @@ router.get("/browse", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+// ─── Available slots for a subcategory ──────────────────────────────────────
+// GET /api/user/subcategories/:id/slots?agentId=xxx&from=YYYY-MM-DD&days=7
+router.get("/subcategories/:id/slots", requireAuth, requireRole("USER"), async (req, res, next) => {
+  try {
+    const { id: subcategoryId } = req.params;
+    const agentId = req.query.agentId as string;
+    const daysAhead = Math.min(Number(req.query.days) || 7, 14);
+    const fromStr = (req.query.from as string) || new Date().toISOString().split("T")[0];
+    const fromDate = new Date(fromStr);
+
+    if (!agentId) return res.status(400).json({ error: "agentId required" });
+
+    // Get slot config for this agent
+    let slotStartHour = 6, slotEndHour = 20;
+    const cfg = await prisma.agentSlotConfig.findUnique({ where: { agentId } });
+    if (cfg) { slotStartHour = cfg.slotStartHour; slotEndHour = cfg.slotEndHour; }
+
+    // Get all heroes for this agent+subcategory
+    const heroes = await prisma.heroProfile.findMany({
+      where: {
+        verifiedByAgentId: agentId,
+        isVerifiedByAgent: true,
+        isAvailable: true,
+        subcategoryIds: { has: subcategoryId },
+      },
+      select: { id: true },
+    });
+    const heroIds = heroes.map((h) => h.id);
+    if (heroIds.length === 0) return res.json({ slots: [], slotStartHour, slotEndHour });
+
+    // Build date range
+    const dates: string[] = [];
+    for (let d = 0; d < daysAhead; d++) {
+      const dt = new Date(fromDate);
+      dt.setDate(dt.getDate() + d);
+      dates.push(dt.toISOString().split("T")[0]);
+    }
+
+    // Get blocked slots (booked or busy) for all heroes in range
+    const toDate = new Date(fromDate);
+    toDate.setDate(toDate.getDate() + daysAhead);
+    const blockedSlots = await prisma.heroSlot.findMany({
+      where: {
+        heroId: { in: heroIds },
+        date: { gte: fromDate, lt: toDate },
+        OR: [{ isBooked: true }, { isBusyByHero: true }],
+      },
+      select: { heroId: true, date: true, hour: true },
+    });
+
+    // For each date+hour, a slot is available if at least one hero is NOT blocked
+    const result: Record<string, { hour: number; available: boolean }[]> = {};
+    for (const dateStr of dates) {
+      result[dateStr] = [];
+      for (let h = slotStartHour; h < slotEndHour; h++) {
+        const blockedHeroIds = new Set(
+          blockedSlots
+            .filter((s) => s.date.toISOString().split("T")[0] === dateStr && s.hour === h)
+            .map((s) => s.heroId)
+        );
+        const available = heroIds.some((id) => !blockedHeroIds.has(id));
+        result[dateStr].push({ hour: h, available });
+      }
+    }
+    res.json({ slots: result, slotStartHour, slotEndHour });
+  } catch (e) { next(e); }
+});
+
+// ─── Service Requests (User side) ────────────────────────────────────────────
+const createServiceRequestSchema = z.object({
+  subcategoryId: z.string().min(1),
+  agentId: z.string().min(1),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  scheduledHour: z.number().int().min(0).max(23),
+  userName: z.string().min(1),
+  userPhone: z.string().min(7),
+  userGender: z.string().optional(),
+  userAddress: z.string().min(3),
+  userLat: z.number().optional(),
+  userLng: z.number().optional(),
+});
+
+router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(createServiceRequestSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof createServiceRequestSchema>;
+
+    // Verify subcategory and agent
+    const subcategory = await prisma.subcategory.findUnique({
+      where: { id: body.subcategoryId },
+      include: { category: true },
+    });
+    if (!subcategory || !subcategory.isActive)
+      return res.status(404).json({ error: "Subcategory not found" });
+    if (subcategory.category.type !== "SERVICE")
+      return res.status(400).json({ error: "Only service subcategories can be booked" });
+
+    // Get agent pricing
+    const pricing = await prisma.agentSubcategoryPricing.findUnique({
+      where: { agentId_subcategoryId: { agentId: body.agentId, subcategoryId: body.subcategoryId } },
+    });
+    if (!pricing)
+      return res.status(400).json({ error: "No pricing set by agent for this subcategory" });
+
+    const request = await prisma.serviceRequest.create({
+      data: {
+        userId: req.user!.id,
+        subcategoryId: body.subcategoryId,
+        agentId: body.agentId,
+        scheduledDate: new Date(body.scheduledDate),
+        scheduledHour: body.scheduledHour,
+        charge: pricing.baseServiceCharge,
+        discountPercent: pricing.discountPercent,
+        transportCharge: pricing.transportChargePerKm,
+        userName: body.userName,
+        userPhone: body.userPhone,
+        userGender: body.userGender,
+        userAddress: body.userAddress,
+        userLat: body.userLat,
+        userLng: body.userLng,
+      },
+      include: {
+        subcategory: { select: { name: true, category: { select: { name: true } } } },
+      },
+    });
+
+    // Broadcast to all eligible heroes
+    const heroes = await prisma.heroProfile.findMany({
+      where: {
+        verifiedByAgentId: body.agentId,
+        isVerifiedByAgent: true,
+        isAvailable: true,
+        subcategoryIds: { has: body.subcategoryId },
+      },
+      select: { userId: true },
+    });
+    for (const h of heroes) {
+      emitService(`user:${h.userId}`, "service_request:new", request);
+    }
+
+    res.status(201).json(request);
+  } catch (e) { next(e); }
+});
+
+// GET /api/user/service-requests — booking history
+router.get("/service-requests", requireAuth, requireRole("USER"), async (req, res, next) => {
+  try {
+    const requests = await prisma.serviceRequest.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        hero: {
+          select: {
+            id: true, serviceName: true, shopName: true, phone: true, gender: true,
+            user: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(requests);
+  } catch (e) { next(e); }
+});
+
+// DELETE /api/user/service-requests/:id — cancel
+router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (req, res, next) => {
+  try {
+    const request = await prisma.serviceRequest.findFirst({
+      where: { id: req.params.id, userId: req.user!.id },
+    });
+    if (!request) return res.status(404).json({ error: "Not found" });
+    if (!["PENDING", "ACCEPTED"].includes(request.status))
+      return res.status(400).json({ error: "Cannot cancel a completed request" });
+
+    await prisma.serviceRequest.update({
+      where: { id: request.id },
+      data: { status: "CANCELLED" },
+    });
+
+    // Free the slot if it was accepted
+    if (request.slotId) {
+      await prisma.heroSlot.update({
+        where: { id: request.slotId },
+        data: { isBooked: false },
+      });
+    }
+
+    // Notify hero if accepted
+    if (request.heroId) {
+      emitService(`user:${request.heroId}`, "service_request:cancelled", { requestId: request.id });
+    }
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 export default router;
