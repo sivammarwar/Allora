@@ -1,8 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,14 +14,12 @@ function fmtHour(h: number) {
   return `${h - 12} PM`;
 }
 
-function getWeekDates(offset = 0) {
-  const now = new Date();
-  now.setDate(now.getDate() + offset * 7);
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+function getNext7Days() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
     return d;
   });
 }
@@ -39,8 +36,7 @@ interface SlotRecord {
 
 export default function HeroSlotsPage() {
   const qc = useQueryClient();
-  const [weekOffset, setWeekOffset] = useState(0);
-  const days = getWeekDates(weekOffset);
+  const days = getNext7Days();
   const from = toDateStr(days[0]);
   const to = toDateStr(days[6]);
 
@@ -72,18 +68,10 @@ export default function HeroSlotsPage() {
           <h1 className="font-heading text-3xl text-brand-text">My Slots</h1>
           <p className="text-brand-textMuted text-sm mt-1">Manage your weekly availability. Click a slot to mark it busy or free.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setWeekOffset((w) => w - 1)} disabled={weekOffset <= 0}>
-            <ChevronLeft size={16} />
-          </Button>
-          <span className="text-sm text-brand-text font-medium whitespace-nowrap">
-            {days[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
-            {days[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-          </span>
-          <Button size="sm" variant="ghost" onClick={() => setWeekOffset((w) => w + 1)}>
-            <ChevronRight size={16} />
-          </Button>
-        </div>
+        <span className="text-sm text-brand-textMuted">
+          {days[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
+          {days[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+        </span>
       </div>
 
       {isLoading ? (
