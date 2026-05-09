@@ -215,40 +215,7 @@ export default function UserDashboardPage() {
             )}
           </section>
 
-          {/* ─── Section 3: PRODUCTS ────────────────────────────────────── */}
-          <section>
-            <h2 className="font-heading text-xl text-brand-text mb-4">Products</h2>
-            {browseData?.products && browseData.products.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {browseData.products.map((cat) => (
-                  <Link key={cat.id} href={`/dashboard/category/${cat.id}`}>
-                    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="relative h-40 bg-brand-surface">
-                        {cat.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <CategoryIcon name={cat.imageUrl} size={48} className="text-brand-primary" />
-                          </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                          <h3 className="text-white font-semibold text-lg">{cat.name}</h3>
-                          <p className="text-white/80 text-sm">Browse products</p>
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-6 text-center text-brand-textMuted text-sm">
-                  No products available in your area yet.
-                </CardContent>
-              </Card>
-            )}
-          </section>
+          {/* Products section hidden */}
         </div>
       )}
     </div>

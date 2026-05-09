@@ -190,16 +190,7 @@ export default function UserSubcategoryPage({
                         {formatINR(Number(h.pricing.serviceCharge))}
                       </p>
                     </div>
-                    {Number(h.pricing.deliveryCharge5km) > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest font-mono text-brand-primary">
-                          Transport (~5km)
-                        </p>
-                        <p className="font-mono text-base text-brand-text">
-                          {formatINR(Number(h.pricing.deliveryCharge5km))}
-                        </p>
-                      </div>
-                    )}
+                    {/* Delivery charge hidden */}
                     <Button
                       onClick={() => {
                         add({
