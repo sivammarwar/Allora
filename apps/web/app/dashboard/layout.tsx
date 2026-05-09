@@ -1,19 +1,29 @@
 "use client";
 
-import { Navbar } from "@/components/shared/Navbar";
-import { RoleGate } from "@/components/shared/RoleGate";
+import { Home, ShoppingBag, CalendarClock, ShoppingCart, User } from "lucide-react";
+import { DashboardShell } from "@/components/shared/DashboardShell";
 import { CartFloatingButton } from "@/components/shared/CartFloatingButton";
 
-export default function UserLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const links = [
+  { href: "/dashboard",          label: "Home",     icon: Home },
+  { href: "/orders",             label: "Orders",   icon: ShoppingBag },
+  { href: "/dashboard/bookings", label: "Bookings", icon: CalendarClock },
+  { href: "/cart",               label: "Cart",     icon: ShoppingCart },
+];
+
+export default function UserLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleGate role="USER">
-      <Navbar />
-      <main className="container py-6">{children}</main>
+    <>
+      <DashboardShell
+        role="USER"
+        title="Allora"
+        subtitle="Shop & book services near you"
+        Icon={Home}
+        links={links}
+      >
+        {children}
+      </DashboardShell>
       <CartFloatingButton />
-    </RoleGate>
+    </>
   );
 }

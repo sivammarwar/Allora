@@ -1,41 +1,26 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Map, Users, Settings, LayoutDashboard, Sparkles } from "lucide-react";
-import { Navbar } from "@/components/shared/Navbar";
-import { Sidebar } from "@/components/shared/Sidebar";
-import { RoleGate } from "@/components/shared/RoleGate";
+import { DashboardShell } from "@/components/shared/DashboardShell";
 
 const links = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/viral", label: "Viral Section", icon: Sparkles },
+  { href: "/admin/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/admin/areas", label: "Areas", icon: Map },
   { href: "/admin/agents", label: "Agents", icon: Users },
+  { href: "/admin/viral", label: "Viral", icon: Sparkles },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const pathname = usePathname() ?? "";
-  const isLogin = pathname.endsWith("/login");
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleGate role="ADMIN">
-      {isLogin ? (
-        children
-      ) : (
-        <>
-          <Navbar title="Admin" />
-          <div className="flex">
-            <Sidebar title="Administration" links={links} />
-            <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6">
-              {children}
-            </main>
-          </div>
-        </>
-      )}
-    </RoleGate>
+    <DashboardShell
+      role="ADMIN"
+      title="Admin Panel"
+      subtitle="System administration"
+      Icon={LayoutDashboard}
+      links={links}
+    >
+      {children}
+    </DashboardShell>
   );
 }
