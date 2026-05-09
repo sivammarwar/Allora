@@ -630,6 +630,7 @@ model AgentSubcategoryPricing {
   subcategory          Subcategory  @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
   baseServiceCharge    Decimal      @db.Decimal(10, 2)
   transportChargePerKm Decimal      @db.Decimal(10, 2) @default(0)
+  discountPercent      Decimal      @db.Decimal(5, 2)  @default(0)
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 

@@ -23,7 +23,12 @@ interface PriceControlEntry {
   subcategoryId: string;
   baseServiceCharge: string;
   transportChargePerKm: string;
+  discountPercent: string;
   subcategory: SubcategoryOption;
+}
+
+function discountedPrice(base: number, discountPct: number) {
+  return base * (1 - Math.min(100, Math.max(0, discountPct)) / 100);
 }
 
 function EditRow({
@@ -36,12 +41,16 @@ function EditRow({
   const qc = useQueryClient();
   const [base, setBase] = useState(Number(entry.baseServiceCharge));
   const [perKm, setPerKm] = useState(Number(entry.transportChargePerKm));
+  const [discount, setDiscount] = useState(Number(entry.discountPercent));
+
+  const finalPrice = discountedPrice(base, discount);
 
   const update = useMutation({
     mutationFn: () =>
       api.put(`/api/agent/price-control/${entry.id}`, {
         baseServiceCharge: base,
         transportChargePerKm: perKm,
+        discountPercent: discount,
       }),
     onSuccess: () => {
       toast.success("Pricing updated");
@@ -73,6 +82,24 @@ function EditRow({
           onChange={(e) => setPerKm(Math.max(0, Number(e.target.value) || 0))}
         />
       </div>
+      <div className="flex-1 min-w-[120px]">
+        <Input
+          label="Discount (%)"
+          type="number"
+          min={0}
+          max={100}
+          step={0.01}
+          value={discount}
+          onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+        />
+      </div>
+      {discount > 0 && (
+        <div className="w-full text-sm text-brand-textMuted">
+          Final price: <span className="line-through">{formatINR(base)}</span>{" "}
+          <span className="font-semibold text-brand-success">{formatINR(finalPrice)}</span>
+          {" "}({discount}% off)
+        </div>
+      )}
       <div className="flex gap-2">
         <Button size="sm" onClick={() => update.mutate()} loading={update.isPending}>
           <Check size={14} /> Save
@@ -93,6 +120,7 @@ export default function PriceControlPage() {
   const [selectedSub, setSelectedSub] = useState<SubcategoryOption | null>(null);
   const [base, setBase] = useState(0);
   const [perKm, setPerKm] = useState(0);
+  const [discount, setDiscount] = useState(0);
 
   const { data: entries = [], isLoading } = useQuery<PriceControlEntry[]>({
     queryKey: ["agent", "price-control"],
@@ -128,12 +156,15 @@ export default function PriceControlPage() {
         s.category.name.toLowerCase().includes(subSearch.toLowerCase()))
   );
 
+  const addFinalPrice = discountedPrice(base, discount);
+
   const add = useMutation({
     mutationFn: () =>
       api.post("/api/agent/price-control", {
         subcategoryId: selectedSub!.id,
         baseServiceCharge: base,
         transportChargePerKm: perKm,
+        discountPercent: discount,
       }),
     onSuccess: () => {
       toast.success(`Price control added for ${selectedSub!.name}`);
@@ -142,6 +173,7 @@ export default function PriceControlPage() {
       setSelectedSub(null);
       setBase(0);
       setPerKm(0);
+      setDiscount(0);
       setSubSearch("");
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
@@ -217,7 +249,7 @@ export default function PriceControlPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Base service charge (₹)"
                 type="number"
@@ -234,7 +266,24 @@ export default function PriceControlPage() {
                 value={perKm}
                 onChange={(e) => setPerKm(Math.max(0, Number(e.target.value) || 0))}
               />
+              <Input
+                label="Discount (%)"
+                type="number"
+                min={0}
+                max={100}
+                step={0.01}
+                value={discount}
+                onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              />
             </div>
+            {discount > 0 && base > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-sm bg-brand-success/10 border border-brand-success/20 text-sm">
+                <span className="text-brand-textMuted">Final price:</span>
+                <span className="line-through text-brand-textMuted">{formatINR(base)}</span>
+                <span className="font-semibold text-brand-success">{formatINR(addFinalPrice)}</span>
+                <span className="text-xs text-brand-success">({discount}% off)</span>
+              </div>
+            )}
 
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => { setAddOpen(false); setSelectedSub(null); setSubSearch(""); }}>
@@ -301,7 +350,15 @@ export default function PriceControlPage() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
                       <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Base service charge</p>
-                      <p className="font-semibold text-brand-text">{formatINR(Number(entry.baseServiceCharge))}</p>
+                      {Number(entry.discountPercent) > 0 ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="line-through text-brand-textMuted text-xs">{formatINR(Number(entry.baseServiceCharge))}</span>
+                          <span className="font-semibold text-brand-success">{formatINR(discountedPrice(Number(entry.baseServiceCharge), Number(entry.discountPercent)))}</span>
+                          <span className="text-[10px] text-brand-success">({Number(entry.discountPercent)}% off)</span>
+                        </div>
+                      ) : (
+                        <p className="font-semibold text-brand-text">{formatINR(Number(entry.baseServiceCharge))}</p>
+                      )}
                     </div>
                     <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
                       <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Transport per km</p>
