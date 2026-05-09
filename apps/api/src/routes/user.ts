@@ -230,34 +230,51 @@ router.get("/agents-nearby", requireAuth, async (req, res, next) => {
 router.use(requireAuth, requireRole("USER"));
 
 /**
- * Helper: returns the verified, active heroes whose service polygon contains
- * the given point (or whose Haversine distance is within `radiusKm` if no
- * polygon is set).
+ * Returns the verified, active heroes visible to the user at (lat, lng).
+ * Visibility is determined by area: find which Area polygons contain the user,
+ * then return heroes verified by agents assigned to those areas.
  */
-async function heroesCoveringPoint(lat: number, lng: number, radiusKm: number) {
-  const all = await prisma.heroProfile.findMany({
-    where: { isVerifiedByAgent: true, isActive: true },
+async function heroesInUserArea(lat: number, lng: number) {
+  const areas = await prisma.area.findMany();
+  const userPoint = turf.point([lng, lat]);
+
+  const matchingAreaIds: string[] = [];
+  for (const area of areas) {
+    try {
+      const geojson = area.polygon as any;
+      let poly: any;
+      if (geojson.type === "FeatureCollection") {
+        poly = geojson.features?.[0];
+      } else if (geojson.type === "Feature") {
+        poly = geojson;
+      } else if (geojson.type === "Polygon" || geojson.type === "MultiPolygon") {
+        poly = { type: "Feature", geometry: geojson, properties: {} };
+      }
+      if (poly && turf.booleanPointInPolygon(userPoint, poly)) {
+        matchingAreaIds.push(area.id);
+      }
+    } catch { /* skip invalid polygon */ }
+  }
+
+  if (matchingAreaIds.length === 0) return [];
+
+  const agentAreas = await prisma.agentArea.findMany({
+    where: { areaId: { in: matchingAreaIds } },
+    select: { agentId: true },
+  });
+  const agentIds = [...new Set(agentAreas.map((a) => a.agentId))];
+  if (agentIds.length === 0) return [];
+
+  return prisma.heroProfile.findMany({
+    where: {
+      isVerifiedByAgent: true,
+      isActive: true,
+      verifiedByAgentId: { in: agentIds },
+    },
     include: {
       pricing: true,
       heroProducts: { where: { isAvailable: true } },
     },
-  });
-  const userPoint = turf.point([lng, lat]);
-  return all.filter((h) => {
-    if (h.serviceAreaPolygon) {
-      try {
-        const poly = turf.polygon(
-          (h.serviceAreaPolygon as any).coordinates as number[][][]
-        );
-        if (turf.booleanPointInPolygon(userPoint, poly)) return true;
-      } catch {
-        /* fall through */
-      }
-    }
-    // Fallback: Haversine within global radius
-    const heroPoint = turf.point([h.locationLng, h.locationLat]);
-    const dKm = turf.distance(userPoint, heroPoint, { units: "kilometers" });
-    return dKm <= radiusKm;
   });
 }
 
@@ -291,16 +308,7 @@ router.get("/categories", async (req, res, next) => {
     if (!parsed.success)
       return res.status(400).json({ error: "lat & lng required" });
 
-    const settings = await prisma.globalSetting.upsert({
-      where: { id: "global" },
-      update: {},
-      create: { id: "global" },
-    });
-    const heroes = await heroesCoveringPoint(
-      parsed.data.lat,
-      parsed.data.lng,
-      settings.userVisibilityRadiusKm
-    );
+    const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
     const categoryIds = Array.from(
       new Set(heroes.flatMap((h) => h.categoryIds))
     );
@@ -312,7 +320,6 @@ router.get("/categories", async (req, res, next) => {
     res.json({
       products: cats.filter((c) => c.type === "PRODUCT"),
       services: cats.filter((c) => c.type === "SERVICE"),
-      radiusKm: settings.userVisibilityRadiusKm,
     });
   } catch (e) {
     next(e);
@@ -346,16 +353,7 @@ router.get("/categories/:id/subcategories", async (req, res, next) => {
     if (!parsed.success)
       return res.status(400).json({ error: "lat & lng required" });
 
-    const settings = await prisma.globalSetting.upsert({
-      where: { id: "global" },
-      update: {},
-      create: { id: "global" },
-    });
-    const heroes = await heroesCoveringPoint(
-      parsed.data.lat,
-      parsed.data.lng,
-      settings.userVisibilityRadiusKm
-    );
+    const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
     const myHeroes = heroes.filter((h) => h.categoryIds.includes(req.params.id));
     const subcategoryIds = Array.from(
       new Set(myHeroes.flatMap((h) => h.subcategoryIds))
@@ -379,16 +377,7 @@ router.get("/categories/:id/products", async (req, res, next) => {
     if (!parsed.success)
       return res.status(400).json({ error: "lat & lng required" });
 
-    const settings = await prisma.globalSetting.upsert({
-      where: { id: "global" },
-      update: {},
-      create: { id: "global" },
-    });
-    const heroes = await heroesCoveringPoint(
-      parsed.data.lat,
-      parsed.data.lng,
-      settings.userVisibilityRadiusKm
-    );
+    const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
     const myHeroes = heroes.filter((h) => h.categoryIds.includes(req.params.id));
 
     const heroProducts = await prisma.heroProduct.findMany({
@@ -444,22 +433,13 @@ router.get("/subcategories/:id", async (req, res, next) => {
     if (!parsed.success)
       return res.status(400).json({ error: "lat & lng required" });
 
-    const settings = await prisma.globalSetting.upsert({
-      where: { id: "global" },
-      update: {},
-      create: { id: "global" },
-    });
     const sub = await prisma.subcategory.findUnique({
       where: { id: req.params.id },
       include: { category: true },
     });
     if (!sub) return res.status(404).json({ error: "Subcategory not found" });
 
-    const heroes = await heroesCoveringPoint(
-      parsed.data.lat,
-      parsed.data.lng,
-      settings.userVisibilityRadiusKm
-    );
+    const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
     const matching = heroes.filter(
       (h) =>
         h.categoryIds.includes(sub.categoryId) &&
@@ -967,18 +947,8 @@ router.get("/browse", async (req, res, next) => {
     if (!parsed.success)
       return res.status(400).json({ error: "lat & lng required" });
 
-    const settings = await prisma.globalSetting.upsert({
-      where: { id: "global" },
-      update: {},
-      create: { id: "global" },
-    });
-
-    // Get heroes covering user's location
-    const heroes = await heroesCoveringPoint(
-      parsed.data.lat,
-      parsed.data.lng,
-      settings.userVisibilityRadiusKm
-    );
+    // Get heroes in the user's area
+    const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
 
     // Get all active categories
     const categories = await prisma.category.findMany({
