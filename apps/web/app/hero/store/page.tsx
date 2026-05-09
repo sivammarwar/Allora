@@ -23,11 +23,18 @@ interface PricingRow {
   subcategory: { id: string; name: string; category: { name: string; type: "PRODUCT" | "SERVICE" } };
 }
 
+interface SubcategoryMeta {
+  id: string;
+  name: string;
+  category: { name: string; type: "PRODUCT" | "SERVICE" };
+}
+
 interface PricingResponse {
   heroId: string;
   subcategoryIds: string[];
   requiresDelivery: boolean;
   pricing: PricingRow[];
+  subcategories: SubcategoryMeta[];
 }
 
 interface HeroProduct {
@@ -82,6 +89,10 @@ export default function HeroStorePage() {
   }, [heroProfile]);
 
   const requiresDelivery = pricingData?.requiresDelivery ?? false;
+  const subMap = new Map((pricingData?.subcategories ?? []).map((s) => [s.id, s]));
+  const hasProductSubs = (pricingData?.subcategories ?? []).some(
+    (s) => s.category.type === "PRODUCT"
+  );
 
   async function savePage() {
     setPageSaving(true);
@@ -157,12 +168,13 @@ export default function HeroStorePage() {
               const existing = pricingData.pricing.find(
                 (p) => p.subcategoryId === subId
               );
+              const meta = subMap.get(subId);
               return (
                 <PricingEditor
                   key={subId}
                   subcategoryId={subId}
-                  subcategoryName={existing?.subcategory.name ?? subId}
-                  categoryType={existing?.subcategory.category.type ?? "PRODUCT"}
+                  subcategoryName={meta?.name ?? existing?.subcategory.name ?? subId}
+                  categoryType={meta?.category.type ?? existing?.subcategory.category.type ?? "SERVICE"}
                   requiresDelivery={requiresDelivery}
                   initial={existing}
                   onSaved={() =>
@@ -175,8 +187,8 @@ export default function HeroStorePage() {
         )}
       </section>
 
-      {/* My Products */}
-      <section className="space-y-3">
+      {/* My Products — only for heroes with PRODUCT-type subcategories */}
+      {hasProductSubs && <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-xl text-brand-text">My products</h2>
           <Button variant="outline" size="sm" onClick={() => router.push("/hero/products")}>
@@ -253,7 +265,7 @@ export default function HeroStorePage() {
             )}
           </CardContent>
         </Card>
-      </section>
+      </section>}
 
       {/* Store Page Builder Dialog */}
       <Dialog

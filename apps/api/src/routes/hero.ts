@@ -212,12 +212,23 @@ router.get("/pricing", async (req, res, next) => {
     });
     if (!profile?.isVerifiedByAgent)
       return res.status(403).json({ error: "Not yet verified" });
+
+    const subcategories = await prisma.subcategory.findMany({
+      where: { id: { in: profile.subcategoryIds } },
+      select: {
+        id: true,
+        name: true,
+        category: { select: { name: true, type: true } },
+      },
+    });
+
     res.json({
       heroId: profile.id,
       categoryIds: profile.categoryIds,
       subcategoryIds: profile.subcategoryIds,
       requiresDelivery: profile.requiresDelivery,
       pricing: profile.pricing,
+      subcategories,
     });
   } catch (e) {
     next(e);
