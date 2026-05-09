@@ -13,57 +13,6 @@ const router = Router();
 // Public categories endpoint (accessible to all authenticated users including heroes)
 router.get("/categories", requireAuth, async (_req, res, next) => {
   try {
-    // Ensure Product and Service categories exist with default subcategories
-    const existing = await prisma.category.findMany({
-      where: { name: { in: ["Product", "Service"] } },
-      include: { subcategories: true },
-    });
-    const existingNames = existing.map((c) => c.name);
-
-    let productCategory = existing.find((c) => c.name === "Product");
-    let serviceCategory = existing.find((c) => c.name === "Service");
-
-    if (!productCategory) {
-      productCategory = await prisma.category.create({
-        data: { name: "Product", type: "PRODUCT", isActive: true },
-        include: { subcategories: true },
-      });
-    }
-    if (!serviceCategory) {
-      serviceCategory = await prisma.category.create({
-        data: { name: "Service", type: "SERVICE", isActive: true },
-        include: { subcategories: true },
-      });
-    }
-
-    // Create default subcategories if none exist
-    const productSubCount = productCategory?.subcategories?.length ?? 0;
-    const serviceSubCount = serviceCategory?.subcategories?.length ?? 0;
-
-    if (productSubCount === 0) {
-      await prisma.subcategory.createMany({
-        data: [
-          { name: "Groceries", categoryId: productCategory!.id, isActive: true },
-          { name: "Electronics", categoryId: productCategory!.id, isActive: true },
-          { name: "Home Essentials", categoryId: productCategory!.id, isActive: true },
-          { name: "Personal Care", categoryId: productCategory!.id, isActive: true },
-        ],
-      });
-    }
-
-    if (serviceSubCount === 0) {
-      await prisma.subcategory.createMany({
-        data: [
-          { name: "Cleaning", categoryId: serviceCategory!.id, isActive: true },
-          { name: "Plumbing", categoryId: serviceCategory!.id, isActive: true },
-          { name: "Electrical", categoryId: serviceCategory!.id, isActive: true },
-          { name: "Salon & Spa", categoryId: serviceCategory!.id, isActive: true },
-          { name: "Repairs", categoryId: serviceCategory!.id, isActive: true },
-          { name: "Pest Control", categoryId: serviceCategory!.id, isActive: true },
-        ],
-      });
-    }
-
     const rows = await prisma.category.findMany({
       where: { isActive: true },
       orderBy: { createdAt: "desc" },
