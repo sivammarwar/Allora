@@ -152,18 +152,7 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
       <Card>
         <CardContent className="py-6 space-y-4">
           <h2 className="font-heading text-lg text-brand-text">Verified Categories</h2>
-          {verifiedProductCategories.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-brand-text mb-2">Product Categories</p>
-              <div className="flex flex-wrap gap-2">
-                {verifiedProductCategories.map((c) => (
-                  <span key={c.id} className="px-3 py-1.5 rounded-sm bg-brand-primary/10 text-brand-primary text-sm">
-                    {c.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Product Categories hidden */}
           {verifiedServiceCategories.length > 0 && (
             <div>
               <p className="text-sm font-medium text-brand-text mb-2">Service Categories</p>
@@ -180,24 +169,7 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {verifiedProductCategories.length > 0 && (
-          <Card
-            className="cursor-pointer hover:border-brand-primary/50 transition-colors"
-            onClick={() => router.push("/hero/products")}
-          >
-            <CardContent className="py-6 space-y-3">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-primary/10 text-brand-primary">
-                <Package size={24} />
-              </div>
-              <div>
-                <h2 className="font-heading text-lg text-brand-text">Products</h2>
-                <p className="text-sm text-brand-textMuted">
-                  Select products from catalog and set your prices
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Products card hidden */}
 
         {verifiedServiceCategories.length > 0 && (
           <Card
@@ -399,43 +371,7 @@ function HeroRegisterForm({ onSubmitted }: { onSubmitted: () => void }) {
               )}
             </div>
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-brand-text">
-              Product Categories ({form.categoryIds.filter(id => cats.find(c => c.id === id)?.type === 'PRODUCT').length} selected)
-            </label>
-            <div className="rounded-sm border border-brand-border bg-brand-bg p-2 max-h-48 overflow-auto space-y-1">
-              {cats.filter(c => c.type === 'PRODUCT').length === 0 ? (
-                <p className="text-sm text-brand-textMuted px-2 py-3 text-center">
-                  No product categories available.
-                </p>
-              ) : (
-                cats.filter(c => c.type === 'PRODUCT').map((c) => {
-                  const checked = form.categoryIds.includes(c.id);
-                  return (
-                    <label
-                      key={c.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-[rgba(192,98,106,0.06)] cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          setForm({
-                            ...form,
-                            categoryIds: checked
-                              ? form.categoryIds.filter((id) => id !== c.id)
-                              : [...form.categoryIds, c.id],
-                          })
-                        }
-                        className="accent-brand-primary"
-                      />
-                      <span className="text-sm text-brand-text">{c.name}</span>
-                    </label>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          {/* Product Categories hidden */}
           {form.categoryIds.filter(id => cats.find(c => c.id === id)?.type === 'SERVICE').length > 0 && (
             <div>
               <label className="mb-1.5 block text-sm font-medium text-brand-text">
