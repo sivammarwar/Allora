@@ -136,11 +136,17 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
     queryFn: () => api.get<Category[]>("/api/user/categories"),
   });
 
-  const verifiedProductCategories = categories.filter((c) =>
-    profile?.categoryIds?.includes(c.id) && c.type === "PRODUCT"
-  );
+  const { data: allSubs = [] } = useQuery<Subcategory[]>({
+    queryKey: ["public", "subcategories", "all"],
+    queryFn: () => api.get<Subcategory[]>("/api/user/subcategories"),
+  });
+
   const verifiedServiceCategories = categories.filter((c) =>
     profile?.categoryIds?.includes(c.id) && c.type === "SERVICE"
+  );
+
+  const verifiedSubcategories = allSubs.filter((s) =>
+    profile?.subcategoryIds?.includes(s.id)
   );
 
   return (
@@ -196,25 +202,44 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
         </Card>
       )}
 
-      {/* Verified Categories */}
-      <Card>
-        <CardContent className="py-6 space-y-4">
-          <h2 className="font-heading text-lg text-brand-text">Verified Categories</h2>
-          {/* Product Categories hidden */}
-          {verifiedServiceCategories.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-brand-text mb-2">Service Categories</p>
-              <div className="flex flex-wrap gap-2">
-                {verifiedServiceCategories.map((c) => (
-                  <span key={c.id} className="px-3 py-1.5 rounded-sm bg-brand-primary/10 text-brand-primary text-sm">
-                    {c.name}
-                  </span>
-                ))}
-              </div>
+      {/* Verified Categories + Subcategories */}
+      {verifiedServiceCategories.length > 0 && (
+        <Card>
+          <CardContent className="py-5 space-y-4">
+            <h2 className="font-heading text-base text-brand-text">Your Verified Services</h2>
+            <div className="space-y-3">
+              {verifiedServiceCategories.map((cat) => {
+                const subs = verifiedSubcategories.filter((s) => s.categoryId === cat.id);
+                return (
+                  <div key={cat.id}>
+                    {/* Category pill */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 rounded-full bg-brand-primary text-white text-xs font-semibold">
+                        {cat.name}
+                      </span>
+                    </div>
+                    {/* Subcategory chips */}
+                    {subs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-2">
+                        {subs.map((s) => (
+                          <span
+                            key={s.id}
+                            className="px-2.5 py-1 rounded-full border border-brand-primary/30 bg-brand-primary/5 text-brand-primary text-xs font-medium"
+                          >
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="pl-2 text-xs text-brand-textMuted">No subcategories assigned</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Products card hidden */}
