@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { MapPin, Loader2, Receipt, ChevronDown, ChevronRight, Sparkles, CalendarClock } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,6 +57,7 @@ interface BrowseResponse {
 // ─── Main Dashboard Component ───────────────────────────────────────────────
 
 export default function UserDashboardPage() {
+  const router = useRouter();
   const [loc, setLoc] = useState<UserLocation | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
@@ -89,6 +91,14 @@ export default function UserDashboardPage() {
     queryFn: () => api.get("/api/user/viral-subcategories"),
   });
 
+  // Resolve nearest agent for the user's location (needed for viral links)
+  const { data: agentData } = useQuery<{ agentId: string | null }>({
+    queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
+    queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
+    enabled: !!loc,
+  });
+  const agentId = agentData?.agentId ?? null;
+
   // Fetch browse data (services and products with nested subcategories)
   const { data: browseData, isLoading: browseLoading } = useQuery<BrowseResponse>({
     queryKey: ["user", "browse", loc?.lat, loc?.lng],
@@ -98,8 +108,8 @@ export default function UserDashboardPage() {
   });
 
   const handleViralClick = (item: ViralSubcategory) => {
-    // Navigate to subcategory detail page
-    window.location.href = `/dashboard/subcategory/${item.id}`;
+    const url = `/dashboard/subcategory/${item.id}${agentId ? `?agentId=${agentId}` : ``}`;
+    router.push(url);
   };
 
   if (!loc) {
