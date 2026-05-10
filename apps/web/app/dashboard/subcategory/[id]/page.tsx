@@ -176,7 +176,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
   const bookBulk = useMutation({
     mutationFn: () =>
-      api.post("/api/user/service-requests/bulk", {
+      api.post<any[]>("/api/user/service-requests/bulk", {
         subcategoryIds: Array.from(selectedSubIds),
         agentId: agentId!,
         scheduledDate: selectedDate,
