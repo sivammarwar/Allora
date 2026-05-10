@@ -73,11 +73,16 @@ function BottomNav({ links }: { links: NavLink[] }) {
   // Limit to 5 tabs — if more, show first 5
   const tabs = links.slice(0, 5);
 
+  // Most-specific match: longest matching href wins (prevents /dashboard matching /dashboard/bookings)
+  const activeHref = [...tabs]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((t) => pathname === t.href || pathname.startsWith(t.href + "/"))?.href;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-lg safe-area-pb">
       <div className="flex items-end justify-around px-2 py-1">
         {tabs.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
+          const active = tab.href === activeHref;
           const Icon = tab.icon;
           return (
             <Link
