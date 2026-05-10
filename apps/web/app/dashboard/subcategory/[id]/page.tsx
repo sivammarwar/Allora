@@ -6,7 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft, Phone,
-  User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin, Check, Tag
+  User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin, Check, Tag,
+  CheckSquare2
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -558,7 +559,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                       <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                         isSelected ? "border-brand-primary bg-brand-primary" : "border-gray-300"
                       }`}>
-                        {isSelected && <Check size={11} className="text-white" />}
+                        {isSelected && <CheckSquare2 size={11} className="text-white" />}
                       </div>
 
                       {/* Image */}
