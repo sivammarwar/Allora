@@ -1138,9 +1138,22 @@ router.delete("/verified-heroes/:id", async (req, res, next) => {
     const hero = await prisma.heroProfile.findUnique({ where: { id: req.params.id } });
     if (!hero || hero.verifiedByAgentId !== profile.id)
       return res.status(404).json({ error: "Hero not found" });
-    await prisma.heroProfile.update({
-      where: { id: req.params.id },
-      data: { isActive: false, isVerifiedByAgent: false },
+    await prisma.$transaction(async (tx) => {
+      // Revoke the hero profile
+      await tx.heroProfile.update({
+        where: { id: req.params.id },
+        data: { isActive: false, isVerifiedByAgent: false, verifiedByAgentId: null },
+      });
+      // Reset the user's role back to USER so they can't access hero routes
+      await tx.user.update({
+        where: { id: hero.userId },
+        data: { role: "USER", isVerified: false },
+      });
+      // Reset the verification request so hero/me returns "pending" not "verified"
+      await tx.verificationRequest.updateMany({
+        where: { requesterId: hero.userId, requestType: "HERO", status: "VERIFIED" },
+        data: { status: "PENDING", agentId: null },
+      });
     });
     res.json({ ok: true });
   } catch (e) { next(e); }

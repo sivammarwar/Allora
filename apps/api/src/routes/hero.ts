@@ -33,7 +33,7 @@ router.get("/me", async (req, res, next) => {
         },
       },
     });
-    if (profile?.isVerifiedByAgent) {
+    if (profile?.isVerifiedByAgent && profile?.isActive) {
       return res.json({ state: "verified", profile });
     }
 
@@ -47,9 +47,13 @@ router.get("/me", async (req, res, next) => {
       },
     });
     if (!request) return res.json({ state: "needs_request" });
+    // If profile was revoked (exists but not verified/active), treat as pending
+    // regardless of what the old verification request says
+    const profileRevoked = profile && (!profile.isVerifiedByAgent || !profile.isActive);
     return res.json({
-      state: request.status === "VERIFIED" ? "verified" : "pending",
+      state: !profileRevoked && request.status === "VERIFIED" ? "verified" : "pending",
       request,
+      ...(profileRevoked && { revoked: true }),
     });
   } catch (e) {
     next(e);
