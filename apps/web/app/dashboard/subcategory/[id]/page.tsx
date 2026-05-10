@@ -140,7 +140,6 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const base = pricing ? Number(pricing.baseServiceCharge) : null;
   const disc = pricing ? Number(pricing.discountPercent) : 0;
   const discounted = base !== null ? base * (1 - disc / 100) : null;
-  const transport = pricing ? Number(pricing.transportChargePerKm) : null;
 
   const fromDate = todayStr();
 
@@ -207,6 +206,11 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     enabled: !!sub && !!loc,
   });
   const otherSubs = suggestions.filter((s: any) => s.id !== id);
+  // Category-level config (transport + bulk discounts) — same for all subs in this category
+  const catConfig = suggestions.find((s: any) => s.categoryConfig)?.categoryConfig ?? null;
+  // Transport lives on category config; agentPricing includes it merged from API for back-compat
+  const transport = catConfig ? Number(catConfig.transportChargePerKm)
+    : pricing ? Number((pricing as any).transportChargePerKm) : null;
 
   if (!loc) return <Card><CardContent className="py-10 text-center text-sm">Set location first.</CardContent></Card>;
   if (subLoading || !sub) return <div className="flex justify-center py-16"><Loader2 className="animate-spin text-brand-primary" /></div>;
@@ -518,8 +522,19 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         ];
         const selected = allSelectable.filter((s) => selectedSubIds.has(s.id) && s.hasPricing);
         const totalOriginal = selected.reduce((sum, s) => sum + s.base, 0);
-        const totalFinal   = selected.reduce((sum, s) => sum + s.final, 0);
-        const savings      = totalOriginal - totalFinal;
+        const totalAfterIndividual = selected.reduce((sum, s) => sum + s.final, 0);
+
+        // Bulk discount from category config
+        const selCount = selected.length;
+        let bulkDiscPct = 0;
+        if (catConfig) {
+          if (selCount >= 4) bulkDiscPct = Number(catConfig.bulkDiscount4Plus);
+          else if (selCount === 3) bulkDiscPct = Number(catConfig.bulkDiscount3);
+          else if (selCount === 2) bulkDiscPct = Number(catConfig.bulkDiscount2);
+        }
+        const bulkSavings = totalAfterIndividual * (bulkDiscPct / 100);
+        const totalFinal  = totalAfterIndividual - bulkSavings;
+        const savings     = totalOriginal - totalFinal;
         return (
           <div
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
@@ -599,21 +614,39 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               {/* Price summary + CTA */}
               <div className="px-4 pt-3 pb-5 border-t border-gray-100 bg-gray-50 space-y-3">
                 {selected.length > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="space-y-0.5">
-                      {totalOriginal !== totalFinal && (
-                        <p className="text-brand-textMuted">
-                          Total MRP: <span className="line-through">₹{totalOriginal.toFixed(0)}</span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="space-y-0.5">
+                        {totalOriginal !== totalAfterIndividual && (
+                          <p className="text-brand-textMuted text-xs">
+                            Total MRP: <span className="line-through">₹{totalOriginal.toFixed(0)}</span>
+                          </p>
+                        )}
+                        {bulkDiscPct > 0 && (
+                          <p className="text-xs text-brand-textMuted">
+                            After individual discounts: ₹{totalAfterIndividual.toFixed(0)}
+                          </p>
+                        )}
+                        <p className="font-semibold text-brand-text">
+                          Total: <span className="text-brand-primary">₹{totalFinal.toFixed(0)}</span>
                         </p>
+                      </div>
+                      {savings > 0.5 && (
+                        <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-full">
+                          <Tag size={11} />
+                          <span className="text-xs font-semibold">You save ₹{savings.toFixed(0)}</span>
+                        </div>
                       )}
-                      <p className="font-semibold text-brand-text">
-                        Total: <span className="text-brand-primary">₹{totalFinal.toFixed(0)}</span>
-                      </p>
                     </div>
-                    {savings > 0.5 && (
-                      <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-full">
-                        <Tag size={11} />
-                        <span className="text-xs font-semibold">You save ₹{savings.toFixed(0)}</span>
+                    {bulkDiscPct > 0 && (
+                      <div className="flex items-center gap-1.5 bg-brand-primary/8 border border-brand-primary/20 px-3 py-1.5 rounded-lg">
+                        <Tag size={11} className="text-brand-primary" />
+                        <span className="text-xs text-brand-primary font-semibold">
+                          Extra {bulkDiscPct}% bulk discount for booking {selCount} services!
+                        </span>
+                        {bulkSavings > 0.5 && (
+                          <span className="text-xs text-brand-primary ml-auto">−₹{bulkSavings.toFixed(0)}</span>
+                        )}
                       </div>
                     )}
                   </div>

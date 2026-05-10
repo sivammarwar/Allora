@@ -242,6 +242,7 @@ model AgentProfile {
   inventoryItems          AgentInventoryItem[]
   secretOrders            SecretOrder[]         @relation("AgentSecretOrders")
   priceControls           AgentSubcategoryPricing[]
+  categoryConfigs         AgentCategoryConfig[]
   slotConfig              AgentSlotConfig?
   serviceRequests         ServiceRequest[]
 
@@ -397,6 +398,7 @@ model Category {
 
   products                 Product[]
   subcategories            Subcategory[]
+  agentCategoryConfigs     AgentCategoryConfig[]
 
   @@index([type, isActive])
 }
@@ -725,13 +727,30 @@ model AgentSubcategoryPricing {
   subcategoryId        String
   subcategory          Subcategory  @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
   baseServiceCharge    Decimal      @db.Decimal(10, 2)
-  transportChargePerKm Decimal      @db.Decimal(10, 2) @default(0)
   discountPercent      Decimal      @db.Decimal(5, 2)  @default(0)
   slotDurationHours    Int          @default(1)         // 1-4 hrs; how long each booking slot takes
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
   @@unique([agentId, subcategoryId])
+  @@index([agentId])
+}
+
+// Per-category config: transport rate and bulk-booking discounts controlled by agent
+model AgentCategoryConfig {
+  id                   String       @id @default(cuid())
+  agentId              String
+  agent                AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  categoryId           String
+  category             Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transportChargePerKm Decimal      @db.Decimal(10, 2) @default(0)
+  bulkDiscount2        Decimal      @db.Decimal(5, 2)  @default(0) // extra % for booking 2 services
+  bulkDiscount3        Decimal      @db.Decimal(5, 2)  @default(0) // extra % for booking 3 services
+  bulkDiscount4Plus    Decimal      @db.Decimal(5, 2)  @default(0) // extra % for booking 4+ services
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([agentId, categoryId])
   @@index([agentId])
 }
 

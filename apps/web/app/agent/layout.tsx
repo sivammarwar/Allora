@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, ShieldCheck, Map, Store, ClipboardList, Warehouse, CreditCard, BadgeDollarSign, Clock } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Map, Store, ClipboardList, Warehouse, CreditCard, BadgeDollarSign, Clock, Truck } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 
 const links = [
@@ -9,6 +9,7 @@ const links = [
   { href: "/agent/areas",           label: "Areas",     icon: Map },
   { href: "/agent/inventory",       label: "Inventory", icon: Warehouse },
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
+  { href: "/agent/category-config", label: "Transport",  icon: Truck },
 ];
 
 const allLinks = [
@@ -19,6 +20,7 @@ const allLinks = [
   { href: "/agent/secret-shops",    label: "Shops",     icon: Store },
   { href: "/agent/secret-orders",   label: "Orders",    icon: ClipboardList },
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
+  { href: "/agent/category-config", label: "Transport",  icon: Truck },
   { href: "/agent/slot-config",     label: "Slots",     icon: Clock },
   { href: "/agent/payment-history", label: "Payments",  icon: CreditCard },
 ];

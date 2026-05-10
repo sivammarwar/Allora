@@ -469,14 +469,27 @@ router.get("/categories/:id/subcategories", async (req, res, next) => {
       include: { category: { select: { id: true, name: true, type: true } } },
     });
 
-    // If agentId provided, attach agent pricing for SERVICE subcategories
+    // If agentId provided, attach agent pricing + category config for SERVICE subcategories
     const agentId = req.query.agentId as string | undefined;
     if (agentId) {
-      const pricings = await (prisma as any).agentSubcategoryPricing.findMany({
-        where: { agentId, subcategoryId: { in: subcategoryIds } },
-      });
+      const [pricings, catCfg] = await Promise.all([
+        (prisma as any).agentSubcategoryPricing.findMany({
+          where: { agentId, subcategoryId: { in: subcategoryIds } },
+        }),
+        (prisma as any).agentCategoryConfig.findUnique({
+          where: { agentId_categoryId: { agentId, categoryId: req.params.id } },
+        }),
+      ]);
       const pricingMap = new Map<string, any>(pricings.map((p: any) => [p.subcategoryId, p]));
-      const subsWithPricing = subs.map((s: any) => ({ ...s, agentPricing: pricingMap.get(s.id) ?? null }));
+      const subsWithPricing = subs.map((s: any) => {
+        const ap = pricingMap.get(s.id) ?? null;
+        // Merge transport from category config into agentPricing for backward-compat
+        const agentPricing = ap ? {
+          ...ap,
+          transportChargePerKm: catCfg ? String(catCfg.transportChargePerKm) : "0",
+        } : null;
+        return { ...s, agentPricing, categoryConfig: catCfg ?? null };
+      });
       return res.json(subsWithPricing);
     }
 
@@ -588,12 +601,20 @@ router.get("/subcategories/:id", async (req, res, next) => {
     const agentIds = [...new Set(
       (matching as MatchingHero[]).map((h) => h.verifiedByAgentId).filter(Boolean) as string[]
     )];
-    const agentPriceControls: any[] = agentIds.length
-      ? await (prisma as any).agentSubcategoryPricing.findMany({
-          where: { agentId: { in: agentIds }, subcategoryId: sub.id },
-        })
-      : [];
+    const [agentPriceControls, agentCatConfigs]: [any[], any[]] = await Promise.all([
+      agentIds.length
+        ? (prisma as any).agentSubcategoryPricing.findMany({
+            where: { agentId: { in: agentIds }, subcategoryId: sub.id },
+          })
+        : Promise.resolve([]),
+      agentIds.length
+        ? (prisma as any).agentCategoryConfig.findMany({
+            where: { agentId: { in: agentIds }, categoryId: sub.categoryId },
+          })
+        : Promise.resolve([]),
+    ]);
     const agentPriceMap = new Map<string, any>(agentPriceControls.map((a: any) => [a.agentId, a]));
+    const agentCatCfgMap = new Map<string, any>(agentCatConfigs.map((c: any) => [c.agentId, c]));
 
     const heroOptions: HeroOption[] = [];
     for (const h of matching as MatchingHero[]) {
@@ -604,11 +625,12 @@ router.get("/subcategories/:id", async (req, res, next) => {
       ).toFixed(2);
 
       const agentPrice = h.verifiedByAgentId ? agentPriceMap.get(h.verifiedByAgentId) : null;
+      const catCfg = h.verifiedByAgentId ? agentCatCfgMap.get(h.verifiedByAgentId) : null;
 
       let pricing: PricingRow | null;
       if (agentPrice) {
-        // Agent has overridden pricing for this subcategory — synthesize a pricing row
-        const perKm = Number(agentPrice.transportChargePerKm);
+        // Agent has overridden pricing — transport comes from category config
+        const perKm = catCfg ? Number(catCfg.transportChargePerKm) : 0;
         pricing = {
           id: agentPrice.id,
           heroId: h.id,
@@ -1258,10 +1280,15 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
     if (subcategory.category.type !== "SERVICE")
       return res.status(400).json({ error: "Only service subcategories can be booked" });
 
-    // Get agent pricing
-    const pricing = await prisma.agentSubcategoryPricing.findUnique({
-      where: { agentId_subcategoryId: { agentId: body.agentId, subcategoryId: body.subcategoryId } },
-    });
+    // Get agent pricing + category config (transport lives there now)
+    const [pricing, catCfgSingle] = await Promise.all([
+      prisma.agentSubcategoryPricing.findUnique({
+        where: { agentId_subcategoryId: { agentId: body.agentId, subcategoryId: body.subcategoryId } },
+      }),
+      (prisma as any).agentCategoryConfig.findUnique({
+        where: { agentId_categoryId: { agentId: body.agentId, categoryId: subcategory.categoryId } },
+      }),
+    ]);
     if (!pricing)
       return res.status(400).json({ error: "No pricing set by agent for this subcategory" });
 
@@ -1274,7 +1301,7 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
         scheduledHour: body.scheduledHour,
         charge: pricing.baseServiceCharge,
         discountPercent: pricing.discountPercent,
-        transportCharge: pricing.transportChargePerKm,
+        transportCharge: catCfgSingle ? catCfgSingle.transportChargePerKm : 0,
         userName: body.userName,
         userPhone: body.userPhone,
         userGender: body.userGender,
@@ -1324,17 +1351,52 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
     const body = req.body as z.infer<typeof bulkServiceRequestSchema>;
     const created = [];
 
+    // Resolve subcategories and their pricings first so we can apply bulk discounts per category
+    type SubInfo = { subcategoryId: string; categoryId: string; pricing: any; };
+    const subInfos: SubInfo[] = [];
     for (const subcategoryId of body.subcategoryIds) {
       const subcategory = await prisma.subcategory.findUnique({
         where: { id: subcategoryId },
         include: { category: true },
       });
       if (!subcategory || !subcategory.isActive || subcategory.category.type !== "SERVICE") continue;
-
       const pricing = await prisma.agentSubcategoryPricing.findUnique({
         where: { agentId_subcategoryId: { agentId: body.agentId, subcategoryId } },
       });
       if (!pricing) continue;
+      subInfos.push({ subcategoryId, categoryId: subcategory.categoryId, pricing });
+    }
+
+    // Count per category to determine bulk discount tier
+    const countPerCategory = new Map<string, number>();
+    for (const si of subInfos) countPerCategory.set(si.categoryId, (countPerCategory.get(si.categoryId) ?? 0) + 1);
+
+    // Fetch category configs for all involved categories
+    const catIds = Array.from(countPerCategory.keys());
+    const catConfigs: any[] = await (prisma as any).agentCategoryConfig.findMany({
+      where: { agentId: body.agentId, categoryId: { in: catIds } },
+    });
+    const catCfgMap = new Map<string, any>(catConfigs.map((c: any) => [c.categoryId, c]));
+
+    for (const { subcategoryId, categoryId, pricing } of subInfos) {
+      const catCfg = catCfgMap.get(categoryId);
+      const count = countPerCategory.get(categoryId) ?? 1;
+
+      // Determine applicable bulk discount
+      let bulkDisc = 0;
+      if (catCfg) {
+        if (count >= 4) bulkDisc = Number(catCfg.bulkDiscount4Plus);
+        else if (count === 3) bulkDisc = Number(catCfg.bulkDiscount3);
+        else if (count === 2) bulkDisc = Number(catCfg.bulkDiscount2);
+      }
+
+      // Effective combined discount: individual + bulk applied on top
+      const indDisc = Number(pricing.discountPercent);
+      const effectiveDiscount = bulkDisc > 0
+        ? 100 * (1 - (1 - indDisc / 100) * (1 - bulkDisc / 100))
+        : indDisc;
+
+      const transportCharge = catCfg ? catCfg.transportChargePerKm : 0;
 
       const request = await prisma.serviceRequest.create({
         data: {
@@ -1344,8 +1406,8 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
           scheduledDate: new Date(body.scheduledDate),
           scheduledHour: body.scheduledHour,
           charge: pricing.baseServiceCharge,
-          discountPercent: pricing.discountPercent,
-          transportCharge: pricing.transportChargePerKm,
+          discountPercent: effectiveDiscount,
+          transportCharge,
           userName: body.userName,
           userPhone: body.userPhone,
           userGender: body.userGender,

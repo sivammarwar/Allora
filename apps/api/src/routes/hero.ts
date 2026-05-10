@@ -213,12 +213,13 @@ router.get("/pricing", async (req, res, next) => {
     if (!profile?.isVerifiedByAgent)
       return res.status(403).json({ error: "Not yet verified" });
 
-    const [subcategories, agentPricing] = await Promise.all([
+    const [subcategories, agentPricing, agentCategoryConfigs] = await Promise.all([
       prisma.subcategory.findMany({
         where: { id: { in: profile.subcategoryIds } },
         select: {
           id: true,
           name: true,
+          categoryId: true,
           category: { select: { name: true, type: true } },
         },
       }),
@@ -228,14 +229,24 @@ router.get("/pricing", async (req, res, next) => {
               agentId: profile.verifiedByAgentId,
               subcategoryId: { in: profile.subcategoryIds },
             },
-            select: {
-              subcategoryId: true,
-              baseServiceCharge: true,
-              transportChargePerKm: true,
-            },
+            select: { subcategoryId: true, baseServiceCharge: true },
+          })
+        : Promise.resolve([]),
+      profile.verifiedByAgentId
+        ? (prisma as any).agentCategoryConfig.findMany({
+            where: { agentId: profile.verifiedByAgentId },
+            select: { categoryId: true, transportChargePerKm: true },
           })
         : Promise.resolve([]),
     ]);
+
+    const catCfgMap = new Map<string, any>(agentCategoryConfigs.map((c: any) => [c.categoryId, c]));
+    // Merge transport from category config back into agentPricing for hero display
+    const agentPricingWithTransport = agentPricing.map((ap: any) => {
+      const sub = subcategories.find((s) => s.id === ap.subcategoryId);
+      const catCfg = sub ? catCfgMap.get(sub.categoryId) : null;
+      return { ...ap, transportChargePerKm: catCfg ? String(catCfg.transportChargePerKm) : "0" };
+    });
 
     res.json({
       heroId: profile.id,
@@ -244,7 +255,7 @@ router.get("/pricing", async (req, res, next) => {
       requiresDelivery: profile.requiresDelivery,
       pricing: profile.pricing,
       subcategories,
-      agentPricing,
+      agentPricing: agentPricingWithTransport,
     });
   } catch (e) {
     next(e);

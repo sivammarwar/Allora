@@ -910,14 +910,12 @@ router.get("/verified-delivery-boys", async (req, res, next) => {
 const priceControlSchema = z.object({
   subcategoryId: z.string().min(1),
   baseServiceCharge: z.number().nonnegative(),
-  transportChargePerKm: z.number().nonnegative().default(0),
   discountPercent: z.number().min(0).max(100).default(0),
   slotDurationHours: z.number().int().min(1).max(4).default(1),
 });
 
 const priceControlUpdateSchema = z.object({
   baseServiceCharge: z.number().nonnegative(),
-  transportChargePerKm: z.number().nonnegative().default(0),
   discountPercent: z.number().min(0).max(100).default(0),
   slotDurationHours: z.number().int().min(1).max(4).default(1),
 });
@@ -952,7 +950,7 @@ router.post(
   async (req, res, next) => {
     try {
       const profile = await getAgentProfile(req.user!.id);
-      const { subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours } =
+      const { subcategoryId, baseServiceCharge, discountPercent, slotDurationHours } =
         req.body as z.infer<typeof priceControlSchema>;
 
       const sub = await prisma.subcategory.findUnique({
@@ -968,8 +966,8 @@ router.post(
 
       const entry = await prisma.agentSubcategoryPricing.upsert({
         where: { agentId_subcategoryId: { agentId: profile.id, subcategoryId } },
-        update: { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
-        create: { agentId: profile.id, subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
+        update: { baseServiceCharge, discountPercent, slotDurationHours },
+        create: { agentId: profile.id, subcategoryId, baseServiceCharge, discountPercent, slotDurationHours },
         include: priceControlInclude,
       });
       res.json(entry);
@@ -990,11 +988,11 @@ router.put(
       });
       if (!existing) return res.status(404).json({ error: "Not found" });
 
-      const { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours } =
+      const { baseServiceCharge, discountPercent, slotDurationHours } =
         req.body as z.infer<typeof priceControlUpdateSchema>;
       const updated = await prisma.agentSubcategoryPricing.update({
         where: { id: req.params.id },
-        data: { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
+        data: { baseServiceCharge, discountPercent, slotDurationHours },
         include: priceControlInclude,
       });
       res.json(updated);
@@ -1016,6 +1014,55 @@ router.delete("/price-control/:id", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+// ─── Category Config (transport + bulk discounts per category) ───────────────
+const categoryConfigSchema = z.object({
+  categoryId: z.string().min(1),
+  transportChargePerKm: z.number().nonnegative().default(0),
+  bulkDiscount2: z.number().min(0).max(100).default(0),
+  bulkDiscount3: z.number().min(0).max(100).default(0),
+  bulkDiscount4Plus: z.number().min(0).max(100).default(0),
+});
+
+router.get("/category-config", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const configs = await (prisma as any).agentCategoryConfig.findMany({
+      where: { agentId: profile.id },
+      include: { category: { select: { id: true, name: true, type: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(configs);
+  } catch (e) { next(e); }
+});
+
+router.post("/category-config", validateBody(categoryConfigSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus } =
+      req.body as z.infer<typeof categoryConfigSchema>;
+    const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!cat || !cat.isActive) return res.status(404).json({ error: "Category not found" });
+    if (cat.type !== "SERVICE") return res.status(400).json({ error: "Only SERVICE categories" });
+    const cfg = await (prisma as any).agentCategoryConfig.upsert({
+      where: { agentId_categoryId: { agentId: profile.id, categoryId } },
+      update: { transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus },
+      create: { agentId: profile.id, categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus },
+      include: { category: { select: { id: true, name: true, type: true } } },
+    });
+    res.json(cfg);
+  } catch (e) { next(e); }
+});
+
+router.delete("/category-config/:categoryId", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    await (prisma as any).agentCategoryConfig.deleteMany({
+      where: { agentId: profile.id, categoryId: req.params.categoryId },
+    });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 // ─── Stats ─────────────────────────────────────────────────────────────────

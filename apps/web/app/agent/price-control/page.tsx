@@ -22,7 +22,6 @@ interface PriceControlEntry {
   id: string;
   subcategoryId: string;
   baseServiceCharge: string;
-  transportChargePerKm: string;
   discountPercent: string;
   slotDurationHours: number;
   subcategory: SubcategoryOption;
@@ -41,7 +40,6 @@ function EditRow({
 }) {
   const qc = useQueryClient();
   const [base, setBase] = useState(Number(entry.baseServiceCharge));
-  const [perKm, setPerKm] = useState(Number(entry.transportChargePerKm));
   const [discount, setDiscount] = useState(Number(entry.discountPercent));
   const [duration, setDuration] = useState(entry.slotDurationHours ?? 1);
 
@@ -51,7 +49,6 @@ function EditRow({
     mutationFn: () =>
       api.put(`/api/agent/price-control/${entry.id}`, {
         baseServiceCharge: base,
-        transportChargePerKm: perKm,
         discountPercent: discount,
         slotDurationHours: duration,
       }),
@@ -73,16 +70,6 @@ function EditRow({
           step={0.01}
           value={base}
           onChange={(e) => setBase(Math.max(0, Number(e.target.value) || 0))}
-        />
-      </div>
-      <div className="flex-1 min-w-[120px]">
-        <Input
-          label="Transport per km (₹)"
-          type="number"
-          min={0}
-          step={0.01}
-          value={perKm}
-          onChange={(e) => setPerKm(Math.max(0, Number(e.target.value) || 0))}
         />
       </div>
       <div className="flex-1 min-w-[120px]">
@@ -134,7 +121,6 @@ export default function PriceControlPage() {
   const [subSearch, setSubSearch] = useState("");
   const [selectedSub, setSelectedSub] = useState<SubcategoryOption | null>(null);
   const [base, setBase] = useState(0);
-  const [perKm, setPerKm] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [duration, setDuration] = useState(1);
 
@@ -179,7 +165,6 @@ export default function PriceControlPage() {
       api.post("/api/agent/price-control", {
         subcategoryId: selectedSub!.id,
         baseServiceCharge: base,
-        transportChargePerKm: perKm,
         discountPercent: discount,
         slotDurationHours: duration,
       }),
@@ -189,7 +174,6 @@ export default function PriceControlPage() {
       setAddOpen(false);
       setSelectedSub(null);
       setBase(0);
-      setPerKm(0);
       setDiscount(0);
       setDuration(1);
       setSubSearch("");
@@ -267,7 +251,7 @@ export default function PriceControlPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <Input
                 label="Base service charge (₹)"
                 type="number"
@@ -275,14 +259,6 @@ export default function PriceControlPage() {
                 step={0.01}
                 value={base}
                 onChange={(e) => setBase(Math.max(0, Number(e.target.value) || 0))}
-              />
-              <Input
-                label="Transport per km (₹)"
-                type="number"
-                min={0}
-                step={0.01}
-                value={perKm}
-                onChange={(e) => setPerKm(Math.max(0, Number(e.target.value) || 0))}
               />
               <Input
                 label="Discount (%)"
@@ -393,10 +369,6 @@ export default function PriceControlPage() {
                       ) : (
                         <p className="font-semibold text-brand-text">{formatINR(Number(entry.baseServiceCharge))}</p>
                       )}
-                    </div>
-                    <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
-                      <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Transport per km</p>
-                      <p className="font-semibold text-brand-text">{formatINR(Number(entry.transportChargePerKm))}/km</p>
                     </div>
                   </div>
                 )}
