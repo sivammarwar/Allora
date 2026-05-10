@@ -71,6 +71,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
   // Booking form state
   const [showForm, setShowForm] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", gender: "MALE", address: "" });
   const [acceptedRequest, setAcceptedRequest] = useState<ServiceRequestResult | null>(null);
 
@@ -277,7 +278,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 <CalendarCheck size={14} className="inline mr-1.5 text-brand-primary" />
                 {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtHour(selectedHour)}
               </p>
-              <Button size="sm" onClick={() => setShowForm(true)}>Book this slot</Button>
+              <Button size="sm" onClick={() => { if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
             </div>
           )}
         </div>
@@ -381,6 +382,85 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           <History size={14} /> My bookings
         </Button>
       </div>
+
+      {/* ── Upsell modal ── */}
+      {showUpsell && selectedHour !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
+        >
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden" style={{ maxHeight: "88vh" }}>
+            {/* Header */}
+            <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+              <div>
+                <h2 className="font-heading text-lg text-brand-text">More in {sub?.category.name}</h2>
+                <p className="text-xs text-brand-textMuted mt-0.5">Explore other services while you&apos;re here</p>
+              </div>
+              <button onClick={() => setShowUpsell(false)} className="ml-4 mt-0.5 p-1 rounded-full hover:bg-gray-100">
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Subcategory grid */}
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              <div className="grid grid-cols-2 gap-3">
+                {otherSubs.map((s: any) => {
+                  const sp = s.agentPricing;
+                  const sBase = sp ? Number(sp.baseServiceCharge) : null;
+                  const sDisc = sp ? Number(sp.discountPercent) : 0;
+                  const sFinal = sBase !== null ? sBase * (1 - sDisc / 100) : null;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => router.push(`/dashboard/subcategory/${s.id}${agentId ? `?agentId=${agentId}` : ""}`)}
+                      className="text-left w-full"
+                    >
+                      <Card className="overflow-hidden hover:border-brand-primary/50 transition-all hover:shadow-md">
+                        {s.imageUrl && (s.imageUrl.startsWith("http") || s.imageUrl.startsWith("/")) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.imageUrl} alt={s.name} className="w-full h-24 object-cover" />
+                        ) : (
+                          <div className="w-full h-16 bg-brand-surface flex items-center justify-center">
+                            <CategoryIcon name={s.imageUrl} size={26} className="text-brand-primary opacity-50" />
+                          </div>
+                        )}
+                        <CardContent className="py-2.5 px-3 space-y-1.5">
+                          <p className="font-semibold text-brand-text text-sm truncate">{s.name}</p>
+                          {sFinal !== null ? (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {sDisc > 0 && (
+                                <span className="text-[10px] line-through text-brand-textMuted">₹{sBase}</span>
+                              )}
+                              <span className="text-sm font-bold text-brand-primary">₹{sFinal.toFixed(0)}</span>
+                              {sDisc > 0 && (
+                                <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">{sDisc}% off</span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-brand-textMuted">Pricing on request</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Continue CTA */}
+            <div className="px-4 py-4 border-t border-gray-100 bg-gray-50">
+              <Button
+                className="w-full"
+                onClick={() => { setShowUpsell(false); setShowForm(true); }}
+              >
+                <CalendarCheck size={15} />
+                Book {sub?.name} &mdash; {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} at {fmtHour(selectedHour)}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
