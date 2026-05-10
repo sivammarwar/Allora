@@ -826,7 +826,26 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
         where: { heroId_date_hour: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour } },
       });
       if (existing && (existing.isBooked || existing.isBusyByHero)) {
-        throw new Error("SLOT_TAKEN");
+        // Allow if this hero already accepted another request from the same user session
+        const sameSession = await tx.serviceRequest.findFirst({
+          where: {
+            heroId: profile.id,
+            userId: request.userId,
+            scheduledDate: request.scheduledDate,
+            scheduledHour: request.scheduledHour,
+            status: "ACCEPTED",
+          },
+        });
+        if (!sameSession) throw new Error("SLOT_TAKEN");
+        // Same session — accept without creating a new slot entry
+        return tx.serviceRequest.update({
+          where: { id: request.id },
+          data: { heroId: profile.id, status: "ACCEPTED" },
+          include: {
+            hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, user: { select: { name: true } } } },
+            subcategory: { select: { id: true, name: true } },
+          },
+        });
       }
       const slot = await tx.heroSlot.upsert({
         where: { heroId_date_hour: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour } },

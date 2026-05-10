@@ -126,12 +126,17 @@ export default function HeroRequestsPage() {
 
   const acceptAll = useMutation({
     mutationFn: async (ids: string[]) => {
-      const results = await Promise.allSettled(
-        ids.map((id) => api.post(`/api/hero/service-requests/${id}/accept`, {}))
-      );
-      const accepted = results.filter((r) => r.status === "fulfilled").length;
-      if (accepted === 0) throw new Error("All requests already taken");
-      return accepted;
+      let count = 0;
+      for (const id of ids) {
+        try {
+          await api.post(`/api/hero/service-requests/${id}/accept`, {});
+          count++;
+        } catch {
+          // ignore individual failures (already taken by another hero)
+        }
+      }
+      if (count === 0) throw new Error("All requests already taken");
+      return count;
     },
     onSuccess: (count) => {
       toast.success(`Accepted ${count} booking${count > 1 ? "s" : ""}!`);
