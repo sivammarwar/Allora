@@ -1091,7 +1091,7 @@ router.delete("/verified-heroes/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Hero not found" });
     await prisma.heroProfile.update({
       where: { id: req.params.id },
-      data: { isActive: false, isVerified: false },
+      data: { isActive: false, isVerifiedByAgent: false },
     });
     res.json({ ok: true });
   } catch (e) { next(e); }
