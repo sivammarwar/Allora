@@ -141,7 +141,7 @@ export function DashboardShell({
             headerRight={headerRight}
           />
           <main className="pt-14 pb-20 min-h-screen bg-gray-50">
-            <div className="px-4 sm:px-6 lg:px-10 py-5 max-w-7xl mx-auto">{children}</div>
+            <div className="px-4 sm:px-6 lg:px-8 py-5 w-full">{children}</div>
           </main>
           <BottomNav links={navTabs} />
         </>
