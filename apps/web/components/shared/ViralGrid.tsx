@@ -72,7 +72,7 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
           <span className="text-zinc-500 text-xs">+{pos}</span>
         </div>
       ) : (
-        <div className="w-full h-full bg-zinc-950" />
+        <div className="w-full h-full" style={{ background: "#0a0a0a" }} />
       );
     }
     const hasImage = isUrl(item.imageUrl);
@@ -115,7 +115,7 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
       {/* ════════════════════════════════════════════════
           MOBILE — edge-to-edge magazine grid
           ════════════════════════════════════════════════ */}
-      <div className="sm:hidden -mx-4 overflow-hidden">
+      <div className="sm:hidden -mx-4 overflow-hidden" style={{ background: "#0a0a0a" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
 
           {/* Hero tile: full-width, cinematic */}
@@ -162,7 +162,7 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
       {/* ════════════════════════════════════════════════
           DESKTOP — seamless bento masonry
           ════════════════════════════════════════════════ */}
-      <div className="hidden sm:block w-full rounded-2xl overflow-hidden">
+      <div className="hidden sm:block w-full rounded-2xl overflow-hidden" style={{ background: "#0a0a0a" }}>
         <div
           style={{
             display: "grid",
