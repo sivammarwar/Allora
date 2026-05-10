@@ -205,6 +205,98 @@ router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
 
 router.use(requireAuth, requireRole("USER"));
 
+// ─── User profile ─────────────────────────────────────────────────────────────
+const updateProfileSchema = z.object({
+  name:   z.string().trim().min(1).max(80).optional(),
+  phone:  z.string().trim().min(7).max(20).optional(),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+});
+
+router.get("/profile", async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true, name: true, email: true, phone: true, gender: true,
+        profileImageUrl: true, createdAt: true,
+        savedAddresses: { orderBy: { createdAt: "asc" } },
+      },
+    });
+    if (!user) return res.status(404).json({ error: "Not found" });
+    res.json(user);
+  } catch (e) { next(e); }
+});
+
+router.patch("/profile", validateBody(updateProfileSchema), async (req, res, next) => {
+  try {
+    const data = req.body as z.infer<typeof updateProfileSchema>;
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data,
+      select: { id: true, name: true, email: true, phone: true, gender: true, profileImageUrl: true },
+    });
+    res.json(user);
+  } catch (e) { next(e); }
+});
+
+// ─── Saved addresses ──────────────────────────────────────────────────────────
+const savedAddressSchema = z.object({
+  label:     z.string().trim().min(1).max(40),
+  address:   z.string().trim().min(3).max(200),
+  lat:       z.number().optional(),
+  lng:       z.number().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+router.get("/saved-addresses", async (req, res, next) => {
+  try {
+    const rows = await prisma.savedAddress.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(rows);
+  } catch (e) { next(e); }
+});
+
+router.post("/saved-addresses", validateBody(savedAddressSchema), async (req, res, next) => {
+  try {
+    const data = req.body as z.infer<typeof savedAddressSchema>;
+    if (data.isDefault) {
+      await prisma.savedAddress.updateMany({
+        where: { userId: req.user!.id },
+        data: { isDefault: false },
+      });
+    }
+    const row = await prisma.savedAddress.create({
+      data: { ...data, userId: req.user!.id, isDefault: data.isDefault ?? false },
+    });
+    res.status(201).json(row);
+  } catch (e) { next(e); }
+});
+
+router.patch("/saved-addresses/:id/default", async (req, res, next) => {
+  try {
+    await prisma.savedAddress.updateMany({
+      where: { userId: req.user!.id },
+      data: { isDefault: false },
+    });
+    const row = await prisma.savedAddress.update({
+      where: { id: req.params.id },
+      data: { isDefault: true },
+    });
+    res.json(row);
+  } catch (e) { next(e); }
+});
+
+router.delete("/saved-addresses/:id", async (req, res, next) => {
+  try {
+    await prisma.savedAddress.deleteMany({
+      where: { id: req.params.id, userId: req.user!.id },
+    });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 /**
  * Returns the verified, active heroes visible to the user at (lat, lng).
  * Visibility is determined by area: find which Area polygons contain the user,

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft, Phone,
-  User, CheckCircle2, Loader2, CalendarCheck, History, X
+  User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +73,12 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [showForm, setShowForm] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", gender: "MALE", address: "" });
+
+  // Saved addresses
+  const { data: savedAddresses = [] } = useQuery<{ id: string; label: string; address: string; isDefault: boolean }[]>({
+    queryKey: ["user", "saved-addresses"],
+    queryFn: () => api.get("/api/user/saved-addresses"),
+  });
   const [acceptedRequest, setAcceptedRequest] = useState<ServiceRequestResult | null>(null);
 
   // ── Data fetching ──
@@ -295,7 +301,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Your name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-              <div>
+              <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-sm font-medium text-brand-text">Gender</label>
                 <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text">
                   <option value="MALE">Male</option>
@@ -303,7 +309,28 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                   <option value="OTHER">Other</option>
                 </select>
               </div>
-              <Input label="Address / landmark" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-brand-text">Address / landmark</label>
+                {savedAddresses.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {savedAddresses.map((sa) => (
+                      <button
+                        key={sa.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, address: sa.address }))}
+                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          form.address === sa.address
+                            ? "bg-brand-primary text-white border-brand-primary"
+                            : "bg-brand-surface border-brand-border text-brand-textMuted hover:border-brand-primary"
+                        }`}
+                      >
+                        <MapPin size={10} /> {sa.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Full address, landmark…" />
+              </div>
             </div>
             <Button
               className="w-full"
