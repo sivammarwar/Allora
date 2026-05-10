@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Phone,
+  ArrowLeft, Phone,
   User, CheckCircle2, Loader2, CalendarCheck, History, X
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -68,7 +68,6 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   // Slot picker state
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
 
   // Booking form state
   const [showForm, setShowForm] = useState(false);
@@ -105,10 +104,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const discounted = base !== null ? base * (1 - disc / 100) : null;
   const transport = pricing ? Number(pricing.transportChargePerKm) : null;
 
-  const fromDate = (() => { const d = new Date(todayStr()); d.setDate(d.getDate() + weekOffset * 7); return d.toISOString().split("T")[0]; })();
+  const fromDate = todayStr();
 
   const { data: slotData } = useQuery<SlotState>({
-    queryKey: ["slots", id, agentId, fromDate],
+    queryKey: ["slots", id, agentId],
     queryFn: () => api.get(`/api/user/subcategories/${id}/slots?agentId=${agentId}&from=${fromDate}&days=7`),
     enabled: !!agentId,
     refetchInterval: 30000,
@@ -220,13 +219,9 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg text-brand-text">Available Slots</h2>
-            <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" onClick={() => setWeekOffset((w) => w - 1)} disabled={weekOffset <= 0}><ChevronLeft size={14} /></Button>
-              <span className="text-xs text-brand-textMuted">
-                {new Date(fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {new Date(addDays(fromDate, 6)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-              </span>
-              <Button size="sm" variant="ghost" onClick={() => setWeekOffset((w) => w + 1)}><ChevronRight size={14} /></Button>
-            </div>
+            <span className="text-xs text-brand-textMuted">
+              {new Date(fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {new Date(addDays(fromDate, 6)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+            </span>
           </div>
 
           {/* Day tabs */}
