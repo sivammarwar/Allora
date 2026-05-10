@@ -1045,6 +1045,58 @@ router.get("/stats", async (req, res, next) => {
   }
 });
 
+// ─── Manage verified hero ─────────────────────────────────────────────────────
+const heroUpdateSchema = z.object({
+  categoryIds:    z.array(z.string()).optional(),
+  subcategoryIds: z.array(z.string()).optional(),
+  serviceName:    z.string().max(120).optional().nullable(),
+  shopName:       z.string().max(120).optional().nullable(),
+  phone:          z.string().max(20).optional(),
+  address:        z.string().max(400).optional(),
+});
+
+router.put("/verified-heroes/:id", validateBody(heroUpdateSchema), async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const hero = await prisma.heroProfile.findUnique({ where: { id: req.params.id } });
+    if (!hero || hero.verifiedByAgentId !== profile.id)
+      return res.status(404).json({ error: "Hero not found" });
+    const data = req.body as z.infer<typeof heroUpdateSchema>;
+    const updated = await prisma.heroProfile.update({
+      where: { id: req.params.id },
+      data: {
+        ...(data.categoryIds    !== undefined && { categoryIds: data.categoryIds }),
+        ...(data.subcategoryIds !== undefined && { subcategoryIds: data.subcategoryIds }),
+        ...(data.serviceName    !== undefined && { serviceName: data.serviceName }),
+        ...(data.shopName       !== undefined && { shopName: data.shopName }),
+        ...(data.phone          !== undefined && { phone: data.phone }),
+        ...(data.address        !== undefined && { address: data.address }),
+      },
+      select: {
+        id: true, shopName: true, serviceName: true, phone: true,
+        address: true, categoryIds: true, subcategoryIds: true,
+        requiresDelivery: true, profileImageUrl: true, createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+router.delete("/verified-heroes/:id", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const hero = await prisma.heroProfile.findUnique({ where: { id: req.params.id } });
+    if (!hero || hero.verifiedByAgentId !== profile.id)
+      return res.status(404).json({ error: "Hero not found" });
+    await prisma.heroProfile.update({
+      where: { id: req.params.id },
+      data: { isActive: false, isVerified: false },
+    });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 // ─── Slot Config ─────────────────────────────────────────────────────────────
 router.get("/slot-config", async (req, res, next) => {
   try {
