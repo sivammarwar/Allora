@@ -285,6 +285,30 @@ router.get("/agents/:id/verified-providers", async (req, res, next) => {
   }
 });
 
+// ─── Viral image update ─────────────────────────────────────────────────────
+const viralImageSchema = z.object({
+  viralImageUrl: z.string().nullable(),
+});
+
+router.patch(
+  "/viral-image/:id",
+  validateBody(viralImageSchema),
+  async (req, res, next) => {
+    try {
+      const { viralImageUrl } = req.body as z.infer<typeof viralImageSchema>;
+      const updated = await prisma.subcategory.update({
+        where: { id: req.params.id },
+        data: { viralImageUrl: viralImageUrl ?? null },
+        select: { id: true, viralImageUrl: true },
+      });
+      res.json(updated);
+    } catch (e: any) {
+      if (e?.code === "P2025") return res.status(404).json({ error: "Subcategory not found" });
+      next(e);
+    }
+  }
+);
+
 // ─── Settings ──────────────────────────────────────────────────────────────
 router.get("/settings", async (_req, res, next) => {
   try {

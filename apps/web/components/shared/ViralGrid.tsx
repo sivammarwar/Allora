@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Camera } from "lucide-react";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface ViralSubcategory {
   id: string;
   name: string;
   imageUrl: string | null;
+  viralImageUrl?: string | null;
   viralPosition: number | null;
   category: {
     id: string;
@@ -21,6 +23,7 @@ interface Props {
   items: ViralSubcategory[];
   onItemClick?: (item: ViralSubcategory) => void;
   emptyCellClick?: (position: number) => void;
+  onUpdateImage?: (item: ViralSubcategory) => void;
   editable?: boolean;
 }
 
@@ -54,7 +57,7 @@ function isUrl(s?: string | null) {
   return !!s && (s.startsWith("http") || s.startsWith("/"));
 }
 
-export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false }: Props) {
+export function ViralGrid({ items, onItemClick, emptyCellClick, onUpdateImage, editable = false }: Props) {
   const [hoveredPos, setHoveredPos] = useState<number | null>(null);
 
   const byPos = new Map<number, ViralSubcategory>();
@@ -75,13 +78,14 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
         <div className="w-full h-full" style={{ background: "#0a0a0a" }} />
       );
     }
-    const hasImage = isUrl(item.imageUrl);
+    const displayUrl = item.viralImageUrl ?? item.imageUrl;
+    const hasImage = isUrl(displayUrl);
     return (
       <div className="relative w-full h-full overflow-hidden group">
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={item.imageUrl!}
+            src={displayUrl!}
             alt={item.name}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
@@ -89,6 +93,15 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
           <div className="absolute inset-0 bg-zinc-900 flex items-center justify-center">
             <CategoryIcon name={item.imageUrl} size={large ? 38 : 22} className="text-zinc-500" />
           </div>
+        )}
+        {editable && onUpdateImage && (
+          <button
+            className="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full bg-black/60 hover:bg-brand-primary transition-colors opacity-0 group-hover:opacity-100"
+            onClick={(e) => { e.stopPropagation(); onUpdateImage(item); }}
+            title="Update viral image"
+          >
+            <Camera size={11} className="text-white" />
+          </button>
         )}
         {/* gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />

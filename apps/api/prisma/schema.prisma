@@ -395,6 +395,7 @@ model Subcategory {
   // Viral section pinning (admin can pin subcategories to viral grid)
   isPinned        Boolean  @default(false)
   viralPosition   Int?     // 1-21 for grid position in viral section (null = not in viral grid)
+  viralImageUrl   String?  // Separate image URL shown only in viral grid, doesn't affect subcategory pages
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

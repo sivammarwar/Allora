@@ -961,6 +961,7 @@ router.get("/viral-subcategories", async (req, res, next) => {
         id: s.id,
         name: s.name,
         imageUrl: s.imageUrl,
+        viralImageUrl: s.viralImageUrl,
         viralPosition: s.viralPosition,
         category: s.category,
         productCount: s._count.products,
