@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Pin, Trash2, X, Sparkles, Camera, ImageIcon } from "lucide-react";
+import { Search, Pin, Trash2, X, Sparkles, Camera } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ViralGrid } from "@/components/shared/ViralGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 import { toast } from "sonner";
 
 interface Subcategory {
@@ -277,32 +278,15 @@ export default function AdminViralPage() {
                 <X size={16} className="text-gray-400" />
               </button>
             </div>
-            <div className="px-5 py-5 space-y-4">
-              {/* Current preview */}
-              {(imageUrlInput || imageEditItem.viralImageUrl) && (
-                <div className="w-full h-36 rounded-xl overflow-hidden bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrlInput || imageEditItem.viralImageUrl!}
-                    alt="preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-brand-text flex items-center gap-1.5">
-                  <ImageIcon size={14} /> Image URL
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-brand-border text-sm text-brand-text bg-brand-surface focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
-                />
-                <p className="text-[10px] text-brand-textMuted">This image only appears in the viral section, not on the subcategory page.</p>
-              </div>
+            <div className="px-5 py-5 space-y-3">
+              <ImageUpload
+                label="Viral Image"
+                value={imageUrlInput || null}
+                onChange={(url) => setImageUrlInput(url ?? "")}
+                folder="viral"
+                aspect="wide"
+              />
+              <p className="text-[10px] text-brand-textMuted">This image only appears in the viral section — not on the subcategory page.</p>
             </div>
             <div className="px-5 pb-5 flex gap-2">
               <Button
