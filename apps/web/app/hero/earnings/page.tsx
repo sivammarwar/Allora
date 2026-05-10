@@ -182,7 +182,7 @@ export default function HeroEarningsPage() {
                       <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
                       <YAxis hide />
                       <Tooltip
-                        formatter={(v: number) => [`₹${v.toFixed(0)}`, "Earned"]}
+                        formatter={(v) => [`₹${Number(v).toFixed(0)}`, "Earned"]}
                         contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB" }}
                         cursor={{ fill: "rgba(124,58,237,0.06)" }}
                       />
@@ -213,7 +213,7 @@ export default function HeroEarningsPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(v: number) => [`₹${v}`, "Earned"]}
+                          formatter={(v) => [`₹${Number(v)}`, "Earned"]}
                           contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB" }}
                         />
                         <Legend
