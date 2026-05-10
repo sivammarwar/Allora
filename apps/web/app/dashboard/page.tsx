@@ -92,6 +92,13 @@ export default function UserDashboardPage() {
   });
 
   // Resolve nearest agent for the user's location (needed for viral links)
+  const { data: avgRatings = {} } = useQuery<Record<string, { avg: number; count: number }>>(
+    {
+      queryKey: ["category-avg-ratings"],
+      queryFn: () => api.get("/api/user/categories/avg-ratings"),
+    }
+  );
+
   const { data: agentData } = useQuery<{ agentId: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
@@ -135,13 +142,6 @@ export default function UserDashboardPage() {
       </div>
     );
   }
-
-  const { data: avgRatings = {} } = useQuery<Record<string, { avg: number; count: number }>>(
-    {
-      queryKey: ["category-avg-ratings"],
-      queryFn: () => api.get("/api/user/categories/avg-ratings"),
-    }
-  );
 
   const isLoading = browseLoading || viralLoading;
 
