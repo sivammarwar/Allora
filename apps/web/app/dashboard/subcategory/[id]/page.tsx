@@ -61,9 +61,14 @@ function fmtSlot(start: number, duration: number = 1) {
   if (sSuffix === eSuffix) return `${s12}–${e12} ${sSuffix}`;
   return `${fmtH(start)} – ${fmtH(end)}`;
 }
-function todayStr() { return new Date().toISOString().split("T")[0]; }
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 function addDays(dateStr: string, n: number) {
-  const d = new Date(dateStr); d.setDate(d.getDate() + n); return d.toISOString().split("T")[0];
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function UserSubcategoryPage({ params }: { params: { id: string } }) {
@@ -82,7 +87,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
-  const todayDateStr = now.toISOString().split("T")[0];
+  const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const currentHour = now.getHours();
 
   // Slot picker state
@@ -271,17 +276,21 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           {/* Day tabs */}
           <div className="flex gap-1 overflow-x-auto pb-1">
             {days.map((d) => {
-              const dayObj = new Date(d);
-              const hasSlots = (slotData?.slots[d] ?? []).some((s) => s.available);
+              const dayObj = new Date(d + "T12:00:00");
+              const isPastDay = d < todayDateStr;
+              const hasSlots = !isPastDay && (slotData?.slots[d] ?? []).some((s) => s.available);
               return (
                 <button
                   key={d}
+                  disabled={isPastDay}
                   onClick={() => { setSelectedDate(d); setSelectedHour(null); }}
                   className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-lg border text-xs transition-colors ${
-                    selectedDate === d
-                      ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                      : "border-brand-border text-brand-textMuted hover:border-brand-primary/50"
-                  } ${!hasSlots && slotData ? "opacity-40" : ""}`}
+                    isPastDay
+                      ? "border-brand-border/30 text-brand-textMuted/30 cursor-not-allowed line-through"
+                      : selectedDate === d
+                        ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
+                        : "border-brand-border text-brand-textMuted hover:border-brand-primary/50"
+                  } ${!hasSlots && slotData && !isPastDay ? "opacity-40" : ""}`}
                 >
                   <span className="font-medium">{DAYS[dayObj.getDay()]}</span>
                   <span>{dayObj.getDate()}</span>
