@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarClock, CheckCircle2, XCircle, Clock, Phone, User,
-  Loader2, ArrowLeft
+  Loader2, ArrowLeft,
+  CheckSquare2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -176,7 +177,7 @@ export default function UserBookingsPage() {
       ) : (
         history.length === 0 ? (
           <div className="text-center py-12 text-brand-textMuted">
-            <CheckCircle2 size={32} className="mx-auto mb-3 opacity-30" />
+            <CheckSquare2 size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">No booking history yet.</p>
           </div>
         ) : (
