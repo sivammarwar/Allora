@@ -772,7 +772,7 @@ router.get("/service-requests", async (req, res, next) => {
     const requests = await prisma.serviceRequest.findMany({
       where,
       include: {
-        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        subcategory: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
         user: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -796,7 +796,7 @@ router.get("/service-requests/incoming", async (req, res, next) => {
         heroId: null,
       },
       include: {
-        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        subcategory: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
         user: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
