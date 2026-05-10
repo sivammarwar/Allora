@@ -492,7 +492,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 onClick={() => { setShowUpsell(false); setShowForm(true); }}
               >
                 <CalendarCheck size={15} />
-                Book {sub?.name} &mdash; {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} at {fmtHour(selectedHour)}
+                Book {sub?.name} &mdash; {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} at {fmtSlot(selectedHour!, slotData?.slotDurationHours ?? 1)}
               </Button>
             </div>
           </div>
