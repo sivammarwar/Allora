@@ -414,7 +414,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               loading={bookBulk.isPending}
               disabled={!form.name || !form.phone || !form.address}
             >
-              <CheckSquare2 size={15} /> {selectedSubIds.size > 1 ? `Confirm ${selectedSubIds.size} bookings` : "Send booking request"}
+              <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? `Confirm ${selectedSubIds.size} bookings` : "Send booking request"}
             </Button>
           </CardContent>
         </Card>
@@ -556,11 +556,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                       } ${s.isMain ? "cursor-default" : "cursor-pointer"}`}
                     >
                       {/* Checkbox */}
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                        isSelected ? "border-brand-primary bg-brand-primary" : "border-gray-300"
-                      }`}>
-                        {isSelected && <Check size={11} className="text-white" />}
-                      </div>
+                      {isSelected
+                        ? <CheckSquare2 size={20} className="text-brand-primary flex-shrink-0" />
+                        : <div className="w-5 h-5 border-2 border-gray-300 rounded-sm flex-shrink-0" />
+                      }
 
                       {/* Image */}
                       <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-brand-surface">
