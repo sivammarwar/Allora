@@ -176,6 +176,33 @@ router.get("/agents-nearby", requireAuth, async (req, res, next) => {
   }
 });
 
+// ─── Viral / Pinned subcategories (accessible to all authenticated roles) ──────
+router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
+  try {
+    const pinned = await prisma.subcategory.findMany({
+      where: { isPinned: true, isActive: true },
+      orderBy: { viralPosition: "asc" },
+      include: {
+        category: { select: { id: true, name: true, type: true, imageUrl: true } },
+        _count: { select: { products: true } },
+      },
+    });
+    res.json(
+      pinned.map((s) => ({
+        id: s.id,
+        name: s.name,
+        imageUrl: s.imageUrl,
+        viralImageUrl: s.viralImageUrl,
+        viralPosition: s.viralPosition,
+        category: s.category,
+        productCount: s._count.products,
+      }))
+    );
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.use(requireAuth, requireRole("USER"));
 
 /**
@@ -940,33 +967,6 @@ router.get("/subcategories/:id/reviews", async (req, res, next) => {
         count: agg._count,
       },
     });
-  } catch (e) {
-    next(e);
-  }
-});
-
-// ─── Viral / Pinned subcategories for homepage ──────────────────────────────
-router.get("/viral-subcategories", async (req, res, next) => {
-  try {
-    const pinned = await prisma.subcategory.findMany({
-      where: { isPinned: true, isActive: true },
-      orderBy: { viralPosition: "asc" },
-      include: {
-        category: { select: { id: true, name: true, type: true, imageUrl: true } },
-        _count: { select: { products: true } },
-      },
-    });
-    res.json(
-      pinned.map((s) => ({
-        id: s.id,
-        name: s.name,
-        imageUrl: s.imageUrl,
-        viralImageUrl: s.viralImageUrl,
-        viralPosition: s.viralPosition,
-        category: s.category,
-        productCount: s._count.products,
-      }))
-    );
   } catch (e) {
     next(e);
   }
