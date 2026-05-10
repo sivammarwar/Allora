@@ -1163,6 +1163,14 @@ router.get("/subcategories/:id/slots", requireAuth, requireRole("USER"), async (
     const cfg = await prisma.agentSlotConfig.findUnique({ where: { agentId } });
     if (cfg) { slotStartHour = cfg.slotStartHour; slotEndHour = cfg.slotEndHour; }
 
+    // Get slot duration for this subcategory (from agent's price-control entry)
+    let slotDurationHours = 1;
+    const pricing = await prisma.agentSubcategoryPricing.findFirst({
+      where: { subcategoryId, agentId },
+      select: { slotDurationHours: true },
+    });
+    if (pricing) slotDurationHours = pricing.slotDurationHours;
+
     // Get all heroes for this agent+subcategory
     const heroes = await prisma.heroProfile.findMany({
       where: {
@@ -1174,7 +1182,7 @@ router.get("/subcategories/:id/slots", requireAuth, requireRole("USER"), async (
       select: { id: true },
     });
     const heroIds = heroes.map((h) => h.id);
-    if (heroIds.length === 0) return res.json({ slots: [], slotStartHour, slotEndHour });
+    if (heroIds.length === 0) return res.json({ slots: [], slotStartHour, slotEndHour, slotDurationHours });
 
     // Build date range
     const dates: string[] = [];
@@ -1196,21 +1204,29 @@ router.get("/subcategories/:id/slots", requireAuth, requireRole("USER"), async (
       select: { heroId: true, date: true, hour: true },
     });
 
-    // For each date+hour, a slot is available if at least one hero is NOT blocked
+    // For each date+hour, a slot starting at h is available if at least one hero
+    // has ALL hours h..h+duration-1 unblocked (multi-hour duration support).
     const result: Record<string, { hour: number; available: boolean }[]> = {};
     for (const dateStr of dates) {
       result[dateStr] = [];
-      for (let h = slotStartHour; h < slotEndHour; h++) {
-        const blockedHeroIds = new Set(
-          blockedSlots
-            .filter((s) => s.date.toISOString().split("T")[0] === dateStr && s.hour === h)
-            .map((s) => s.heroId)
-        );
-        const available = heroIds.some((id) => !blockedHeroIds.has(id));
+      // Only generate start hours where the full duration fits within the window
+      for (let h = slotStartHour; h <= slotEndHour - slotDurationHours; h++) {
+        const available = heroIds.some((heroId) => {
+          for (let offset = 0; offset < slotDurationHours; offset++) {
+            const blocked = blockedSlots.some(
+              (s) =>
+                s.heroId === heroId &&
+                s.date.toISOString().split("T")[0] === dateStr &&
+                s.hour === h + offset
+            );
+            if (blocked) return false;
+          }
+          return true;
+        });
         result[dateStr].push({ hour: h, available });
       }
     }
-    res.json({ slots: result, slotStartHour, slotEndHour });
+    res.json({ slots: result, slotStartHour, slotEndHour, slotDurationHours });
   } catch (e) { next(e); }
 });
 

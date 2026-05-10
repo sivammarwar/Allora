@@ -24,6 +24,7 @@ interface PriceControlEntry {
   baseServiceCharge: string;
   transportChargePerKm: string;
   discountPercent: string;
+  slotDurationHours: number;
   subcategory: SubcategoryOption;
 }
 
@@ -42,6 +43,7 @@ function EditRow({
   const [base, setBase] = useState(Number(entry.baseServiceCharge));
   const [perKm, setPerKm] = useState(Number(entry.transportChargePerKm));
   const [discount, setDiscount] = useState(Number(entry.discountPercent));
+  const [duration, setDuration] = useState(entry.slotDurationHours ?? 1);
 
   const finalPrice = discountedPrice(base, discount);
 
@@ -51,6 +53,7 @@ function EditRow({
         baseServiceCharge: base,
         transportChargePerKm: perKm,
         discountPercent: discount,
+        slotDurationHours: duration,
       }),
     onSuccess: () => {
       toast.success("Pricing updated");
@@ -93,6 +96,18 @@ function EditRow({
           onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
         />
       </div>
+      <div className="flex-1 min-w-[120px]">
+        <label className="mb-1.5 block text-sm font-medium text-brand-text">Slot duration (hrs)</label>
+        <select
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value))}
+          className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary"
+        >
+          {[1, 2, 3, 4].map((h) => (
+            <option key={h} value={h}>{h} hr{h > 1 ? "s" : ""}</option>
+          ))}
+        </select>
+      </div>
       {discount > 0 && (
         <div className="w-full text-sm text-brand-textMuted">
           Final price: <span className="line-through">{formatINR(base)}</span>{" "}
@@ -121,6 +136,7 @@ export default function PriceControlPage() {
   const [base, setBase] = useState(0);
   const [perKm, setPerKm] = useState(0);
   const [discount, setDiscount] = useState(0);
+  const [duration, setDuration] = useState(1);
 
   const { data: entries = [], isLoading } = useQuery<PriceControlEntry[]>({
     queryKey: ["agent", "price-control"],
@@ -165,6 +181,7 @@ export default function PriceControlPage() {
         baseServiceCharge: base,
         transportChargePerKm: perKm,
         discountPercent: discount,
+        slotDurationHours: duration,
       }),
     onSuccess: () => {
       toast.success(`Price control added for ${selectedSub!.name}`);
@@ -174,6 +191,7 @@ export default function PriceControlPage() {
       setBase(0);
       setPerKm(0);
       setDiscount(0);
+      setDuration(1);
       setSubSearch("");
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
@@ -249,7 +267,7 @@ export default function PriceControlPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Input
                 label="Base service charge (₹)"
                 type="number"
@@ -275,6 +293,18 @@ export default function PriceControlPage() {
                 value={discount}
                 onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-brand-text">Slot duration (hrs)</label>
+                <select
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary"
+                >
+                  {[1, 2, 3, 4].map((h) => (
+                    <option key={h} value={h}>{h} hr{h > 1 ? "s" : ""}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             {discount > 0 && base > 0 && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-sm bg-brand-success/10 border border-brand-success/20 text-sm">
@@ -348,6 +378,10 @@ export default function PriceControlPage() {
                   <EditRow entry={entry} onDone={() => setEditingId(null)} />
                 ) : (
                   <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="col-span-2 rounded-sm bg-brand-bg border border-brand-border px-3 py-1.5 flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wide text-brand-textMuted">Slot duration:</span>
+                      <span className="font-semibold text-brand-primary text-sm">{entry.slotDurationHours ?? 1} hr{(entry.slotDurationHours ?? 1) > 1 ? "s" : ""}</span>
+                    </div>
                     <div className="rounded-sm bg-brand-bg border border-brand-border px-3 py-2">
                       <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Base service charge</p>
                       {Number(entry.discountPercent) > 0 ? (

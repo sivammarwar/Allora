@@ -912,12 +912,14 @@ const priceControlSchema = z.object({
   baseServiceCharge: z.number().nonnegative(),
   transportChargePerKm: z.number().nonnegative().default(0),
   discountPercent: z.number().min(0).max(100).default(0),
+  slotDurationHours: z.number().int().min(1).max(4).default(1),
 });
 
 const priceControlUpdateSchema = z.object({
   baseServiceCharge: z.number().nonnegative(),
   transportChargePerKm: z.number().nonnegative().default(0),
   discountPercent: z.number().min(0).max(100).default(0),
+  slotDurationHours: z.number().int().min(1).max(4).default(1),
 });
 
 const priceControlInclude = {
@@ -950,7 +952,7 @@ router.post(
   async (req, res, next) => {
     try {
       const profile = await getAgentProfile(req.user!.id);
-      const { subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent } =
+      const { subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours } =
         req.body as z.infer<typeof priceControlSchema>;
 
       const sub = await prisma.subcategory.findUnique({
@@ -966,8 +968,8 @@ router.post(
 
       const entry = await prisma.agentSubcategoryPricing.upsert({
         where: { agentId_subcategoryId: { agentId: profile.id, subcategoryId } },
-        update: { baseServiceCharge, transportChargePerKm, discountPercent },
-        create: { agentId: profile.id, subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent },
+        update: { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
+        create: { agentId: profile.id, subcategoryId, baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
         include: priceControlInclude,
       });
       res.json(entry);
@@ -988,11 +990,11 @@ router.put(
       });
       if (!existing) return res.status(404).json({ error: "Not found" });
 
-      const { baseServiceCharge, transportChargePerKm, discountPercent } =
+      const { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours } =
         req.body as z.infer<typeof priceControlUpdateSchema>;
       const updated = await prisma.agentSubcategoryPricing.update({
         where: { id: req.params.id },
-        data: { baseServiceCharge, transportChargePerKm, discountPercent },
+        data: { baseServiceCharge, transportChargePerKm, discountPercent, slotDurationHours },
         include: priceControlInclude,
       });
       res.json(updated);

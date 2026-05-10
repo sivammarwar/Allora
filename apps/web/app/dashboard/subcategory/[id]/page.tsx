@@ -35,6 +35,7 @@ interface SlotState {
   slots: Record<string, { hour: number; available: boolean }[]>;
   slotStartHour: number;
   slotEndHour: number;
+  slotDurationHours: number;
 }
 
 interface ServiceRequestResult {
@@ -44,11 +45,20 @@ interface ServiceRequestResult {
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function fmtHour(h: number) {
-  if (h === 0) return "12 AM";
+function fmtH(h: number) {
+  if (h === 0 || h === 24) return "12 AM";
   if (h < 12) return `${h} AM`;
   if (h === 12) return "12 PM";
   return `${h - 12} PM`;
+}
+function fmtSlot(start: number, duration: number = 1) {
+  const end = start + duration;
+  const s12 = start === 0 ? 12 : start > 12 ? start - 12 : start;
+  const e12 = end === 0 || end === 24 ? 12 : end > 12 ? end - 12 : end;
+  const sSuffix = start < 12 ? "AM" : "PM";
+  const eSuffix = end <= 12 ? (end < 12 ? "AM" : "PM") : "PM";
+  if (sSuffix === eSuffix) return `${s12}–${e12} ${sSuffix}`;
+  return `${fmtH(start)} – ${fmtH(end)}`;
 }
 function todayStr() { return new Date().toISOString().split("T")[0]; }
 function addDays(dateStr: string, n: number) {
@@ -254,13 +264,13 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           </div>
 
           {/* Hour grid */}
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
             {slotHours.map(({ hour, available }) => (
               <button
                 key={hour}
                 disabled={!available}
                 onClick={() => setSelectedHour(hour)}
-                className={`py-2 rounded-lg border text-xs font-medium transition-colors ${
+                className={`py-2 px-1 rounded-lg border text-xs font-medium transition-colors text-center ${
                   selectedHour === hour
                     ? "border-brand-primary bg-brand-primary text-white"
                     : available
@@ -268,7 +278,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                       : "border-brand-border/30 text-brand-textMuted/40 cursor-not-allowed"
                 }`}
               >
-                {fmtHour(hour)}
+                {fmtSlot(hour, slotData?.slotDurationHours ?? 1)}
               </button>
             ))}
             {slotHours.length === 0 && (
@@ -282,7 +292,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             <div className="flex items-center justify-between p-3 rounded-lg bg-brand-primary/10 border border-brand-primary/20">
               <p className="text-sm text-brand-text">
                 <CalendarCheck size={14} className="inline mr-1.5 text-brand-primary" />
-                {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtHour(selectedHour)}
+                {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtSlot(selectedHour, slotData?.slotDurationHours ?? 1)}
               </p>
               <Button size="sm" onClick={() => { if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
             </div>

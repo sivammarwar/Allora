@@ -8,10 +8,18 @@ import { Button } from "@/components/ui/button";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function fmtHour(h: number) {
-  if (h === 0) return "12 AM";
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return "12 PM";
-  return `${h - 12} PM`;
+  const h12 = h === 0 || h === 24 ? 12 : h > 12 ? h - 12 : h;
+  const suffix = h < 12 ? "AM" : "PM";
+  return `${h12} ${suffix}`;
+}
+function fmtSlotRow(h: number) {
+  const end = h + 1;
+  const s = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const e = end === 24 ? 12 : end > 12 ? end - 12 : end;
+  const sSuffix = h < 12 ? "AM" : "PM";
+  const eSuffix = end <= 12 ? (end < 12 ? "AM" : "PM") : "PM";
+  if (sSuffix === eSuffix) return `${s}\u2013${e} ${sSuffix}`;
+  return `${fmtHour(h)}\u2013${fmtHour(end)}`;
 }
 
 function getNext7Days() {
@@ -93,7 +101,7 @@ export default function HeroSlotsPage() {
             <tbody>
               {hours.map((hour) => (
                 <tr key={hour} className="border-t border-brand-border/40">
-                  <td className="px-2 py-1 text-brand-textMuted font-mono text-[10px]">{fmtHour(hour)}</td>
+                  <td className="px-2 py-1 text-brand-textMuted font-mono text-[10px] whitespace-nowrap">{fmtSlotRow(hour)}</td>
                   {days.map((d) => {
                     const dateStr = toDateStr(d);
                     const slot = getSlot(dateStr, hour);

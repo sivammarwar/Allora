@@ -727,6 +727,7 @@ model AgentSubcategoryPricing {
   baseServiceCharge    Decimal      @db.Decimal(10, 2)
   transportChargePerKm Decimal      @db.Decimal(10, 2) @default(0)
   discountPercent      Decimal      @db.Decimal(5, 2)  @default(0)
+  slotDurationHours    Int          @default(1)         // 1-4 hrs; how long each booking slot takes
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
