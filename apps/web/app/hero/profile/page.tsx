@@ -30,12 +30,15 @@ interface HeroProfile {
   verifiedByAgent: { id: string; user: { name: string | null; email: string } } | null;
 }
 
-interface PricingRow {
+interface PricingEntry {
   subcategoryId: string;
-  subcategoryName: string;
-  categoryName: string;
   baseServiceCharge: string;
   discountPercent: string;
+  subcategory: { id: string; name: string; category: { name: string; type: string } };
+}
+
+interface PricingResponse {
+  pricing: PricingEntry[];
 }
 
 export default function HeroProfilePage() {
@@ -46,11 +49,13 @@ export default function HeroProfilePage() {
     queryFn: () => api.get("/api/hero/me"),
   });
 
-  const { data: pricing = [] } = useQuery<PricingRow[]>({
+  const { data: pricingData } = useQuery<PricingResponse>({
     queryKey: ["hero", "pricing"],
     queryFn: () => api.get("/api/hero/pricing"),
     enabled: me?.state === "verified",
   });
+
+  const pricingRows = pricingData?.pricing ?? [];
 
   const toggleAvail = useMutation({
     mutationFn: (v: boolean) => api.put("/api/hero/availability", { isAvailable: v }),
@@ -66,8 +71,9 @@ export default function HeroProfilePage() {
     return <div className="text-center py-16 text-brand-textMuted text-sm">Profile not available.</div>;
   }
 
-  const groupedServices = pricing.reduce<Record<string, PricingRow[]>>((acc, row) => {
-    (acc[row.categoryName] = acc[row.categoryName] ?? []).push(row);
+  const groupedServices = pricingRows.reduce<Record<string, PricingEntry[]>>((acc, row) => {
+    const cat = row.subcategory?.category?.name ?? "Other";
+    (acc[cat] = acc[cat] ?? []).push(row);
     return acc;
   }, {});
 
@@ -246,7 +252,7 @@ export default function HeroProfilePage() {
                         <div key={row.subcategoryId} className="py-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <CheckCircle2 size={12} className="text-brand-success shrink-0" />
-                            <span className="text-sm text-brand-text">{row.subcategoryName}</span>
+                            <span className="text-sm text-brand-text">{row.subcategory.name}</span>
                           </div>
                           <div className="text-right shrink-0">
                             <span className="text-sm font-semibold text-brand-text">₹{final.toFixed(0)}</span>
