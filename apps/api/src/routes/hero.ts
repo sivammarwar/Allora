@@ -907,6 +907,34 @@ router.post("/service-requests/:id/complete", async (req, res, next) => {
       where: { id: request.id },
       data: { status: "COMPLETED", completedAt: new Date() },
     });
+
+    const dateStr = (request.scheduledDate as Date).toISOString().split("T")[0];
+
+    // Free the slot only if no other ACCEPTED requests from the same session remain
+    const remaining = await prisma.serviceRequest.count({
+      where: {
+        heroId: profile.id,
+        userId: request.userId,
+        scheduledDate: request.scheduledDate,
+        scheduledHour: request.scheduledHour,
+        status: "ACCEPTED",
+        id: { not: request.id },
+      },
+    });
+    if (remaining === 0) {
+      const slot = request.slotId
+        ? await prisma.heroSlot.findUnique({ where: { id: request.slotId } })
+        : await prisma.heroSlot.findUnique({
+            where: { heroId_date_hour: { heroId: profile.id, date: request.scheduledDate, hour: request.scheduledHour } },
+          });
+      if (slot) {
+        await prisma.heroSlot.update({ where: { id: slot.id }, data: { isBooked: false } });
+        emitService(`slots:${request.subcategoryId}:${dateStr}`, "slot:updated", {
+          date: dateStr, hour: request.scheduledHour, isBooked: false, isBusy: false,
+        });
+      }
+    }
+
     emitService(`user:${request.userId}`, "service_request:completed", { requestId: request.id });
     res.json(updated);
   } catch (e) { next(e); }

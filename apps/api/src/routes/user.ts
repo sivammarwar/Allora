@@ -1477,12 +1477,44 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
       data: { status: "CANCELLED" },
     });
 
-    // Free the slot if it was accepted
+    const dateStr = (request.scheduledDate as Date).toISOString().split("T")[0];
+
     if (request.slotId) {
+      // Primary request: free its slot directly
       await prisma.heroSlot.update({
         where: { id: request.slotId },
         data: { isBooked: false },
       });
+      emitService(`slots:${request.subcategoryId}:${dateStr}`, "slot:updated", {
+        date: dateStr, hour: request.scheduledHour, isBooked: false, isBusy: false,
+      });
+    } else if (request.heroId) {
+      // Same-session request (no slotId): free the shared slot only if no other
+      // ACCEPTED requests from this session remain
+      const remaining = await prisma.serviceRequest.count({
+        where: {
+          heroId: request.heroId,
+          userId: request.userId,
+          scheduledDate: request.scheduledDate,
+          scheduledHour: request.scheduledHour,
+          status: "ACCEPTED",
+          id: { not: request.id },
+        },
+      });
+      if (remaining === 0) {
+        const slot = await prisma.heroSlot.findUnique({
+          where: { heroId_date_hour: { heroId: request.heroId, date: request.scheduledDate, hour: request.scheduledHour } },
+        });
+        if (slot) {
+          await prisma.heroSlot.update({
+            where: { id: slot.id },
+            data: { isBooked: false },
+          });
+          emitService(`slots:${request.subcategoryId}:${dateStr}`, "slot:updated", {
+            date: dateStr, hour: request.scheduledHour, isBooked: false, isBusy: false,
+          });
+        }
+      }
     }
 
     // Notify hero if accepted
