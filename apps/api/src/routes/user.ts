@@ -1305,6 +1305,83 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
   } catch (e) { next(e); }
 });
 
+// ─── Bulk booking (multi-service in one request) ─────────────────────────────
+const bulkServiceRequestSchema = z.object({
+  subcategoryIds: z.array(z.string().min(1)).min(1).max(8),
+  agentId: z.string().min(1),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  scheduledHour: z.number().int().min(0).max(23),
+  userName: z.string().min(1),
+  userPhone: z.string().min(7),
+  userGender: z.string().optional(),
+  userAddress: z.string().min(3),
+  userLat: z.number().optional(),
+  userLng: z.number().optional(),
+});
+
+router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validateBody(bulkServiceRequestSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof bulkServiceRequestSchema>;
+    const created = [];
+
+    for (const subcategoryId of body.subcategoryIds) {
+      const subcategory = await prisma.subcategory.findUnique({
+        where: { id: subcategoryId },
+        include: { category: true },
+      });
+      if (!subcategory || !subcategory.isActive || subcategory.category.type !== "SERVICE") continue;
+
+      const pricing = await prisma.agentSubcategoryPricing.findUnique({
+        where: { agentId_subcategoryId: { agentId: body.agentId, subcategoryId } },
+      });
+      if (!pricing) continue;
+
+      const request = await prisma.serviceRequest.create({
+        data: {
+          userId: req.user!.id,
+          subcategoryId,
+          agentId: body.agentId,
+          scheduledDate: new Date(body.scheduledDate),
+          scheduledHour: body.scheduledHour,
+          charge: pricing.baseServiceCharge,
+          discountPercent: pricing.discountPercent,
+          transportCharge: pricing.transportChargePerKm,
+          userName: body.userName,
+          userPhone: body.userPhone,
+          userGender: body.userGender,
+          userAddress: body.userAddress,
+          userLat: body.userLat,
+          userLng: body.userLng,
+        },
+        include: {
+          subcategory: { select: { name: true, category: { select: { name: true } } } },
+        },
+      });
+
+      // Broadcast to eligible heroes for this subcategory
+      const heroes = await prisma.heroProfile.findMany({
+        where: {
+          verifiedByAgentId: body.agentId,
+          isVerifiedByAgent: true,
+          isAvailable: true,
+          subcategoryIds: { has: subcategoryId },
+        },
+        select: { userId: true },
+      });
+      for (const h of heroes) {
+        emitService(`user:${h.userId}`, "service_request:new", request);
+      }
+
+      created.push(request);
+    }
+
+    if (created.length === 0)
+      return res.status(400).json({ error: "No valid subcategories could be booked (check pricing)" });
+
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
 // GET /api/user/service-requests — booking history
 router.get("/service-requests", requireAuth, requireRole("USER"), async (req, res, next) => {
   try {

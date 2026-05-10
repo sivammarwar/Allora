@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft, Phone,
-  User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin
+  User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin, Check, Tag
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -93,6 +93,17 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [showUpsell, setShowUpsell] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", gender: "MALE", address: "" });
 
+  // Multi-service selection (primary subcategory always included)
+  const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set([id]));
+  const toggleSub = (subId: string) => {
+    if (subId === id) return; // primary is always selected
+    setSelectedSubIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(subId)) next.delete(subId); else next.add(subId);
+      return next;
+    });
+  };
+
   // Saved addresses
   const { data: savedAddresses = [] } = useQuery<{ id: string; label: string; address: string; isDefault: boolean }[]>({
     queryKey: ["user", "saved-addresses"],
@@ -163,10 +174,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     return () => { s.off("service_request:accepted", onAccepted); };
   }, [qc]);
 
-  const book = useMutation({
+  const bookBulk = useMutation({
     mutationFn: () =>
-      api.post("/api/user/service-requests", {
-        subcategoryId: id,
+      api.post("/api/user/service-requests/bulk", {
+        subcategoryIds: Array.from(selectedSubIds),
         agentId: agentId!,
         scheduledDate: selectedDate,
         scheduledHour: selectedHour!,
@@ -177,9 +188,11 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         userLat: loc?.lat,
         userLng: loc?.lng,
       }),
-    onSuccess: () => {
-      toast.success("Booking request sent! Waiting for a provider to accept.");
+    onSuccess: (data: any[]) => {
+      const n = data.length;
+      toast.success(`${n} booking request${n > 1 ? "s" : ""} sent! Waiting for a provider to accept.`);
       setShowForm(false);
+      setSelectedSubIds(new Set([id]));
       qc.invalidateQueries({ queryKey: ["user", "service-requests"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
@@ -309,7 +322,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 <CalendarCheck size={14} className="inline mr-1.5 text-brand-primary" />
                 {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtSlot(selectedHour, slotData?.slotDurationHours ?? 1)}
               </p>
-              <Button size="sm" onClick={() => { if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
+              <Button size="sm" onClick={() => { setSelectedSubIds(new Set([id])); if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
             </div>
           )}
         </div>
@@ -323,6 +336,43 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               <h2 className="font-heading text-lg text-brand-text">Your details</h2>
               <button onClick={() => setShowForm(false)}><X size={16} className="text-brand-textMuted" /></button>
             </div>
+            {/* Booking summary */}
+            {(() => {
+              const allPriceable = [
+                { id, name: sub?.name ?? "", base: base ?? 0, disc, final: discounted ?? 0, hasPricing: !!pricing },
+                ...otherSubs.filter((s: any) => selectedSubIds.has(s.id)).map((s: any) => {
+                  const sp = s.agentPricing;
+                  const sBase = sp ? Number(sp.baseServiceCharge) : 0;
+                  const sDisc = sp ? Number(sp.discountPercent) : 0;
+                  return { id: s.id, name: s.name, base: sBase, disc: sDisc, final: sBase * (1 - sDisc / 100), hasPricing: !!sp };
+                }),
+              ].filter((s) => s.hasPricing);
+              const totalO = allPriceable.reduce((a, s) => a + s.base, 0);
+              const totalF = allPriceable.reduce((a, s) => a + s.final, 0);
+              const saved  = totalO - totalF;
+              return (
+                <div className="rounded-lg bg-brand-primary/5 border border-brand-primary/20 px-3 py-2.5 space-y-1.5">
+                  {allPriceable.map((s, i) => (
+                    <div key={s.id} className="flex items-center justify-between text-sm">
+                      <span className={`text-brand-text ${i === 0 ? "font-medium" : ""}`}>{s.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        {s.disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">\u20b9{s.base}</span>}
+                        <span className="font-semibold text-brand-primary">\u20b9{s.final.toFixed(0)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {allPriceable.length > 1 && (
+                    <div className="flex items-center justify-between pt-1 border-t border-brand-primary/20 text-sm font-semibold">
+                      <span className="text-brand-text">Total</span>
+                      <div className="flex items-center gap-2">
+                        {saved > 0.5 && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Save \u20b9{saved.toFixed(0)}</span>}
+                        <span className="text-brand-primary">\u20b9{totalF.toFixed(0)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Your name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
@@ -359,11 +409,11 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             </div>
             <Button
               className="w-full"
-              onClick={() => book.mutate()}
-              loading={book.isPending}
+              onClick={() => bookBulk.mutate()}
+              loading={bookBulk.isPending}
               disabled={!form.name || !form.phone || !form.address}
             >
-              <CheckCircle2 size={15} /> Send booking request
+              <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? `Confirm ${selectedSubIds.size} bookings` : "Send booking request"}
             </Button>
           </CardContent>
         </Card>
@@ -435,84 +485,152 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         </Button>
       </div>
 
-      {/* ── Upsell modal ── */}
-      {showUpsell && selectedHour !== null && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
-        >
-          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden" style={{ maxHeight: "88vh" }}>
-            {/* Header */}
-            <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100">
-              <div>
-                <h2 className="font-heading text-lg text-brand-text">More in {sub?.category.name}</h2>
-                <p className="text-xs text-brand-textMuted mt-0.5">Explore other services while you&apos;re here</p>
+      {/* ── Multi-service upsell modal ── */}
+      {showUpsell && selectedHour !== null && (() => {
+        // Compute prices for all selectable subs
+        const allSelectable = [
+          {
+            id,
+            name: sub?.name ?? "",
+            imageUrl: sub?.imageUrl ?? null,
+            base: base ?? 0,
+            disc,
+            final: discounted ?? 0,
+            hasPricing: !!pricing,
+            isMain: true,
+          },
+          ...otherSubs.map((s: any) => {
+            const sp = s.agentPricing;
+            const sBase = sp ? Number(sp.baseServiceCharge) : 0;
+            const sDisc = sp ? Number(sp.discountPercent) : 0;
+            return {
+              id: s.id,
+              name: s.name,
+              imageUrl: s.imageUrl,
+              base: sBase,
+              disc: sDisc,
+              final: sBase * (1 - sDisc / 100),
+              hasPricing: !!sp,
+              isMain: false,
+            };
+          }),
+        ];
+        const selected = allSelectable.filter((s) => selectedSubIds.has(s.id) && s.hasPricing);
+        const totalOriginal = selected.reduce((sum, s) => sum + s.base, 0);
+        const totalFinal   = selected.reduce((sum, s) => sum + s.final, 0);
+        const savings      = totalOriginal - totalFinal;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
+          >
+            <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+              {/* Header */}
+              <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+                <div>
+                  <h2 className="font-heading text-lg text-brand-text">Book services together</h2>
+                  <p className="text-xs text-brand-textMuted mt-0.5">
+                    {fmtSlot(selectedHour, slotData?.slotDurationHours ?? 1)} &bull; {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                  </p>
+                </div>
+                <button onClick={() => setShowUpsell(false)} className="ml-4 mt-0.5 p-1 rounded-full hover:bg-gray-100">
+                  <X size={18} className="text-gray-400" />
+                </button>
               </div>
-              <button onClick={() => setShowUpsell(false)} className="ml-4 mt-0.5 p-1 rounded-full hover:bg-gray-100">
-                <X size={18} className="text-gray-400" />
-              </button>
-            </div>
 
-            {/* Subcategory grid */}
-            <div className="overflow-y-auto flex-1 px-4 py-4">
-              <div className="grid grid-cols-2 gap-3">
-                {otherSubs.map((s: any) => {
-                  const sp = s.agentPricing;
-                  const sBase = sp ? Number(sp.baseServiceCharge) : null;
-                  const sDisc = sp ? Number(sp.discountPercent) : 0;
-                  const sFinal = sBase !== null ? sBase * (1 - sDisc / 100) : null;
+              {/* Service list */}
+              <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+                {allSelectable.map((s) => {
+                  const isSelected = selectedSubIds.has(s.id);
                   return (
                     <button
                       key={s.id}
-                      onClick={() => router.push(`/dashboard/subcategory/${s.id}${agentId ? `?agentId=${agentId}` : ""}`)}
-                      className="text-left w-full"
+                      onClick={() => toggleSub(s.id)}
+                      disabled={s.isMain}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                        isSelected
+                          ? "border-brand-primary bg-brand-primary/5"
+                          : "border-gray-100 hover:border-gray-200 bg-white"
+                      } ${s.isMain ? "cursor-default" : "cursor-pointer"}`}
                     >
-                      <Card className="overflow-hidden hover:border-brand-primary/50 transition-all hover:shadow-md">
+                      {/* Checkbox */}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        isSelected ? "border-brand-primary bg-brand-primary" : "border-gray-300"
+                      }`}>
+                        {isSelected && <Check size={11} className="text-white" />}
+                      </div>
+
+                      {/* Image */}
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-brand-surface">
                         {s.imageUrl && (s.imageUrl.startsWith("http") || s.imageUrl.startsWith("/")) ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.imageUrl} alt={s.name} className="w-full h-24 object-cover" />
+                          <img src={s.imageUrl} alt={s.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-16 bg-brand-surface flex items-center justify-center">
-                            <CategoryIcon name={s.imageUrl} size={26} className="text-brand-primary opacity-50" />
+                          <div className="w-full h-full flex items-center justify-center">
+                            <CategoryIcon name={s.imageUrl} size={18} className="text-brand-primary opacity-60" />
                           </div>
                         )}
-                        <CardContent className="py-2.5 px-3 space-y-1.5">
+                      </div>
+
+                      {/* Name + price */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
                           <p className="font-semibold text-brand-text text-sm truncate">{s.name}</p>
-                          {sFinal !== null ? (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {sDisc > 0 && (
-                                <span className="text-[10px] line-through text-brand-textMuted">₹{sBase}</span>
-                              )}
-                              <span className="text-sm font-bold text-brand-primary">₹{sFinal.toFixed(0)}</span>
-                              {sDisc > 0 && (
-                                <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">{sDisc}% off</span>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-[10px] text-brand-textMuted">Pricing on request</p>
+                          {s.isMain && (
+                            <span className="text-[9px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">Primary</span>
                           )}
-                        </CardContent>
-                      </Card>
+                        </div>
+                        {s.hasPricing ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {s.disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">₹{s.base}</span>}
+                            <span className="text-sm font-bold text-brand-primary">₹{s.final.toFixed(0)}</span>
+                            {s.disc > 0 && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{s.disc}% off</span>}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-brand-textMuted mt-0.5">Pricing on request</p>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* Continue CTA */}
-            <div className="px-4 py-4 border-t border-gray-100 bg-gray-50">
-              <Button
-                className="w-full"
-                onClick={() => { setShowUpsell(false); setShowForm(true); }}
-              >
-                <CalendarCheck size={15} />
-                Book {sub?.name} &mdash; {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} at {fmtSlot(selectedHour!, slotData?.slotDurationHours ?? 1)}
-              </Button>
+              {/* Price summary + CTA */}
+              <div className="px-4 pt-3 pb-5 border-t border-gray-100 bg-gray-50 space-y-3">
+                {selected.length > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="space-y-0.5">
+                      {totalOriginal !== totalFinal && (
+                        <p className="text-brand-textMuted">
+                          Total MRP: <span className="line-through">₹{totalOriginal.toFixed(0)}</span>
+                        </p>
+                      )}
+                      <p className="font-semibold text-brand-text">
+                        Total: <span className="text-brand-primary">₹{totalFinal.toFixed(0)}</span>
+                      </p>
+                    </div>
+                    {savings > 0.5 && (
+                      <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-full">
+                        <Tag size={11} />
+                        <span className="text-xs font-semibold">You save ₹{savings.toFixed(0)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <Button
+                  className="w-full"
+                  onClick={() => { setShowUpsell(false); setShowForm(true); }}
+                  disabled={selected.length === 0}
+                >
+                  <CalendarCheck size={15} />
+                  Book {selected.length} service{selected.length !== 1 ? "s" : ""} &mdash; ₹{totalFinal.toFixed(0)}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
