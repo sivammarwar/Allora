@@ -75,6 +75,15 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [loc, setLoc] = useState<UserLocation | null>(null);
   useEffect(() => setLoc(getStoredLocation()), []);
 
+  // Real-time clock — updates every minute so past slots fade automatically
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const todayDateStr = now.toISOString().split("T")[0];
+  const currentHour = now.getHours();
+
   // Slot picker state
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
@@ -265,22 +274,28 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
           {/* Hour grid */}
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-            {slotHours.map(({ hour, available }) => (
-              <button
-                key={hour}
-                disabled={!available}
-                onClick={() => setSelectedHour(hour)}
-                className={`py-2 px-1 rounded-lg border text-xs font-medium transition-colors text-center ${
-                  selectedHour === hour
-                    ? "border-brand-primary bg-brand-primary text-white"
-                    : available
-                      ? "border-brand-border hover:border-brand-primary/60 text-brand-text"
-                      : "border-brand-border/30 text-brand-textMuted/40 cursor-not-allowed"
-                }`}
-              >
-                {fmtSlot(hour, slotData?.slotDurationHours ?? 1)}
-              </button>
-            ))}
+            {slotHours.map(({ hour, available }) => {
+              const isPast = selectedDate === todayDateStr && hour <= currentHour;
+              const isDisabled = isPast || !available;
+              return (
+                <button
+                  key={hour}
+                  disabled={isDisabled}
+                  onClick={() => setSelectedHour(hour)}
+                  className={`py-2 px-1 rounded-lg border text-xs font-medium transition-colors text-center ${
+                    selectedHour === hour
+                      ? "border-brand-primary bg-brand-primary text-white"
+                      : isPast
+                        ? "border-brand-border/20 text-brand-textMuted/30 bg-gray-50 cursor-not-allowed line-through"
+                        : available
+                          ? "border-brand-border hover:border-brand-primary/60 text-brand-text"
+                          : "border-brand-border/30 text-brand-textMuted/40 cursor-not-allowed"
+                  }`}
+                >
+                  {fmtSlot(hour, slotData?.slotDurationHours ?? 1)}
+                </button>
+              );
+            })}
             {slotHours.length === 0 && (
               <p className="col-span-full text-xs text-brand-textMuted text-center py-3">
                 No slots available on this day.
