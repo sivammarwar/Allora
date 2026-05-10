@@ -593,8 +593,8 @@ model Review {
   id               String          @id @default(cuid())
   userId           String
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  heroId           String
-  hero             HeroProfile     @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  heroId           String?
+  hero             HeroProfile?    @relation(fields: [heroId], references: [id], onDelete: SetNull)
   categoryId       String?
   category         Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategoryId    String?

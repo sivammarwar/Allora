@@ -430,6 +430,28 @@ router.get("/categories", async (req, res, next) => {
   }
 });
 
+// GET /api/user/categories/avg-ratings — bulk star averages for all categories
+router.get("/categories/avg-ratings", async (_req, res, next) => {
+  try {
+    const rows = await prisma.review.groupBy({
+      by: ["categoryId"],
+      where: { categoryId: { not: null } },
+      _avg: { rating: true },
+      _count: { id: true },
+    });
+    const result: Record<string, { avg: number; count: number }> = {};
+    for (const r of rows) {
+      if (r.categoryId) {
+        result[r.categoryId] = {
+          avg: Math.round((r._avg.rating ?? 0) * 10) / 10,
+          count: r._count.id,
+        };
+      }
+    }
+    res.json(result);
+  } catch (e) { next(e); }
+});
+
 // ─── Single category detail ─────────────────────────────────────────────────
 router.get("/categories/:id", async (req, res, next) => {
   try {
@@ -1525,28 +1547,6 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
   } catch (e) { next(e); }
 });
 
-// GET /api/user/categories/avg-ratings — { [categoryId]: { avg, count } }
-router.get("/categories/avg-ratings", async (_req, res, next) => {
-  try {
-    const rows = await prisma.review.groupBy({
-      by: ["categoryId"],
-      where: { categoryId: { not: null } },
-      _avg: { rating: true },
-      _count: { id: true },
-    });
-    const result: Record<string, { avg: number; count: number }> = {};
-    for (const r of rows) {
-      if (r.categoryId) {
-        result[r.categoryId] = {
-          avg: Math.round((r._avg.rating ?? 0) * 10) / 10,
-          count: r._count.id,
-        };
-      }
-    }
-    res.json(result);
-  } catch (e) { next(e); }
-});
-
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 
 // POST /api/user/reviews — create a new review tied to a completed service request
@@ -1573,13 +1573,12 @@ router.post("/reviews", async (req, res, next) => {
     });
     if (!sr || sr.userId !== userId) return res.status(404).json({ error: "Booking not found" });
     if (sr.status !== "COMPLETED") return res.status(400).json({ error: "Can only review completed bookings" });
-    if (!sr.heroId) return res.status(400).json({ error: "No hero assigned" });
 
     // One review per completed booking (enforced by @unique on serviceRequestId)
     const review = await prisma.review.create({
       data: {
         userId,
-        heroId: sr.heroId,
+        ...(sr.heroId ? { heroId: sr.heroId } : {}),
         categoryId: sr.subcategory.categoryId,
         subcategoryId: sr.subcategoryId,
         serviceRequestId,
