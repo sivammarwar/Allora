@@ -2,6 +2,7 @@
 
 import { Home, CalendarClock, User } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
+import { UserHeaderActions } from "@/components/shared/UserHeaderActions";
 
 const links = [
   { href: "/dashboard",          label: "Home",     icon: Home },
@@ -17,6 +18,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       subtitle="Shop & book services near you"
       Icon={Home}
       links={links}
+      headerRight={<UserHeaderActions />}
     >
       {children}
     </DashboardShell>

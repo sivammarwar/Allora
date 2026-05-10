@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, Loader2, Receipt, ChevronDown, ChevronRight, Sparkles, CalendarClock } from "lucide-react";
+import { MapPin, Loader2, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,35 +140,6 @@ export default function UserDashboardPage() {
 
   return (
     <div className="page-enter space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="font-heading text-3xl text-brand-text">
-            Discover Local Services
-          </h1>
-          <p className="text-brand-textMuted text-sm mt-1">
-            Browse services and products available in your area
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/orders">
-            <Button variant="outline" size="sm">
-              <Receipt size={14} />
-              My orders
-            </Button>
-          </Link>
-          <Link href="/dashboard/bookings">
-            <Button variant="outline" size="sm">
-              <CalendarClock size={14} />
-              Bookings
-            </Button>
-          </Link>
-          <Button variant="ghost" size="sm" onClick={requestLocation} loading={locating}>
-            <MapPin size={14} />
-            Update location
-          </Button>
-        </div>
-      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-10">
