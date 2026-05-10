@@ -555,7 +555,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                       } ${s.isMain ? "cursor-default" : "cursor-pointer"}`}
                     >
                       {/* Checkbox */}
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                         isSelected ? "border-brand-primary bg-brand-primary" : "border-gray-300"
                       }`}>
                         {isSelected && <Check size={11} className="text-white" />}
