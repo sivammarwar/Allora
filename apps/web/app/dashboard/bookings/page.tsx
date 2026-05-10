@@ -33,6 +33,7 @@ interface Booking {
   scheduledHour: number;
   charge: string;
   discountPercent: string;
+  bulkDiscountPercent: string;
   transportCharge: string;
   createdAt: string;
   subcategory: { id: string; name: string; category: { id: string; name: string } };
@@ -74,7 +75,8 @@ function groupBookings(list: Booking[]): BookingGroup[] {
       });
     }
     const g = map.get(key)!;
-    const final = Number(b.charge) * (1 - Number(b.discountPercent) / 100);
+    const afterInd = Number(b.charge) * (1 - Number(b.discountPercent) / 100);
+    const final = afterInd * (1 - Number(b.bulkDiscountPercent) / 100);
     g.bookings.push(b);
     g.totalFinal += final;
     if (["PENDING", "ACCEPTED"].includes(b.status)) g.groupStatus = b.status;
@@ -225,33 +227,58 @@ export default function UserBookingsPage() {
       >
         {selected && (
           <div className="px-6 py-4 space-y-4">
-            {/* Subcategory list */}
-            <div className="divide-y divide-brand-border">
-              {selected.bookings.map((b) => {
-                const final = Number(b.charge) * (1 - Number(b.discountPercent) / 100);
-                const disc = Number(b.discountPercent);
-                return (
-                  <div key={b.id} className="py-3 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-brand-text">{b.subcategory.name}</p>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[b.status]}`}>
-                        {b.status}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-brand-text shrink-0">
-                      ₹{final.toFixed(0)}
-                      {disc > 0 && <span className="text-[10px] text-brand-textMuted ml-1">({disc}% off)</span>}
-                    </p>
+            {/* Subcategory list — prices after individual discount only */}
+            {(() => {
+              const bulkPct = Number(selected.bookings[0]?.bulkDiscountPercent ?? 0);
+              const subtotal = selected.bookings.reduce(
+                (s, b) => s + Number(b.charge) * (1 - Number(b.discountPercent) / 100), 0
+              );
+              const bulkSaving = subtotal * bulkPct / 100;
+              return (
+                <>
+                  <div className="divide-y divide-brand-border">
+                    {selected.bookings.map((b) => {
+                      const afterInd = Number(b.charge) * (1 - Number(b.discountPercent) / 100);
+                      const indDisc = Number(b.discountPercent);
+                      return (
+                        <div key={b.id} className="py-3 flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-brand-text">{b.subcategory.name}</p>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${STATUS_BADGE[b.status]}`}>
+                              {b.status}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-brand-text shrink-0">
+                            ₹{afterInd.toFixed(0)}
+                            {indDisc > 0 && <span className="text-[10px] text-brand-textMuted ml-1">({indDisc}% off)</span>}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Total */}
-            <div className="flex items-center justify-between pt-1 border-t border-brand-border">
-              <p className="text-sm font-semibold text-brand-text">Total</p>
-              <p className="font-heading text-xl text-brand-text">₹{selected.totalFinal.toFixed(0)}</p>
-            </div>
+                  {/* Bulk discount line on subtotal */}
+                  {bulkPct > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-brand-border">
+                      <div className="flex items-center justify-between text-sm text-brand-textMuted">
+                        <span>Subtotal ({selected.bookings.length} services)</span>
+                        <span>₹{subtotal.toFixed(0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-brand-success font-medium">Bulk discount ({selected.bookings.length} services · {bulkPct}% off)</span>
+                        <span className="text-brand-success font-medium">−₹{bulkSaving.toFixed(0)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="flex items-center justify-between pt-1 border-t border-brand-border">
+                    <p className="text-sm font-semibold text-brand-text">Total</p>
+                    <p className="font-heading text-xl text-brand-text">₹{selected.totalFinal.toFixed(0)}</p>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Hero info */}
             {selected.hero && (

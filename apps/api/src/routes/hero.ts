@@ -906,7 +906,8 @@ router.get("/earnings", async (req, res, next) => {
     const totalEarnings = requests.reduce((sum, r) => {
       const base = Number(r.charge);
       const disc = Number(r.discountPercent);
-      const discounted = base * (1 - disc / 100);
+      const bulkDisc = Number((r as any).bulkDiscountPercent ?? 0);
+      const discounted = base * (1 - disc / 100) * (1 - bulkDisc / 100);
       return sum + discounted + Number(r.transportCharge);
     }, 0);
     res.json({ totalEarnings, history: requests });

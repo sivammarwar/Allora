@@ -1301,6 +1301,7 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
         scheduledHour: body.scheduledHour,
         charge: pricing.baseServiceCharge,
         discountPercent: pricing.discountPercent,
+        bulkDiscountPercent: 0,
         transportCharge: catCfgSingle ? catCfgSingle.transportChargePerKm : 0,
         userName: body.userName,
         userPhone: body.userPhone,
@@ -1390,11 +1391,7 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
         else if (count === 2) bulkDisc = Number(catCfg.bulkDiscount2);
       }
 
-      // Effective combined discount: individual + bulk applied on top
       const indDisc = Number(pricing.discountPercent);
-      const effectiveDiscount = bulkDisc > 0
-        ? 100 * (1 - (1 - indDisc / 100) * (1 - bulkDisc / 100))
-        : indDisc;
 
       const transportCharge = catCfg ? catCfg.transportChargePerKm : 0;
 
@@ -1406,7 +1403,8 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
           scheduledDate: new Date(body.scheduledDate),
           scheduledHour: body.scheduledHour,
           charge: pricing.baseServiceCharge,
-          discountPercent: effectiveDiscount,
+          discountPercent: indDisc,
+          bulkDiscountPercent: bulkDisc,
           transportCharge,
           userName: body.userName,
           userPhone: body.userPhone,
@@ -1450,7 +1448,7 @@ router.get("/service-requests", requireAuth, requireRole("USER"), async (req, re
     const requests = await prisma.serviceRequest.findMany({
       where: { userId: req.user!.id },
       include: {
-        subcategory: { select: { id: true, name: true, category: { select: { name: true } } } },
+        subcategory: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
         hero: {
           select: {
             id: true, serviceName: true, shopName: true, phone: true, gender: true,

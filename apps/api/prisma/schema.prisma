@@ -699,9 +699,10 @@ model ServiceRequest {
   slotId          String?              @unique
   slot            HeroSlot?            @relation(fields: [slotId], references: [id])
   status          ServiceRequestStatus @default(PENDING)
-  charge          Decimal              @db.Decimal(10, 2)
-  discountPercent Decimal              @db.Decimal(5, 2)  @default(0)
-  transportCharge Decimal              @db.Decimal(10, 2) @default(0)
+  charge               Decimal              @db.Decimal(10, 2)
+  discountPercent      Decimal              @db.Decimal(5, 2)  @default(0) // individual service discount
+  bulkDiscountPercent  Decimal              @db.Decimal(5, 2)  @default(0) // extra discount for booking multiple services
+  transportCharge      Decimal              @db.Decimal(10, 2) @default(0)
   userName        String
   userPhone       String
   userGender      String?
