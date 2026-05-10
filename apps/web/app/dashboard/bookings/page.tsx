@@ -1,16 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarClock, XCircle, Clock, Phone, User,
-  Loader2, ArrowLeft, CheckSquare2, ChevronRight,
+  Loader2, ArrowLeft, CheckSquare2, ChevronRight, Star, Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { getSocket } from "@/lib/socket";
 
 function fmtHour(h: number) {
   if (h === 0) return "12:00 AM";
@@ -91,10 +92,52 @@ export default function UserBookingsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [selected, setSelected] = useState<BookingGroup | null>(null);
+  const [ratingPrompt, setRatingPrompt] = useState<{ requestId: string; label: string } | null>(null);
+  const [promptRating, setPromptRating] = useState(0);
+  const [promptText, setPromptText] = useState("");
+  const [promptHover, setPromptHover] = useState(0);
 
   const { data: bookings = [], isLoading } = useQuery<Booking[]>({
     queryKey: ["user", "service-requests"],
     queryFn: () => api.get("/api/user/service-requests"),
+  });
+
+  // Listen for real-time completion events
+  useEffect(() => {
+    const s = getSocket("/service");
+    const onCompleted = ({ requestId }: { requestId: string }) => {
+      qc.invalidateQueries({ queryKey: ["user", "service-requests"] });
+      // Find booking details from cache to show in prompt
+      const cached: Booking[] = qc.getQueryData(["user", "service-requests"]) ?? [];
+      const b = cached.find((x) => x.id === requestId);
+      const label = b ? `${b.subcategory.name} – ${b.subcategory.category.name}` : "your service";
+      setPromptRating(0);
+      setPromptText("");
+      setRatingPrompt({ requestId, label });
+    };
+    s.on("service_request:completed", onCompleted);
+    return () => { s.off("service_request:completed", onCompleted); };
+  }, [qc]);
+
+  const submitRating = useMutation({
+    mutationFn: () =>
+      api.post("/api/user/reviews", {
+        serviceRequestId: ratingPrompt!.requestId,
+        rating: promptRating,
+        reviewText: promptText.trim() || undefined,
+      }),
+    onSuccess: () => {
+      toast.success("Thank you for your review!");
+      setRatingPrompt(null);
+      qc.invalidateQueries({ queryKey: ["category-avg-ratings"] });
+    },
+    onError: (e) => {
+      if (e instanceof ApiError && e.message.includes("Already reviewed")) {
+        setRatingPrompt(null);
+      } else {
+        toast.error(e instanceof ApiError ? e.message : "Failed");
+      }
+    },
   });
 
   const activeGroups = useMemo(
@@ -307,6 +350,82 @@ export default function UserBookingsPage() {
                 Cancel all {cancellableIds.length} booking{cancellableIds.length > 1 ? "s" : ""}
               </Button>
             )}
+          </div>
+        )}
+      </Dialog>
+
+      {/* ── Rate this service prompt ── */}
+      <Dialog
+        open={!!ratingPrompt}
+        onClose={() => setRatingPrompt(null)}
+        title="How was your experience?"
+        description={ratingPrompt?.label}
+        size="sm"
+      >
+        {ratingPrompt && (
+          <div className="px-6 py-5 space-y-5">
+            {/* Star selector */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((v) => (
+                  <button
+                    key={v}
+                    onMouseEnter={() => setPromptHover(v)}
+                    onMouseLeave={() => setPromptHover(0)}
+                    onClick={() => setPromptRating(v)}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      size={36}
+                      className={`transition-all ${
+                        (promptHover || promptRating) >= v
+                          ? "fill-amber-400 text-amber-400 scale-110"
+                          : "text-brand-border"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-brand-textMuted">
+                {promptRating === 0 ? "Tap to rate" :
+                 promptRating === 1 ? "Poor" :
+                 promptRating === 2 ? "Fair" :
+                 promptRating === 3 ? "Good" :
+                 promptRating === 4 ? "Very good" : "Excellent!"}
+              </p>
+            </div>
+
+            {/* Optional text */}
+            <div className="relative">
+              <textarea
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                rows={3}
+                placeholder="Write a short review… (optional, max 40 words)"
+                className="w-full text-sm rounded-xl border border-brand-border bg-brand-bg p-3 pb-7 resize-none focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 placeholder:text-brand-textMuted/50"
+              />
+              <span className={`absolute bottom-2 right-3 text-[11px] font-mono ${
+                promptText.trim().split(/\s+/).filter(Boolean).length > 40 ? "text-red-500" : "text-brand-textMuted"
+              }`}>
+                {promptText.trim().split(/\s+/).filter(Boolean).length}/40
+              </span>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setRatingPrompt(null)}>
+                Skip
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={promptRating === 0 || submitRating.isPending ||
+                  promptText.trim().split(/\s+/).filter(Boolean).length > 40}
+                onClick={() => submitRating.mutate()}
+                loading={submitRating.isPending}
+              >
+                <Send size={14} />
+                Submit
+              </Button>
+            </div>
           </div>
         )}
       </Dialog>

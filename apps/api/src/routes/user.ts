@@ -1525,4 +1525,206 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
   } catch (e) { next(e); }
 });
 
+// GET /api/user/categories/avg-ratings — { [categoryId]: { avg, count } }
+router.get("/categories/avg-ratings", async (_req, res, next) => {
+  try {
+    const rows = await prisma.review.groupBy({
+      by: ["categoryId"],
+      where: { categoryId: { not: null } },
+      _avg: { rating: true },
+      _count: { id: true },
+    });
+    const result: Record<string, { avg: number; count: number }> = {};
+    for (const r of rows) {
+      if (r.categoryId) {
+        result[r.categoryId] = {
+          avg: Math.round((r._avg.rating ?? 0) * 10) / 10,
+          count: r._count.id,
+        };
+      }
+    }
+    res.json(result);
+  } catch (e) { next(e); }
+});
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+// POST /api/user/reviews — create a new review tied to a completed service request
+router.post("/reviews", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { serviceRequestId, rating, reviewText } = req.body;
+
+    if (!serviceRequestId || !rating) {
+      return res.status(400).json({ error: "serviceRequestId and rating are required" });
+    }
+    if (typeof rating !== "number" || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be 1–5" });
+    }
+    if (reviewText) {
+      const wordCount = reviewText.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
+    }
+
+    // Verify the service request belongs to this user and is COMPLETED
+    const sr = await prisma.serviceRequest.findUnique({
+      where: { id: serviceRequestId },
+      include: { subcategory: { select: { categoryId: true } } },
+    });
+    if (!sr || sr.userId !== userId) return res.status(404).json({ error: "Booking not found" });
+    if (sr.status !== "COMPLETED") return res.status(400).json({ error: "Can only review completed bookings" });
+    if (!sr.heroId) return res.status(400).json({ error: "No hero assigned" });
+
+    // One review per completed booking (enforced by @unique on serviceRequestId)
+    const review = await prisma.review.create({
+      data: {
+        userId,
+        heroId: sr.heroId,
+        categoryId: sr.subcategory.categoryId,
+        subcategoryId: sr.subcategoryId,
+        serviceRequestId,
+        rating,
+        reviewText: reviewText?.trim() ?? null,
+      },
+      include: {
+        user: { select: { name: true, profileImageUrl: true } },
+        reactions: true,
+      },
+    });
+    res.status(201).json(review);
+  } catch (e: any) {
+    if (e?.code === "P2002") return res.status(409).json({ error: "Already reviewed this booking" });
+    next(e);
+  }
+});
+
+// GET /api/user/categories/:id/reviews?page=1&limit=10
+router.get("/categories/:id/reviews", async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const categoryId = req.params.id;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(20, parseInt(req.query.limit as string) || 10);
+
+    const [reviews, total, avgResult] = await Promise.all([
+      prisma.review.findMany({
+        where: { categoryId },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          user: { select: { id: true, name: true, profileImageUrl: true } },
+          reactions: { select: { userId: true, type: true } },
+        },
+      }),
+      prisma.review.count({ where: { categoryId } }),
+      prisma.review.aggregate({ where: { categoryId }, _avg: { rating: true }, _count: true }),
+    ]);
+
+    const shaped = reviews.map((r) => ({
+      ...r,
+      likes: r.reactions.filter((x) => x.type === "LIKE").length,
+      dislikes: r.reactions.filter((x) => x.type === "DISLIKE").length,
+      myReaction: userId ? (r.reactions.find((x) => x.userId === userId)?.type ?? null) : null,
+      isOwn: r.userId === userId,
+      reactions: undefined,
+    }));
+
+    res.json({
+      reviews: shaped,
+      total,
+      avgRating: avgResult._avg.rating ? Math.round(avgResult._avg.rating * 10) / 10 : null,
+      totalCount: avgResult._count,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (e) { next(e); }
+});
+
+// PUT /api/user/reviews/:id — edit review text only (rating is immutable)
+router.put("/reviews/:id", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { reviewText } = req.body;
+    if (reviewText !== undefined && reviewText !== null) {
+      const wordCount = String(reviewText).trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
+    }
+    const review = await prisma.review.findUnique({ where: { id: req.params.id } });
+    if (!review || review.userId !== userId) return res.status(404).json({ error: "Review not found" });
+    const updated = await prisma.review.update({
+      where: { id: req.params.id },
+      data: { reviewText: reviewText?.trim() ?? null },
+      include: { user: { select: { name: true, profileImageUrl: true } }, reactions: true },
+    });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// DELETE /api/user/reviews/:id
+router.delete("/reviews/:id", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const review = await prisma.review.findUnique({ where: { id: req.params.id } });
+    if (!review || review.userId !== userId) return res.status(404).json({ error: "Review not found" });
+    await prisma.review.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// POST /api/user/reviews/:id/react — toggle like/dislike
+router.post("/reviews/:id/react", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const reviewId = req.params.id;
+    const { type } = req.body; // "LIKE" | "DISLIKE"
+    if (type !== "LIKE" && type !== "DISLIKE") {
+      return res.status(400).json({ error: "type must be LIKE or DISLIKE" });
+    }
+    const existing = await prisma.reviewReaction.findUnique({
+      where: { reviewId_userId: { reviewId, userId } },
+    });
+    if (existing) {
+      if (existing.type === type) {
+        // Toggle off
+        await prisma.reviewReaction.delete({ where: { reviewId_userId: { reviewId, userId } } });
+        return res.json({ action: "removed" });
+      }
+      // Switch type
+      await prisma.reviewReaction.update({
+        where: { reviewId_userId: { reviewId, userId } },
+        data: { type: type as any },
+      });
+      return res.json({ action: "switched", type });
+    }
+    await prisma.reviewReaction.create({ data: { reviewId, userId, type: type as any } });
+    res.json({ action: "added", type });
+  } catch (e) { next(e); }
+});
+
+// GET /api/user/categories/:id/reviews/my-pending — completed bookings without a review
+router.get("/categories/:id/reviews/my-pending", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const categoryId = req.params.id;
+    const pending = await prisma.serviceRequest.findMany({
+      where: {
+        userId,
+        status: "COMPLETED",
+        review: null,
+        subcategory: { categoryId },
+      },
+      select: {
+        id: true,
+        scheduledDate: true,
+        scheduledHour: true,
+        subcategory: { select: { name: true, category: { select: { id: true, name: true } } } },
+      },
+      orderBy: { completedAt: "desc" },
+      take: 5,
+    });
+    res.json(pending);
+  } catch (e) { next(e); }
+});
+
 export default router;

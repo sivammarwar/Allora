@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, Loader2, Sparkles } from "lucide-react";
+import { MapPin, Loader2, Sparkles, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,6 +136,13 @@ export default function UserDashboardPage() {
     );
   }
 
+  const { data: avgRatings = {} } = useQuery<Record<string, { avg: number; count: number }>>(
+    {
+      queryKey: ["category-avg-ratings"],
+      queryFn: () => api.get("/api/user/categories/avg-ratings"),
+    }
+  );
+
   const isLoading = browseLoading || viralLoading;
 
   return (
@@ -188,6 +195,13 @@ export default function UserDashboardPage() {
                           <h3 className="text-white font-semibold text-lg">{cat.name}</h3>
                           <p className="text-white/80 text-sm">{cat.subcategories.length} subcategories</p>
                         </div>
+                        {avgRatings[cat.id] && (
+                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded-full">
+                            <Star size={11} className="fill-amber-400 text-amber-400" />
+                            <span>{avgRatings[cat.id].avg.toFixed(1)}</span>
+                            <span className="text-white/60">({avgRatings[cat.id].count})</span>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   </Link>

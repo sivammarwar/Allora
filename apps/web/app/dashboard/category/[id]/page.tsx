@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Package, ShoppingCart } from "lucide-react";
+import { CategoryReviews } from "@/components/shared/CategoryReviews";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -294,6 +295,9 @@ export default function UserCategoryPage({
           )}
         </>
       )}
+
+      {/* ── Reviews section ── */}
+      {category && <CategoryReviews categoryId={id} />}
     </div>
     <CartFloatingButton />
     </>

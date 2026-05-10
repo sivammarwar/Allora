@@ -123,6 +123,11 @@ enum ServiceRequestStatus {
   CANCELLED
 }
 
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
 enum NotificationType {
   VERIFICATION_STATUS
   ORDER_NEW
@@ -177,6 +182,7 @@ model User {
   orders               Order[]
   serviceRequests      ServiceRequest[]
   reviews              Review[]
+  reviewReactions      ReviewReaction[]
   notifications        Notification[]
 
   // Saved addresses
@@ -399,6 +405,7 @@ model Category {
   products                 Product[]
   subcategories            Subcategory[]
   agentCategoryConfigs     AgentCategoryConfig[]
+  reviews                  Review[]
 
   @@index([type, isActive])
 }
@@ -583,22 +590,44 @@ model PaymentRecord {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Review {
-  id            String       @id @default(cuid())
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  heroId        String
-  hero          HeroProfile  @relation(fields: [heroId], references: [id], onDelete: Cascade)
-  subcategoryId String?
-  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  productId     String?
-  product       Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
-  rating        Int          // 1..5
-  reviewText    String?
-  createdAt     DateTime     @default(now())
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heroId           String
+  hero             HeroProfile     @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  categoryId       String?
+  category         Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryId    String?
+  subcategory      Subcategory?    @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  productId        String?
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  serviceRequestId String?         @unique
+  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  rating           Int             // 1..5, immutable after create
+  reviewText       String?         // max 40 words, editable
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  reactions        ReviewReaction[]
 
   @@index([heroId, createdAt])
+  @@index([categoryId, createdAt])
   @@index([subcategoryId, createdAt])
   @@index([productId, createdAt])
+}
+
+model ReviewReaction {
+  id        String       @id @default(cuid())
+  reviewId  String
+  review    Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
 }
 
 model Notification {
@@ -714,6 +743,8 @@ model ServiceRequest {
   completedAt     DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
+
+  review    Review?
 
   @@index([userId, createdAt])
   @@index([heroId, status])
