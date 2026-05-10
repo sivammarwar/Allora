@@ -103,19 +103,33 @@ export function ViralGrid({ items, onItemClick, emptyCellClick, editable = false
             }}
           >
             {item ? (
-              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-                <div className="w-12 h-12 rounded-full bg-brand-surface flex items-center justify-center mb-1">
-                  <CategoryIcon name={item.imageUrl} size={24} className="text-brand-primary" />
-                </div>
-                <span className="text-[10px] text-white font-medium leading-tight line-clamp-2">
-                  {item.name}
-                </span>
-                {editable && (
-                  <span className="text-[8px] text-brand-textMuted mt-0.5">
-                    Pos {item.viralPosition}
+              <>
+                {/* Background fill: real image or dark overlay */}
+                {item.imageUrl && (item.imageUrl.startsWith("http") || item.imageUrl.startsWith("/")) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : null}
+                {/* Dark gradient overlay + label */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-start justify-end p-2">
+                  {(!item.imageUrl || (!item.imageUrl.startsWith("http") && !item.imageUrl.startsWith("/"))) && (
+                    <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center mb-1 self-center">
+                      <CategoryIcon name={item.imageUrl} size={18} className="text-brand-primary" />
+                    </div>
+                  )}
+                  <span className="text-[10px] text-white font-semibold leading-tight line-clamp-2 w-full">
+                    {item.name}
                   </span>
-                )}
-              </div>
+                  {editable && (
+                    <span className="text-[8px] text-white/60 mt-0.5">
+                      Pos {item.viralPosition}
+                    </span>
+                  )}
+                </div>
+              </>
             ) : editable ? (
               <div className="w-full h-full flex items-center justify-center">
                 <span className="text-[10px] text-brand-textMuted">+ {position}</span>

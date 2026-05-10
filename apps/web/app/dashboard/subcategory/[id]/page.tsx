@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getStoredLocation, type UserLocation } from "@/lib/location";
 import { getSocket } from "@/lib/socket";
+import { CategoryIcon } from "@/components/shared/CategoryIcon";
 
 interface AgentPricing {
   id: string;
@@ -354,10 +355,18 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 <button
                   key={s.id}
                   onClick={() => router.push(`/dashboard/subcategory/${s.id}${agentId ? `?agentId=${agentId}` : ""}`)}
-                  className="text-left"
+                  className="text-left w-full"
                 >
-                  <Card className="hover:border-brand-primary/50 transition-colors">
-                    <CardContent className="py-3 space-y-1">
+                  <Card className="hover:border-brand-primary/50 transition-colors overflow-hidden">
+                    {s.imageUrl && (s.imageUrl.startsWith("http") || s.imageUrl.startsWith("/")) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.imageUrl} alt={s.name} className="w-full h-24 object-cover" />
+                    ) : (
+                      <div className="w-full h-16 bg-brand-surface flex items-center justify-center">
+                        <CategoryIcon name={s.imageUrl} size={28} className="text-brand-primary opacity-60" />
+                      </div>
+                    )}
+                    <CardContent className="py-2 space-y-0.5">
                       <p className="font-medium text-brand-text text-sm truncate">{s.name}</p>
                       {sFinal !== null && (
                         <p className="text-xs text-brand-primary font-medium">₹{sFinal.toFixed(0)}</p>
