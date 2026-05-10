@@ -356,8 +356,8 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                     <div key={s.id} className="flex items-center justify-between text-sm">
                       <span className={`text-brand-text ${i === 0 ? "font-medium" : ""}`}>{s.name}</span>
                       <div className="flex items-center gap-1.5">
-                        {s.disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">\u20b9{s.base}</span>}
-                        <span className="font-semibold text-brand-primary">\u20b9{s.final.toFixed(0)}</span>
+                        {s.disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">₹{s.base}</span>}
+                        <span className="font-semibold text-brand-primary">₹{s.final.toFixed(0)}</span>
                       </div>
                     </div>
                   ))}
@@ -365,8 +365,8 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                     <div className="flex items-center justify-between pt-1 border-t border-brand-primary/20 text-sm font-semibold">
                       <span className="text-brand-text">Total</span>
                       <div className="flex items-center gap-2">
-                        {saved > 0.5 && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Save \u20b9{saved.toFixed(0)}</span>}
-                        <span className="text-brand-primary">\u20b9{totalF.toFixed(0)}</span>
+                        {saved > 0.5 && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Save ₹{saved.toFixed(0)}</span>}
+                        <span className="text-brand-primary">₹{totalF.toFixed(0)}</span>
                       </div>
                     </div>
                   )}
