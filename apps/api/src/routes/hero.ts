@@ -28,6 +28,7 @@ router.get("/me", async (req, res, next) => {
     const profile = await prisma.heroProfile.findUnique({
       where: { userId },
       include: {
+        user: { select: { name: true, email: true } },
         verifiedByAgent: {
           select: { id: true, user: { select: { name: true, email: true } } },
         },
