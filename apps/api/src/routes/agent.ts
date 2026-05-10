@@ -1016,7 +1016,7 @@ router.delete("/price-control/:id", async (req, res, next) => {
   }
 });
 
-// ─── Category Config (transport + bulk discounts per category) ───────────────
+// ─── Category Config (transport + bulk discounts per category) ──────────────
 const categoryConfigSchema = z.object({
   categoryId: z.string().min(1),
   transportChargePerKm: z.number().nonnegative().default(0),
