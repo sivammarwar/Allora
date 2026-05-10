@@ -77,7 +77,7 @@ function BottomNav({ links }: { links: NavLink[] }) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-lg safe-area-pb">
       <div className="flex items-end justify-around px-2 py-1">
         {tabs.map((tab) => {
-          const active = pathname.startsWith(tab.href);
+          const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           const Icon = tab.icon;
           return (
             <Link
