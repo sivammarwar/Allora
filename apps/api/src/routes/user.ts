@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { logger } from "../lib/logger";
 import * as turf from "@turf/turf";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
@@ -1555,11 +1556,16 @@ router.post("/reviews", async (req, res, next) => {
     const userId = req.user!.id;
     const { serviceRequestId, rating, reviewText } = req.body;
 
-    if (!serviceRequestId || !rating) {
-      return res.status(400).json({ error: "serviceRequestId and rating are required" });
+    logger.info(`POST /reviews body: ${JSON.stringify({ serviceRequestId, rating: rating, ratingType: typeof rating, reviewText })} userId=${userId}`);
+
+    if (!serviceRequestId) {
+      return res.status(400).json({ error: "serviceRequestId is required" });
+    }
+    if (!rating && rating !== 0) {
+      return res.status(400).json({ error: "rating is required" });
     }
     if (typeof rating !== "number" || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "Rating must be 1–5" });
+      return res.status(400).json({ error: `Rating must be 1–5 (received: ${JSON.stringify(rating)}, type: ${typeof rating})` });
     }
     if (reviewText) {
       const wordCount = reviewText.trim().split(/\s+/).filter(Boolean).length;
