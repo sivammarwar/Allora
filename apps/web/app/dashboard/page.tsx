@@ -191,49 +191,34 @@ export default function UserDashboardPage() {
     router.push(url);
   };
 
-  if (!loc) {
-    return (
-      <div className="page-enter max-w-md mx-auto pt-8">
-        <div className="rounded-2xl border border-brand-border bg-white p-8 text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 rounded-full bg-brand-primary/10 flex items-center justify-center mx-auto">
-            <Navigation className="text-brand-primary" size={26} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Where are you located?</h1>
-            <p className="text-sm text-brand-textMuted mt-1">
-              We use your location to show local services and partners near you.
-            </p>
-          </div>
-          {locError && (
-            <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{locError}</p>
-          )}
-          <Button onClick={requestLocation} loading={locating} className="w-full">
-            <MapPin size={15} />
-            Detect my location
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   const isLoading = browseLoading || viralLoading || newlyLoading;
 
   return (
     <div className="page-enter space-y-0">
 
       {/* ── Location bar ─────────────────────────────────────────────── */}
-      <button
-        onClick={() => setPickerOpen(true)}
-        className="flex items-center gap-2 mb-6 group w-fit"
-      >
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/8 border border-brand-primary/20 hover:border-brand-primary/40 transition-colors">
-          <MapPin size={12} className="text-brand-primary shrink-0" />
-          <span className="text-xs font-semibold text-brand-text max-w-[200px] truncate">
-            {loc.name ?? `${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)}`}
-          </span>
-          <ChevronDown size={11} className="text-brand-primary" />
+      {loc ? (
+        <button
+          onClick={() => setPickerOpen(true)}
+          className="flex items-center gap-2 mb-6 group w-fit"
+        >
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/8 border border-brand-primary/20 hover:border-brand-primary/40 transition-colors">
+            <MapPin size={12} className="text-brand-primary shrink-0" />
+            <span className="text-xs font-semibold text-brand-text max-w-[200px] truncate">
+              {loc.name ?? `${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)}`}
+            </span>
+            <ChevronDown size={11} className="text-brand-primary" />
+          </div>
+        </button>
+      ) : (
+        <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-primary/8 border border-brand-primary/20">
+          <Navigation size={14} className="text-brand-primary shrink-0" />
+          <p className="text-xs text-brand-text font-medium flex-1">Share your location to see services near you</p>
+          <Button size="sm" onClick={requestLocation} loading={locating} className="text-xs h-7 px-3">
+            {locError ? "Retry" : "Detect"}
+          </Button>
         </div>
-      </button>
+      )}
 
       {pickerOpen && (
         <LocationPickerModal
@@ -247,12 +232,7 @@ export default function UserDashboardPage() {
         />
       )}
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="animate-spin text-brand-primary" size={28} />
-        </div>
-      ) : (
-        <div className="space-y-12">
+      <div className="space-y-12">
 
           {/* ─── Section 1: MOST USED ────────────────────────────────── */}
           <section>
@@ -395,8 +375,7 @@ export default function UserDashboardPage() {
             </section>
           )}
 
-        </div>
-      )}
+      </div>
     </div>
   );
 }
