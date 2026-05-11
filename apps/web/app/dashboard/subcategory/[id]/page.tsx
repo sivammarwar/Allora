@@ -81,7 +81,11 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const { data: currentUser } = useCurrentUser();
 
   function requireLogin() {
-    if (!currentUser) { router.push("/login"); return true; }
+    if (!currentUser) {
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      router.push(`/login?redirect=${redirect}`);
+      return true;
+    }
     return false;
   }
 

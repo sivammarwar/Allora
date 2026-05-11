@@ -91,7 +91,7 @@ function BottomNav({ links }: { links: NavLink[] }) {
           return (
             <button
               key={tab.href}
-              onClick={() => blocked ? router.push("/login") : router.push(tab.href)}
+              onClick={() => blocked ? router.push(`/login?redirect=${encodeURIComponent(tab.href)}`) : router.push(tab.href)}
               className="flex flex-col items-center gap-0.5 relative transition-colors px-3 py-2 flex-1"
             >
               {active && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Eye, EyeOff, KeyRound, ShieldCheck, Lock } from "lucide-react";
@@ -34,6 +34,8 @@ interface Props {
 
 export function RoleLogin({ role, title, subtitle }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || roleHome[role];
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -79,7 +81,7 @@ export function RoleLogin({ role, title, subtitle }: Props) {
         return;
       }
       toast.success("Welcome back!");
-      router.replace(roleHome[user.role]);
+      router.replace(redirectTo);
     } catch (err) {
       if (err instanceof ApiError && (err.data as any)?.error === "no_password") {
         // shouldn't happen but handle gracefully
@@ -129,7 +131,7 @@ export function RoleLogin({ role, title, subtitle }: Props) {
     try {
       await setPasswordMutation.mutateAsync({ password });
       toast.success(isReset ? "Password updated! Logging you in…" : "Password created! Welcome.");
-      router.replace(roleHome[role]);
+      router.replace(redirectTo);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to save password");
     }

@@ -282,7 +282,20 @@ router.get("/most-rated-subcategories", optionalAuth, async (_req, res, next) =>
   } catch (e) { next(e); }
 });
 
-router.use(requireAuth, requireRole("USER"));
+// Public read-only GET paths are passed through with optional auth so guests can browse.
+// All other routes (writes + sensitive reads) still require a verified USER token.
+const PUBLIC_GET = [
+  /^\/categories\/avg-ratings$/,
+  /^\/categories\/[^/]+$/,
+  /^\/subcategories\/[^/]+\/slots$/,
+  /^\/subcategories\/[^/]+$/,
+  /^\/browse$/,
+];
+router.use((req, res, next) => {
+  const isPublicGet = req.method === "GET" && PUBLIC_GET.some((re) => re.test(req.path));
+  if (isPublicGet) return optionalAuth(req, res, next);
+  return requireAuth(req, res, () => requireRole("USER")(req, res, next));
+});
 
 // ─── User profile ─────────────────────────────────────────────────────────────
 const updateProfileSchema = z.object({

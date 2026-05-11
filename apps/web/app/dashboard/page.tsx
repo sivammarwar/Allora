@@ -17,6 +17,7 @@ import {
 import { BentoGrid, type BentoItem } from "@/components/shared/BentoGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
+import { useCurrentUser } from "@/lib/auth";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ interface BrowseResponse {
 
 export default function UserDashboardPage() {
   const router = useRouter();
+  const { data: currentUser } = useCurrentUser();
   const [loc, setLoc] = useState<UserLocation | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
@@ -171,7 +173,8 @@ export default function UserDashboardPage() {
   const { data: agentData } = useQuery<{ agentId: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
-    enabled: !!loc,
+    enabled: !!loc && !!currentUser,
+    retry: false,
   });
   const agentId = agentData?.agentId ?? null;
 
