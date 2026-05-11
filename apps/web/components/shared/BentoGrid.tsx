@@ -114,7 +114,7 @@ function BentoCard({
       className="group relative overflow-hidden rounded-[14px] bg-white cursor-pointer h-full flex flex-col"
     >
       {/* Image block */}
-      <div className="overflow-hidden" style={{ flex: hasPricing ? "0 0 66%" : "0 0 62%" }}>
+      <div className="overflow-hidden" style={{ flex: large ? (hasPricing ? "0 0 74%" : "0 0 70%") : (hasPricing ? "0 0 66%" : "0 0 62%") }}>
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -130,7 +130,7 @@ function BentoCard({
       </div>
 
       {/* Text + pricing block */}
-      <div className={`flex-1 flex flex-col justify-center ${large ? "px-3.5 py-2 sm:px-4" : "px-2.5 py-1.5"}`}>
+      <div className={`flex-1 flex flex-col justify-center ${large ? "px-3.5 py-1.5 sm:px-4" : "px-2.5 py-1.5"}`}>
         <p className="text-[8px] font-sans font-light tracking-[0.1em] uppercase text-stone-400 leading-none mb-0.5 truncate">
           {item.categoryName}
         </p>
