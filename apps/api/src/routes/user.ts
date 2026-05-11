@@ -1550,8 +1550,8 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 
-// POST /api/user/reviews — create a new review tied to a completed service request
-router.post("/reviews", async (req, res, next) => {
+// POST /api/user/service-reviews — create a new review tied to a completed service request
+router.post("/service-reviews", async (req, res, next) => {
   try {
     const userId = req.user!.id;
     const { serviceRequestId, rating, reviewText } = req.body;
@@ -1646,8 +1646,8 @@ router.get("/categories/:id/reviews", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PUT /api/user/reviews/:id — edit review text only (rating is immutable)
-router.put("/reviews/:id", async (req, res, next) => {
+// PUT /api/user/service-reviews/:id — edit review text only (rating is immutable)
+router.put("/service-reviews/:id", async (req, res, next) => {
   try {
     const userId = req.user!.id;
     const { reviewText } = req.body;
@@ -1666,8 +1666,8 @@ router.put("/reviews/:id", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// DELETE /api/user/reviews/:id
-router.delete("/reviews/:id", async (req, res, next) => {
+// DELETE /api/user/service-reviews/:id
+router.delete("/service-reviews/:id", async (req, res, next) => {
   try {
     const userId = req.user!.id;
     const review = await prisma.review.findUnique({ where: { id: req.params.id } });
@@ -1677,8 +1677,8 @@ router.delete("/reviews/:id", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /api/user/reviews/:id/react — toggle like/dislike
-router.post("/reviews/:id/react", async (req, res, next) => {
+// POST /api/user/service-reviews/:id/react — toggle like/dislike
+router.post("/service-reviews/:id/react", async (req, res, next) => {
   try {
     const userId = req.user!.id;
     const reviewId = req.params.id;

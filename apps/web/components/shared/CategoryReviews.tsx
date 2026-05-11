@@ -114,13 +114,13 @@ function ReviewCard({
 
   const react = useMutation({
     mutationFn: (type: "LIKE" | "DISLIKE") =>
-      api.post(`/api/user/reviews/${review.id}/react`, { type }),
+      api.post(`/api/user/service-reviews/${review.id}/react`, { type }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["category-reviews", categoryId] }),
   });
 
   const editMut = useMutation({
     mutationFn: (text: string) =>
-      api.put(`/api/user/reviews/${review.id}`, { reviewText: text || null }),
+      api.put(`/api/user/service-reviews/${review.id}`, { reviewText: text || null }),
     onSuccess: () => {
       toast.success("Review updated");
       setEditing(false);
@@ -130,7 +130,7 @@ function ReviewCard({
   });
 
   const deleteMut = useMutation({
-    mutationFn: () => api.delete(`/api/user/reviews/${review.id}`),
+    mutationFn: () => api.delete(`/api/user/service-reviews/${review.id}`),
     onSuccess: () => {
       toast.success("Review deleted");
       onDeleted();
@@ -272,7 +272,7 @@ function WriteReview({
 
   const submit = useMutation({
     mutationFn: () =>
-      api.post("/api/user/reviews", {
+      api.post("/api/user/service-reviews", {
         serviceRequestId: selectedRequest,
         rating,
         reviewText: text.trim() || undefined,

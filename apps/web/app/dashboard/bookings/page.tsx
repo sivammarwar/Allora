@@ -121,7 +121,7 @@ export default function UserBookingsPage() {
 
   const submitRating = useMutation({
     mutationFn: () =>
-      api.post("/api/user/reviews", {
+      api.post("/api/user/service-reviews", {
         serviceRequestId: ratingPrompt!.requestId,
         rating: promptRating,
         reviewText: promptText.trim() || undefined,
