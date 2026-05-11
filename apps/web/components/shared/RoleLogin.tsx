@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -32,7 +32,7 @@ interface Props {
   subtitle?: string;
 }
 
-export function RoleLogin({ role, title, subtitle }: Props) {
+function RoleLoginForm({ role, title, subtitle }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || roleHome[role];
@@ -313,5 +313,13 @@ export function RoleLogin({ role, title, subtitle }: Props) {
         )}
       </div>
     </div>
+  );
+}
+
+export function RoleLogin(props: Props) {
+  return (
+    <Suspense>
+      <RoleLoginForm {...props} />
+    </Suspense>
   );
 }
