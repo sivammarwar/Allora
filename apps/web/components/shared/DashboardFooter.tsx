@@ -9,10 +9,9 @@ const EXPLORE = [
 ];
 
 const COMPANY = [
-  { label: "About Allora",    href: "/about" },
-  { label: "How It Works",    href: "/how-it-works" },
-  { label: "Become a Hero",   href: "/hero/register" },
-  { label: "Secret Shop",     href: "/secret-shop" },
+  { label: "About Allora",    href: "/about",                              external: false },
+  { label: "How It Works",    href: "/how-it-works",                       external: false },
+  { label: "Become a Hero",   href: "https://allora-web.vercel.app/hero/login", external: true },
 ];
 
 const LEGAL = [
@@ -87,9 +86,13 @@ export function DashboardFooter() {
           <div className="space-y-4">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Company</p>
             <ul className="space-y-3.5">
-              {COMPANY.map(({ label, href }) => (
+              {COMPANY.map(({ label, href, external }) => (
                 <li key={label}>
-                  <Link href={href} className="text-sm text-gray-600 hover:text-brand-primary transition-colors">
+                  <Link
+                    href={href}
+                    className="text-sm text-gray-600 hover:text-brand-primary transition-colors"
+                    {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
                     {label}
                   </Link>
                 </li>
