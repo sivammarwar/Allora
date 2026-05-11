@@ -119,6 +119,23 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [showUpsell, setShowUpsell] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", gender: "MALE", address: "" });
 
+  // Pre-fill booking form from profile
+  const { data: profile } = useQuery<{ name: string | null; phone: string | null; gender: string | null }>({
+    queryKey: ["user", "profile"],
+    queryFn: () => api.get("/api/user/profile"),
+    enabled: !!currentUser,
+  });
+  useEffect(() => {
+    if (profile) {
+      setForm((f) => ({
+        ...f,
+        name: f.name || profile.name || "",
+        phone: f.phone || profile.phone || "",
+        gender: profile.gender ?? f.gender,
+      }));
+    }
+  }, [profile]);
+
   // Multi-service selection (primary subcategory always included)
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set([id]));
   const toggleSub = (subId: string) => {
@@ -135,6 +152,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     queryKey: ["user", "saved-addresses"],
     queryFn: () => api.get("/api/user/saved-addresses"),
   });
+  useEffect(() => {
+    const def = savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0];
+    if (def) setForm((f) => ({ ...f, address: f.address || def.address }));
+  }, [savedAddresses]);
   const [acceptedRequest, setAcceptedRequest] = useState<ServiceRequestResult | null>(null);
 
   // ── Data fetching ──
