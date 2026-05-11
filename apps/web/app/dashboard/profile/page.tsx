@@ -7,8 +7,10 @@ import {
   User, Phone, Mail, MapPin, Plus, Trash2, Star,
   Pencil, Check, X, LogOut,
 } from "lucide-react";
+import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/lib/auth";
 
 interface SavedAddress {
   id: string;
@@ -35,6 +37,13 @@ const LABEL_PRESETS = ["Home", "Office", "Partner's place", "Other"];
 export default function UserProfilePage() {
   const qc = useQueryClient();
   const router = useRouter();
+  const { data: currentUser, isLoading: authLoading } = useCurrentUser();
+
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.replace("/login?redirect=%2Fdashboard%2Fprofile");
+    }
+  }, [authLoading, currentUser, router]);
 
   // ── Profile edit state ────────────────────────────────────────────────────
   const [editingProfile, setEditingProfile] = useState(false);

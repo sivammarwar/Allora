@@ -13,6 +13,7 @@ import { getStoredLocation, type UserLocation } from "@/lib/location";
 import { useCart } from "@/lib/cart";
 import { CartFloatingButton } from "@/components/shared/CartFloatingButton";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/lib/auth";
 
 interface Category {
   id: string;
@@ -80,6 +81,16 @@ export default function UserCategoryPage({
   const router = useRouter();
   const [loc, setLoc] = useState<UserLocation | null>(null);
   const addToCart = useCart((s) => s.add);
+  const { data: currentUser } = useCurrentUser();
+
+  function requireLogin() {
+    if (!currentUser) {
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      router.push(`/login?redirect=${redirect}`);
+      return true;
+    }
+    return false;
+  }
 
   const handleAddToCart = (heroProduct: HeroProduct) => {
     const { product, hero } = heroProduct;
@@ -109,7 +120,8 @@ export default function UserCategoryPage({
   const { data: agentData } = useQuery<{ agentId: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
-    enabled: !!loc,
+    enabled: !!loc && !!currentUser,
+    retry: false,
   });
   const agentId = agentData?.agentId ?? null;
 
@@ -234,7 +246,7 @@ export default function UserCategoryPage({
                       <Button
                         size="sm"
                         className="w-full"
-                        onClick={() => handleAddToCart(heroProduct)}
+                        onClick={() => { if (requireLogin()) return; handleAddToCart(heroProduct); }}
                       >
                         <ShoppingCart size={14} className="mr-2" />
                         Add to Cart

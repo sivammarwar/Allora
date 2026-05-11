@@ -287,6 +287,8 @@ router.get("/most-rated-subcategories", optionalAuth, async (_req, res, next) =>
 const PUBLIC_GET = [
   /^\/categories\/avg-ratings$/,
   /^\/categories\/[^/]+$/,
+  /^\/categories\/[^/]+\/subcategories$/,
+  /^\/categories\/[^/]+\/products$/,
   /^\/subcategories\/[^/]+\/slots$/,
   /^\/subcategories\/[^/]+$/,
   /^\/browse$/,

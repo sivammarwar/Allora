@@ -7,7 +7,9 @@ import {
   Loader2, ArrowLeft, CheckSquare2, ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { api, ApiError } from "@/lib/api";
+import { useCurrentUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -88,7 +90,14 @@ function groupBookings(list: Booking[]): BookingGroup[] {
 
 export default function UserBookingsPage() {
   const router = useRouter();
+  const { data: currentUser, isLoading: authLoading } = useCurrentUser();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.replace("/login?redirect=%2Fdashboard%2Fbookings");
+    }
+  }, [authLoading, currentUser, router]);
   const [tab, setTab] = useState<"active" | "history">("active");
   const [selected, setSelected] = useState<BookingGroup | null>(null);
   const { data: bookings = [], isLoading } = useQuery<Booking[]>({
