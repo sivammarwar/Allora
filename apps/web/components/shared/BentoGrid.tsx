@@ -225,6 +225,41 @@ function MobileBento({ byPos, editable, onItemClick, onEmptyClick }: {
   );
 }
 
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+export function BentoGridSkeleton() {
+  return (
+    <>
+      {/* Desktop skeleton — mirrors exact slot geometry */}
+      <div
+        className="hidden sm:grid w-full gap-3"
+        style={{ gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "200px 180px 200px" }}
+      >
+        {[1, 2, 3, 4, 5, 6].map((pos) => {
+          const [cs, ce, rs, re] = SLOT[pos];
+          return (
+            <div key={pos} style={{ gridColumnStart: cs, gridColumnEnd: ce, gridRowStart: rs, gridRowEnd: re }}>
+              <div className="skeleton w-full h-full rounded-[14px]" />
+            </div>
+          );
+        })}
+      </div>
+      {/* Mobile skeleton */}
+      <div className="sm:hidden space-y-2.5">
+        <div className="skeleton rounded-[14px]" style={{ height: 260 }} />
+        <div className="grid grid-cols-2 gap-2.5" style={{ height: 190 }}>
+          <div className="skeleton rounded-[14px]" />
+          <div className="skeleton rounded-[14px]" />
+        </div>
+        <div className="skeleton rounded-[14px]" style={{ height: 260 }} />
+        <div className="grid grid-cols-2 gap-2.5" style={{ height: 190 }}>
+          <div className="skeleton rounded-[14px]" />
+          <div className="skeleton rounded-[14px]" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Public export ────────────────────────────────────────────────────────────
 export function BentoGrid({ items, onItemClick, onEmptyClick, editable = false }: Props) {
   const byPos = new Map<number, BentoItem>();

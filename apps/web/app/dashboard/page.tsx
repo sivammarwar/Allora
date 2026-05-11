@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, Loader2, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown, Sparkles } from "lucide-react";
+import { MapPin, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
   reverseGeocode,
   type UserLocation,
 } from "@/lib/location";
-import { BentoGrid, type BentoItem } from "@/components/shared/BentoGrid";
+import { BentoGrid, BentoGridSkeleton, type BentoItem } from "@/components/shared/BentoGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
 import { useCurrentUser } from "@/lib/auth";
@@ -135,7 +135,7 @@ export default function UserDashboardPage() {
     queryFn: () => api.get("/api/user/newly-added-subcategories"),
   });
 
-  const { data: mostRated = [] } = useQuery<MostRatedItem[]>({
+  const { data: mostRated = [], isLoading: mostRatedLoading } = useQuery<MostRatedItem[]>({
     queryKey: ["user", "most-rated-subcategories"],
     queryFn: () => api.get("/api/user/most-rated-subcategories"),
   });
@@ -191,8 +191,6 @@ export default function UserDashboardPage() {
     router.push(url);
   };
 
-  const isLoading = browseLoading || viralLoading || newlyLoading;
-
   return (
     <div className="page-enter space-y-0">
 
@@ -245,8 +243,12 @@ export default function UserDashboardPage() {
                 <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Most Used</h2>
               </div>
             </div>
-            {viralBento.length > 0 ? (
-              <BentoGrid items={viralBento} onItemClick={handleBentoClick} />
+            {viralLoading ? (
+              <BentoGridSkeleton />
+            ) : viralBento.length > 0 ? (
+              <div className="section-reveal">
+                <BentoGrid items={viralBento} onItemClick={handleBentoClick} />
+              </div>
             ) : (
               <div className="rounded-xl border border-dashed border-brand-border py-10 text-center text-sm text-brand-textMuted">
                 No featured services yet.
@@ -279,8 +281,12 @@ export default function UserDashboardPage() {
                 <span className="text-xs text-brand-textMuted">{browseData.services.length} categories</span>
               )}
             </div>
-            {browseData?.services && browseData.services.length > 0 ? (
+            {browseLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1,2,3].map((i) => <div key={i} className="skeleton h-48 rounded-2xl" />)}
+              </div>
+            ) : browseData?.services && browseData.services.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 section-reveal stagger-children">
                 {browseData.services.map((cat) => {
                   const rating = avgRatings[cat.id];
                   return (
@@ -345,13 +351,19 @@ export default function UserDashboardPage() {
                     <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Newly Added</h2>
                   </div>
                 </div>
-                <BentoGrid items={newlyBento} onItemClick={handleBentoClick} />
+                {newlyLoading ? (
+                  <BentoGridSkeleton />
+                ) : (
+                  <div className="section-reveal">
+                    <BentoGrid items={newlyBento} onItemClick={handleBentoClick} />
+                  </div>
+                )}
               </section>
             </>
           )}
 
           {/* ─── Section 4: MOST RATED ROW ───────────────────────────── */}
-          {mostRated.length > 0 && (
+          {(mostRatedLoading || mostRated.length > 0) && (
             <>
               <div className="flex items-center gap-3 py-1">
                 <div className="h-px flex-1 bg-gradient-to-r from-gray-200 via-gray-200 to-transparent" />
@@ -372,7 +384,14 @@ export default function UserDashboardPage() {
                   <h2 className="text-2xl font-extrabold text-black tracking-tight leading-none">Most Rated</h2>
                 </div>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollSnapType: "x mandatory" }}>
+              {mostRatedLoading ? (
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+                  {[1,2,3,4].map((i) => (
+                    <div key={i} className="skeleton shrink-0 w-36 sm:w-44 rounded-[14px]" style={{ height: 180 }} />
+                  ))}
+                </div>
+              ) : (
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 section-reveal" style={{ scrollSnapType: "x mandatory" }}>
                 {mostRated.map((sub) => (
                   <Link
                     key={sub.id}
@@ -404,6 +423,7 @@ export default function UserDashboardPage() {
                   </Link>
                 ))}
               </div>
+              )}
               </section>
             </>
           )}

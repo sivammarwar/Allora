@@ -111,8 +111,35 @@
 
   /* Page transition wrapper */
   .page-enter {
-    @apply animate-fade-slide-up;
+    animation: fade-slide-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+
+  /* Section reveal — used when async data arrives */
+  .section-reveal {
+    animation: fade-slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #f3f3f3 25%, #ebebeb 37%, #f3f3f3 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.6s ease infinite;
+    border-radius: 10px;
+  }
+
+  /* Stagger helpers for grid children */
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(n+7) { animation-delay: 360ms; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 
 @keyframes allora-pulse {
