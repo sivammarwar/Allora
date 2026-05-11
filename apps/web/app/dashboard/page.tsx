@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, Loader2, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown } from "lucide-react";
+import { MapPin, Loader2, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   detectLocation,
@@ -15,30 +14,47 @@ import {
   reverseGeocode,
   type UserLocation,
 } from "@/lib/location";
-import { ViralGrid, type ViralSubcategory } from "@/components/shared/ViralGrid";
+import { BentoGrid, type BentoItem } from "@/components/shared/BentoGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
 import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-interface Product {
+interface ViralRaw {
   id: string;
   name: string;
-  description: string | null;
   imageUrl: string | null;
-  basePrice: number;
-  displayPrice: number;
-  isActive: boolean;
+  viralImageUrl?: string | null;
+  viralPosition: number | null;
+  category: { id: string; name: string; type: "PRODUCT" | "SERVICE"; imageUrl: string | null };
+}
+
+interface NewlyAddedRaw {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  viralImageUrl?: string | null;
+  newlyAddedPosition: number | null;
+  category: { id: string; name: string; type: "PRODUCT" | "SERVICE"; imageUrl: string | null };
+}
+
+interface MostRatedItem {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  categoryName: string;
+  categoryType: "PRODUCT" | "SERVICE";
+  avgRating: number;
+  ratingCount: number;
 }
 
 interface Subcategory {
   id: string;
   name: string;
   imageUrl: string | null;
-  pageContent: unknown | null;
   isActive: boolean;
-  products: Product[];
+  products: { id: string }[];
   productCount: number;
 }
 
@@ -99,19 +115,49 @@ export default function UserDashboardPage() {
     }
   }
 
-  // Fetch viral subcategories (no location required)
-  const { data: viralData, isLoading: viralLoading } = useQuery<ViralSubcategory[]>({
+  // Fetch sections
+  const { data: viralRaw = [], isLoading: viralLoading } = useQuery<ViralRaw[]>({
     queryKey: ["user", "viral-subcategories"],
     queryFn: () => api.get("/api/user/viral-subcategories"),
   });
 
-  // Resolve nearest agent for the user's location (needed for viral links)
+  const { data: newlyAddedRaw = [], isLoading: newlyLoading } = useQuery<NewlyAddedRaw[]>({
+    queryKey: ["user", "newly-added-subcategories"],
+    queryFn: () => api.get("/api/user/newly-added-subcategories"),
+  });
+
+  const { data: mostRated = [] } = useQuery<MostRatedItem[]>({
+    queryKey: ["user", "most-rated-subcategories"],
+    queryFn: () => api.get("/api/user/most-rated-subcategories"),
+  });
+
   const { data: avgRatings = {} } = useQuery<Record<string, { avg: number; count: number }>>(
     {
       queryKey: ["category-avg-ratings"],
       queryFn: () => api.get("/api/user/categories/avg-ratings"),
     }
   );
+
+  // Map raw viral/newly-added to BentoItem
+  const viralBento: BentoItem[] = viralRaw.map((s) => ({
+    id: s.id,
+    name: s.name,
+    imageUrl: s.imageUrl,
+    viralImageUrl: s.viralImageUrl,
+    position: s.viralPosition ?? 0,
+    categoryName: s.category.name,
+    categoryType: s.category.type,
+  }));
+
+  const newlyBento: BentoItem[] = newlyAddedRaw.map((s) => ({
+    id: s.id,
+    name: s.name,
+    imageUrl: s.imageUrl,
+    viralImageUrl: s.viralImageUrl,
+    position: s.newlyAddedPosition ?? 0,
+    categoryName: s.category.name,
+    categoryType: s.category.type,
+  }));
 
   const { data: agentData } = useQuery<{ agentId: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
@@ -128,7 +174,7 @@ export default function UserDashboardPage() {
     enabled: !!loc,
   });
 
-  const handleViralClick = (item: ViralSubcategory) => {
+  const handleBentoClick = (item: BentoItem) => {
     const url = `/dashboard/subcategory/${item.id}${agentId ? `?agentId=${agentId}` : ``}`;
     router.push(url);
   };
@@ -158,7 +204,7 @@ export default function UserDashboardPage() {
     );
   }
 
-  const isLoading = browseLoading || viralLoading;
+  const isLoading = browseLoading || viralLoading || newlyLoading;
 
   return (
     <div className="page-enter space-y-0">
@@ -196,34 +242,33 @@ export default function UserDashboardPage() {
       ) : (
         <div className="space-y-12">
 
-          {/* ─── Section 1: MOST USED ──────────────────────────────────── */}
+          {/* ─── Section 1: MOST USED ────────────────────────────────── */}
           <section>
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <TrendingUp size={18} className="text-brand-primary" />
-                  <span className="text-xs font-semibold text-brand-primary uppercase tracking-widest">Trending</span>
+                  <TrendingUp size={16} className="text-brand-primary" />
+                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Trending</span>
                 </div>
                 <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Most Used</h2>
               </div>
             </div>
-
-            {viralData && viralData.length > 0 ? (
-              <ViralGrid items={viralData} onItemClick={handleViralClick} />
+            {viralBento.length > 0 ? (
+              <BentoGrid items={viralBento} onItemClick={handleBentoClick} />
             ) : (
               <div className="rounded-xl border border-dashed border-brand-border py-10 text-center text-sm text-brand-textMuted">
-                No trending services yet. Check back soon!
+                No featured services yet.
               </div>
             )}
           </section>
 
-          {/* ─── Section 2: SERVICES ────────────────────────────────────── */}
+          {/* ─── Section 2: BROWSE SERVICES ──────────────────────────── */}
           <section>
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <Grid2X2 size={16} className="text-brand-primary" />
-                  <span className="text-xs font-semibold text-brand-primary uppercase tracking-widest">Browse</span>
+                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Browse</span>
                 </div>
                 <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Services</h2>
               </div>
@@ -231,7 +276,6 @@ export default function UserDashboardPage() {
                 <span className="text-xs text-brand-textMuted">{browseData.services.length} categories</span>
               )}
             </div>
-
             {browseData?.services && browseData.services.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {browseData.services.map((cat) => {
@@ -239,24 +283,16 @@ export default function UserDashboardPage() {
                   return (
                     <Link key={cat.id} href={`/dashboard/category/${cat.id}`}>
                       <div className="group relative overflow-hidden rounded-2xl bg-gray-100 cursor-pointer shadow-sm hover:shadow-md transition-all duration-200">
-                        {/* Image */}
                         <div className="relative h-48 overflow-hidden">
                           {cat.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={cat.imageUrl}
-                              alt={cat.name}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
+                            <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 flex items-center justify-center">
                               <CategoryIcon name={cat.imageUrl} size={52} className="text-brand-primary/40" />
                             </div>
                           )}
-                          {/* Gradient overlay */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                          {/* Rating badge */}
                           {rating && (
                             <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
                               <Star size={10} className="fill-amber-400 text-amber-400" />
@@ -264,18 +300,12 @@ export default function UserDashboardPage() {
                               <span className="text-white/50 font-normal">({rating.count})</span>
                             </div>
                           )}
-
-                          {/* Arrow */}
                           <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <ChevronRight size={14} className="text-white" />
                           </div>
-
-                          {/* Name + sub count */}
                           <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-8">
                             <h3 className="text-white font-bold text-lg leading-snug">{cat.name}</h3>
-                            <p className="text-white/60 text-xs mt-0.5">
-                              {cat.subcategories.length} service{cat.subcategories.length !== 1 ? "s" : ""} available
-                            </p>
+                            <p className="text-white/60 text-xs mt-0.5">{cat.subcategories.length} service{cat.subcategories.length !== 1 ? "s" : ""} available</p>
                           </div>
                         </div>
                       </div>
@@ -289,6 +319,69 @@ export default function UserDashboardPage() {
               </div>
             )}
           </section>
+
+          {/* ─── Section 3: NEWLY ADDED ──────────────────────────────── */}
+          {newlyBento.length > 0 && (
+            <section>
+              <div className="flex items-end justify-between mb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Sparkles size={16} className="text-brand-primary" />
+                    <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Fresh</span>
+                  </div>
+                  <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Newly Added</h2>
+                </div>
+              </div>
+              <BentoGrid items={newlyBento} onItemClick={handleBentoClick} />
+            </section>
+          )}
+
+          {/* ─── Section 4: MOST RATED ROW ───────────────────────────── */}
+          {mostRated.length > 0 && (
+            <section>
+              <div className="flex items-end justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Star size={15} className="text-amber-500 fill-amber-400" />
+                    <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Top Rated</span>
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-black tracking-tight leading-none">Most Rated</h2>
+                </div>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollSnapType: "x mandatory" }}>
+                {mostRated.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    href={`/dashboard/subcategory/${sub.id}${agentId ? `?agentId=${agentId}` : ""}`}
+                    style={{ scrollSnapAlign: "start" }}
+                    className="shrink-0 w-36 sm:w-44"
+                  >
+                    <div className="group overflow-hidden rounded-[14px] bg-white cursor-pointer">
+                      <div className="h-28 sm:h-32 overflow-hidden">
+                        {sub.imageUrl && (sub.imageUrl.startsWith("http") || sub.imageUrl.startsWith("/")) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={sub.imageUrl} alt={sub.name} className="w-full h-full object-cover transition-transform duration-[400ms] group-hover:scale-[1.04]" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-brand-primary/8 to-brand-primary/4 flex items-center justify-center">
+                            <CategoryIcon name={sub.imageUrl} size={28} className="text-brand-primary/50" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-3 py-2.5">
+                        <p className="text-[9px] uppercase tracking-widest text-stone-400 font-light truncate">{sub.categoryName}</p>
+                        <h4 className="font-cormorant font-semibold text-base text-gray-900 leading-snug line-clamp-2 mt-0.5">{sub.name}</h4>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <Star size={10} className="fill-amber-400 text-amber-400" />
+                          <span className="text-[11px] font-semibold text-gray-700">{sub.avgRating.toFixed(1)}</span>
+                          <span className="text-[10px] text-gray-400">({sub.ratingCount})</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
       )}

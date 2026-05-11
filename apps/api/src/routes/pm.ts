@@ -157,7 +157,8 @@ const upsertSubcategorySchema = z.object({
   imageUrl: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   isPinned: z.boolean().optional(),
-  viralPosition: z.number().int().min(1).max(21).optional().nullable(),
+  viralPosition: z.number().int().min(1).max(6).optional().nullable(),
+  newlyAddedPosition: z.number().int().min(1).max(6).optional().nullable(),
 });
 
 router.post(

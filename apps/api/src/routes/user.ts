@@ -181,11 +181,11 @@ router.get("/agents-nearby", requireAuth, async (req, res, next) => {
 router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
   try {
     const pinned = await prisma.subcategory.findMany({
-      where: { isPinned: true, isActive: true },
+      where: { isPinned: true, isActive: true, viralPosition: { not: null } },
       orderBy: { viralPosition: "asc" },
+      take: 6,
       include: {
         category: { select: { id: true, name: true, type: true, imageUrl: true } },
-        _count: { select: { products: true } },
       },
     });
     res.json(
@@ -196,12 +196,76 @@ router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
         viralImageUrl: s.viralImageUrl,
         viralPosition: s.viralPosition,
         category: s.category,
-        productCount: s._count.products,
       }))
     );
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
+});
+
+// ─── Newly Added subcategories (admin-curated, 6 slots) ─────────────────────
+router.get("/newly-added-subcategories", requireAuth, async (_req, res, next) => {
+  try {
+    const items = await prisma.subcategory.findMany({
+      where: { newlyAddedPosition: { not: null }, isActive: true },
+      orderBy: { newlyAddedPosition: "asc" },
+      take: 6,
+      include: {
+        category: { select: { id: true, name: true, type: true, imageUrl: true } },
+      },
+    });
+    res.json(
+      items.map((s) => ({
+        id: s.id,
+        name: s.name,
+        imageUrl: s.imageUrl,
+        viralImageUrl: s.viralImageUrl,
+        newlyAddedPosition: s.newlyAddedPosition,
+        category: s.category,
+      }))
+    );
+  } catch (e) { next(e); }
+});
+
+// ─── Most Rated subcategories (top 15 by category combined avg) ─────────────
+router.get("/most-rated-subcategories", requireAuth, async (_req, res, next) => {
+  try {
+    const [reviewRows, ratingRows] = await Promise.all([
+      prisma.review.groupBy({ by: ["categoryId"], where: { categoryId: { not: null } }, _avg: { rating: true }, _count: { id: true } }),
+      prisma.bookingRating.groupBy({ by: ["categoryId"], _avg: { rating: true }, _count: { id: true } }),
+    ]);
+    const catMap: Record<string, { sum: number; count: number }> = {};
+    for (const r of reviewRows) {
+      if (r.categoryId) catMap[r.categoryId] = { sum: (r._avg.rating ?? 0) * r._count.id, count: r._count.id };
+    }
+    for (const r of ratingRows) {
+      const e = catMap[r.categoryId] ?? { sum: 0, count: 0 };
+      e.sum += (r._avg.rating ?? 0) * r._count.id;
+      e.count += r._count.id;
+      catMap[r.categoryId] = e;
+    }
+    const subcategories = await prisma.subcategory.findMany({
+      where: { isActive: true },
+      include: { category: { select: { id: true, name: true, type: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    const scored = subcategories
+      .map((s) => {
+        const cat = catMap[s.categoryId];
+        const avg = cat ? cat.sum / cat.count : 0;
+        return { ...s, avgRating: avg, ratingCount: cat?.count ?? 0 };
+      })
+      .filter((s) => s.avgRating > 0)
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 15);
+    res.json(scored.map((s) => ({
+      id: s.id,
+      name: s.name,
+      imageUrl: s.imageUrl,
+      categoryName: s.category.name,
+      categoryType: s.category.type,
+      avgRating: Math.round(s.avgRating * 10) / 10,
+      ratingCount: s.ratingCount,
+    })));
+  } catch (e) { next(e); }
 });
 
 router.use(requireAuth, requireRole("USER"));

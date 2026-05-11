@@ -75,6 +75,7 @@ const config: Config = {
         heading: ["var(--font-playfair)", "ui-serif", "Georgia", "serif"],
         sans: ["var(--font-dm-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-jetbrains)", "ui-monospace", "SFMono-Regular", "monospace"],
+        cormorant: ["var(--font-cormorant)", "Georgia", "ui-serif", "serif"],
       },
       borderRadius: {
         lg: "12px",

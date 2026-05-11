@@ -422,9 +422,10 @@ model Subcategory {
   pageContent     Json?    // { html, assets: [{name,url}], css? } — for SERVICE pages
   isActive        Boolean  @default(true)
   // Viral section pinning (admin can pin subcategories to viral grid)
-  isPinned        Boolean  @default(false)
-  viralPosition   Int?     // 1-21 for grid position in viral section (null = not in viral grid)
-  viralImageUrl   String?  // Separate image URL shown only in viral grid, doesn't affect subcategory pages
+  isPinned           Boolean  @default(false)
+  viralPosition      Int?     // 1-6 for grid position in Most Used section (null = not shown)
+  viralImageUrl      String?  // Separate image URL shown only in viral grid
+  newlyAddedPosition Int?     // 1-6 for position in Newly Added section (null = not shown)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
