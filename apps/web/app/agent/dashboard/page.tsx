@@ -170,8 +170,6 @@ function EditHeroModal({
 
 export default function AgentDashboardPage() {
   const qc = useQueryClient();
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
   const [showHeroes, setShowHeroes] = useState(true);
   const [showDelivery, setShowDelivery] = useState(true);
   const [editingHero, setEditingHero] = useState<VerifiedHero | null>(null);
@@ -219,23 +217,6 @@ export default function AgentDashboardPage() {
     enabled: areas.length > 0,
   });
 
-  const addWorkspace = useMutation({
-    mutationFn: () =>
-      api.post("/api/agent/workspace", {
-        areaName: name.trim(),
-        areaCode: code.trim().toUpperCase(),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["agent", "areas"] });
-      qc.invalidateQueries({ queryKey: ["agent", "stats"] });
-      toast.success("Area added to your workspace");
-      setName("");
-      setCode("");
-    },
-    onError: (e) =>
-      toast.error(e instanceof ApiError ? e.message : "Failed to add area"),
-  });
-
   if (!isLoading && areas.length === 0) {
     return (
       <div className="page-enter max-w-xl mx-auto">
@@ -243,42 +224,11 @@ export default function AgentDashboardPage() {
           <CardContent className="py-10 text-center space-y-2">
             <MapPinned className="mx-auto text-brand-primary" size={28} />
             <h1 className="font-heading text-2xl text-brand-text">
-              Set up your workspace
+              No areas assigned yet
             </h1>
             <p className="text-brand-textMuted text-sm">
-              Enter the name and 20-character code of an area assigned to you by the admin.
+              Your admin will assign service areas to you. Once assigned, your dashboard will activate.
             </p>
-          </CardContent>
-          <CardContent className="space-y-4 border-t border-brand-border">
-            <Input
-              label="Area name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-            <Input
-              label="20-character code"
-              value={code}
-              onChange={(e) =>
-                setCode(
-                  e.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, "")
-                    .slice(0, 20)
-                )
-              }
-              className="font-mono tracking-wider"
-              maxLength={20}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={() => addWorkspace.mutate()}
-                loading={addWorkspace.isPending}
-                disabled={name.trim().length < 1 || code.length !== 20}
-              >
-                Add area
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
