@@ -186,17 +186,24 @@ router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
       take: 6,
       include: {
         category: { select: { id: true, name: true, type: true, imageUrl: true } },
+        agentPricing: { orderBy: { baseServiceCharge: "asc" }, take: 1,
+          include: { agent: { include: { categoryConfigs: { take: 1 } } } } },
       },
     });
     res.json(
-      pinned.map((s) => ({
-        id: s.id,
-        name: s.name,
-        imageUrl: s.imageUrl,
-        viralImageUrl: s.viralImageUrl,
-        viralPosition: s.viralPosition,
-        category: s.category,
-      }))
+      pinned.map((s) => {
+        const ap = s.agentPricing[0] ?? null;
+        const transport = ap?.agent?.categoryConfigs[0] ? Number(ap.agent.categoryConfigs[0].transportChargePerKm) : null;
+        return {
+          id: s.id, name: s.name, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
+          viralPosition: s.viralPosition, category: s.category,
+          pricing: ap ? {
+            baseServiceCharge: Number(ap.baseServiceCharge),
+            discountPercent: Number(ap.discountPercent),
+            transportChargePerKm: transport,
+          } : null,
+        };
+      })
     );
   } catch (e) { next(e); }
 });
@@ -210,17 +217,24 @@ router.get("/newly-added-subcategories", requireAuth, async (_req, res, next) =>
       take: 6,
       include: {
         category: { select: { id: true, name: true, type: true, imageUrl: true } },
+        agentPricing: { orderBy: { baseServiceCharge: "asc" }, take: 1,
+          include: { agent: { include: { categoryConfigs: { take: 1 } } } } },
       },
     });
     res.json(
-      items.map((s) => ({
-        id: s.id,
-        name: s.name,
-        imageUrl: s.imageUrl,
-        viralImageUrl: s.viralImageUrl,
-        newlyAddedPosition: s.newlyAddedPosition,
-        category: s.category,
-      }))
+      items.map((s) => {
+        const ap = s.agentPricing[0] ?? null;
+        const transport = ap?.agent?.categoryConfigs[0] ? Number(ap.agent.categoryConfigs[0].transportChargePerKm) : null;
+        return {
+          id: s.id, name: s.name, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
+          newlyAddedPosition: s.newlyAddedPosition, category: s.category,
+          pricing: ap ? {
+            baseServiceCharge: Number(ap.baseServiceCharge),
+            discountPercent: Number(ap.discountPercent),
+            transportChargePerKm: transport,
+          } : null,
+        };
+      })
     );
   } catch (e) { next(e); }
 });

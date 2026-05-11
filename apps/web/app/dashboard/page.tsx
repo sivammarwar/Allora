@@ -17,9 +17,14 @@ import {
 import { BentoGrid, type BentoItem } from "@/components/shared/BentoGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
-import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
+
+interface SubcategoryPricing {
+  baseServiceCharge: number;
+  discountPercent: number;
+  transportChargePerKm: number | null;
+}
 
 interface ViralRaw {
   id: string;
@@ -28,6 +33,7 @@ interface ViralRaw {
   viralImageUrl?: string | null;
   viralPosition: number | null;
   category: { id: string; name: string; type: "PRODUCT" | "SERVICE"; imageUrl: string | null };
+  pricing: SubcategoryPricing | null;
 }
 
 interface NewlyAddedRaw {
@@ -37,6 +43,7 @@ interface NewlyAddedRaw {
   viralImageUrl?: string | null;
   newlyAddedPosition: number | null;
   category: { id: string; name: string; type: "PRODUCT" | "SERVICE"; imageUrl: string | null };
+  pricing: SubcategoryPricing | null;
 }
 
 interface MostRatedItem {
@@ -147,6 +154,7 @@ export default function UserDashboardPage() {
     position: s.viralPosition ?? 0,
     categoryName: s.category.name,
     categoryType: s.category.type,
+    pricing: s.pricing,
   }));
 
   const newlyBento: BentoItem[] = newlyAddedRaw.map((s) => ({
@@ -157,6 +165,7 @@ export default function UserDashboardPage() {
     position: s.newlyAddedPosition ?? 0,
     categoryName: s.category.name,
     categoryType: s.category.type,
+    pricing: s.pricing,
   }));
 
   const { data: agentData } = useQuery<{ agentId: string | null }>({

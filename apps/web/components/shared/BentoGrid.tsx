@@ -12,6 +12,11 @@ export interface BentoItem {
   position: number;        // 1–6
   categoryName: string;
   categoryType: "PRODUCT" | "SERVICE";
+  pricing?: {
+    baseServiceCharge: number;
+    discountPercent: number;
+    transportChargePerKm: number | null;
+  } | null;
 }
 
 interface Props {
@@ -22,8 +27,6 @@ interface Props {
 }
 
 // ─── Slot geometry (4-col × 3-row grid) ──────────────────────────────────────
-// col indices are 1-based (CSS grid)
-// [colStart, colEnd, rowStart, rowEnd]
 const SLOT: Record<number, [number, number, number, number]> = {
   1: [1, 3, 1, 3],   // hero — left tall (2 rows × 2 cols)
   2: [3, 4, 1, 2],   // top-right small
@@ -35,6 +38,39 @@ const SLOT: Record<number, [number, number, number, number]> = {
 
 function isUrl(s?: string | null) {
   return !!s && (s.startsWith("http") || s.startsWith("/"));
+}
+
+// ─── Compact pricing row ──────────────────────────────────────────────────────
+function PricingRow({ pricing, large }: { pricing: NonNullable<BentoItem["pricing"]>; large: boolean }) {
+  const base = pricing.baseServiceCharge;
+  const disc = pricing.discountPercent;
+  const discounted = base * (1 - disc / 100);
+  const transport = pricing.transportChargePerKm;
+
+  return (
+    <div className={`flex items-center gap-2 flex-wrap ${large ? "mt-2" : "mt-1"}`}>
+      {/* Service charge */}
+      <div className="flex items-center gap-1">
+        {disc > 0 && (
+          <span className="line-through text-stone-400 text-[10px]">₹{base}</span>
+        )}
+        <span className={`font-bold text-brand-primary ${large ? "text-sm" : "text-xs"}`}>
+          ₹{discounted.toFixed(0)}
+        </span>
+        {disc > 0 && (
+          <span className="text-[9px] bg-green-100 text-green-700 px-1 py-0.5 rounded-full leading-none">
+            {disc}% off
+          </span>
+        )}
+      </div>
+      {/* Transport */}
+      {transport !== null && transport !== undefined && transport > 0 && (
+        <span className="text-[9px] text-stone-400 leading-none">
+          · ₹{transport}/km
+        </span>
+      )}
+    </div>
+  );
 }
 
 // ─── Single card ─────────────────────────────────────────────────────────────
@@ -70,6 +106,10 @@ function BentoCard({
 
   const displayUrl = item.viralImageUrl ?? item.imageUrl;
   const hasImage = isUrl(displayUrl);
+  const hasPricing = !!item.pricing;
+
+  // Image takes more vertical space, text block is tighter
+  const textPx = hasPricing ? (large ? "px-3 pt-2 pb-2.5 sm:px-4" : "px-2.5 pt-1.5 pb-2") : (large ? "px-3 pt-2 pb-3 sm:px-4" : "px-2.5 pt-1.5 pb-2.5");
 
   return (
     <div
@@ -77,7 +117,7 @@ function BentoCard({
       className="group relative overflow-hidden rounded-[14px] bg-white cursor-pointer h-full flex flex-col"
     >
       {/* Image block */}
-      <div className="overflow-hidden" style={{ flex: "0 0 62%" }}>
+      <div className="overflow-hidden" style={{ flex: hasPricing ? "0 0 68%" : "0 0 62%" }}>
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -92,18 +132,19 @@ function BentoCard({
         )}
       </div>
 
-      {/* Text block */}
-      <div className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col justify-center">
-        <p className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.12em] uppercase text-stone-400 leading-none mb-1.5 truncate">
+      {/* Text + pricing block */}
+      <div className={`flex-1 ${textPx} flex flex-col justify-center`}>
+        <p className="text-[8px] sm:text-[9px] font-sans font-light tracking-[0.12em] uppercase text-stone-400 leading-none mb-1 truncate">
           {item.categoryName}
         </p>
         <h3
-          className={`font-cormorant font-semibold text-gray-900 leading-snug line-clamp-2 ${
-            large ? "text-2xl sm:text-3xl" : "text-base sm:text-xl"
+          className={`font-cormorant font-semibold text-gray-900 leading-tight line-clamp-2 ${
+            large ? "text-xl sm:text-2xl" : "text-sm sm:text-base"
           }`}
         >
           {item.name}
         </h3>
+        {item.pricing && <PricingRow pricing={item.pricing} large={large} />}
       </div>
 
       {/* Edit badge (editable mode) */}
