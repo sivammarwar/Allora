@@ -232,10 +232,10 @@ export default function UserDashboardPage() {
         />
       )}
 
-      <div className="space-y-12">
+      <div className="space-y-0">
 
           {/* ─── Section 1: MOST USED ────────────────────────────────── */}
-          <section>
+          <section className="pb-10">
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
@@ -254,8 +254,19 @@ export default function UserDashboardPage() {
             )}
           </section>
 
+          {/* ── Section divider ── */}
+          <div className="flex items-center gap-3 py-1">
+            <div className="h-px flex-1 bg-gradient-to-r from-gray-200 via-gray-200 to-transparent" />
+            <span className="flex gap-1">
+              <span className="w-1 h-1 rounded-full bg-gray-300 inline-block" />
+              <span className="w-1 h-1 rounded-full bg-gray-200 inline-block" />
+              <span className="w-1 h-1 rounded-full bg-gray-100 inline-block" />
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-l from-gray-200 via-gray-200 to-transparent" />
+          </div>
+
           {/* ─── Section 2: BROWSE SERVICES ──────────────────────────── */}
-          <section>
+          <section className="pt-8 pb-10">
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
@@ -314,23 +325,44 @@ export default function UserDashboardPage() {
 
           {/* ─── Section 3: NEWLY ADDED ──────────────────────────────── */}
           {newlyBento.length > 0 && (
-            <section>
-              <div className="flex items-end justify-between mb-5">
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <Sparkles size={16} className="text-brand-primary" />
-                    <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Fresh</span>
-                  </div>
-                  <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Newly Added</h2>
-                </div>
+            <>
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-gradient-to-r from-gray-200 via-gray-200 to-transparent" />
+                <span className="flex gap-1">
+                  <span className="w-1 h-1 rounded-full bg-gray-300 inline-block" />
+                  <span className="w-1 h-1 rounded-full bg-gray-200 inline-block" />
+                  <span className="w-1 h-1 rounded-full bg-gray-100 inline-block" />
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-l from-gray-200 via-gray-200 to-transparent" />
               </div>
-              <BentoGrid items={newlyBento} onItemClick={handleBentoClick} />
-            </section>
+              <section className="pt-8 pb-10">
+                <div className="flex items-end justify-between mb-5">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Sparkles size={16} className="text-brand-primary" />
+                      <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Fresh</span>
+                    </div>
+                    <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Newly Added</h2>
+                  </div>
+                </div>
+                <BentoGrid items={newlyBento} onItemClick={handleBentoClick} />
+              </section>
+            </>
           )}
 
           {/* ─── Section 4: MOST RATED ROW ───────────────────────────── */}
           {mostRated.length > 0 && (
-            <section>
+            <>
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-gradient-to-r from-gray-200 via-gray-200 to-transparent" />
+                <span className="flex gap-1">
+                  <span className="w-1 h-1 rounded-full bg-gray-300 inline-block" />
+                  <span className="w-1 h-1 rounded-full bg-gray-200 inline-block" />
+                  <span className="w-1 h-1 rounded-full bg-gray-100 inline-block" />
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-l from-gray-200 via-gray-200 to-transparent" />
+              </div>
+              <section className="pt-8 pb-4">
               <div className="flex items-end justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
@@ -372,7 +404,8 @@ export default function UserDashboardPage() {
                   </Link>
                 ))}
               </div>
-            </section>
+              </section>
+            </>
           )}
 
       </div>
