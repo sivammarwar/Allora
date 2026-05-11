@@ -1293,7 +1293,7 @@ router.get("/browse", async (req, res, next) => {
 
 // ─── Available slots for a subcategory ──────────────────────────────────────
 // GET /api/user/subcategories/:id/slots?agentId=xxx&from=YYYY-MM-DD&days=7
-router.get("/subcategories/:id/slots", requireAuth, requireRole("USER"), async (req, res, next) => {
+router.get("/subcategories/:id/slots", async (req, res, next) => {
   try {
     const { id: subcategoryId } = req.params;
     const agentId = req.query.agentId as string;
