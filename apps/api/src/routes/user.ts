@@ -1637,6 +1637,32 @@ router.get("/categories/:id/can-review", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// GET /api/user/categories/:id/pending-ratings — completed bookings not yet rated by this user
+router.get("/categories/:id/pending-ratings", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const categoryId = req.params.id;
+    const rated = await prisma.bookingRating.findMany({
+      where: { userId, categoryId },
+      select: { serviceRequestId: true },
+    });
+    const ratedIds = rated.map((r) => r.serviceRequestId);
+    const where: any = { userId, status: "COMPLETED", subcategory: { categoryId } };
+    if (ratedIds.length > 0) where.id = { notIn: ratedIds };
+    const pending = await prisma.serviceRequest.findMany({
+      where,
+      select: {
+        id: true,
+        completedAt: true,
+        subcategory: { select: { name: true } },
+      },
+      orderBy: { completedAt: "desc" },
+      take: 20,
+    });
+    res.json(pending);
+  } catch (e) { next(e); }
+});
+
 // GET /api/user/categories/:id/reviews?page=1&limit=10
 router.get("/categories/:id/reviews", async (req, res, next) => {
   try {

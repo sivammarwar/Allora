@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Star, ThumbsUp, ThumbsDown, UserCircle, Pencil, Trash2,
-  Send, Loader2, ChevronDown,
+  Send, Loader2, ChevronDown, CheckCircle2,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -248,6 +248,87 @@ function ReviewCard({
   );
 }
 
+// ─── Per-booking rating section ──────────────────────────────────────────────
+interface PendingRating {
+  id: string;
+  completedAt: string | null;
+  subcategory: { name: string };
+}
+
+function ServiceRatingSection({ categoryId }: { categoryId: string }) {
+  const qc = useQueryClient();
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
+
+  const { data: pending = [], refetch } = useQuery<PendingRating[]>({
+    queryKey: ["pending-ratings", categoryId],
+    queryFn: () => api.get(`/api/user/categories/${categoryId}/pending-ratings`),
+  });
+
+  const submitRating = useMutation({
+    mutationFn: ({ serviceRequestId, rating }: { serviceRequestId: string; rating: number }) =>
+      api.post("/api/user/booking-ratings", { serviceRequestId, rating }),
+    onSuccess: (_data, vars) => {
+      toast.success("Rating submitted!");
+      setSubmitted((s) => ({ ...s, [vars.serviceRequestId]: true }));
+      qc.invalidateQueries({ queryKey: ["pending-ratings", categoryId] });
+      qc.invalidateQueries({ queryKey: ["category-avg-ratings"] });
+      refetch();
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to submit rating"),
+  });
+
+  const visible = pending.filter((p) => !submitted[p.id]);
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Star size={16} className="text-amber-500 fill-amber-400" />
+        <p className="text-sm font-semibold text-brand-text">Rate your completed services</p>
+        <span className="ml-auto text-xs text-brand-textMuted">{visible.length} pending</span>
+      </div>
+      <div className="space-y-3">
+        {visible.map((p) => {
+          const r = ratings[p.id] ?? 0;
+          const isPending = submitRating.isPending && submitRating.variables?.serviceRequestId === p.id;
+          return (
+            <div key={p.id} className="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-amber-100">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-brand-text truncate">{p.subcategory.name}</p>
+                {p.completedAt && (
+                  <p className="text-[11px] text-brand-textMuted">
+                    {new Date(p.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Stars
+                  value={r}
+                  size={22}
+                  interactive
+                  onChange={(v) => setRatings((s) => ({ ...s, [p.id]: v }))}
+                />
+                <button
+                  disabled={r === 0 || isPending}
+                  onClick={() => submitRating.mutate({ serviceRequestId: p.id, rating: r })}
+                  className={`p-1.5 rounded-full transition-colors ${
+                    r === 0
+                      ? "text-brand-border cursor-not-allowed"
+                      : "text-amber-500 hover:bg-amber-100 cursor-pointer"
+                  }`}
+                >
+                  {isPending ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Write review form ────────────────────────────────────────────────────────
 function WriteReview({
   categoryId,
@@ -366,6 +447,9 @@ export function CategoryReviews({ categoryId }: { categoryId: string }) {
           )}
         </div>
       </div>
+
+      {/* Per-booking star ratings — shown for every unrated completed booking */}
+      <ServiceRatingSection categoryId={categoryId} />
 
       {/* Write / edit review — visible whenever user has a completed booking for this category */}
       {canReviewData?.canReview && (
