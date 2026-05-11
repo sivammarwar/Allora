@@ -1038,14 +1038,9 @@ router.post("/reviews", validateBody(reviewSchema), async (req, res, next) => {
         .json({ error: "Can only review delivered items" });
     }
 
-    // One review per (user, orderItem) — enforce by upserting on a synthetic key.
+    // One review per (user, productId)
     const existing = await prisma.review.findFirst({
-      where: {
-        userId,
-        heroId: item.heroId,
-        productId: item.productId,
-        subcategoryId: item.subcategoryId,
-      },
+      where: { userId, heroId: item.heroId, productId: item.productId },
       select: { id: true },
     });
 
@@ -1059,7 +1054,6 @@ router.post("/reviews", validateBody(reviewSchema), async (req, res, next) => {
             userId,
             heroId: item.heroId,
             productId: item.productId,
-            subcategoryId: item.subcategoryId,
             rating: body.rating,
             reviewText: body.reviewText ?? null,
           },
@@ -1076,16 +1070,11 @@ router.get("/reviews/me/:orderItemId", async (req, res, next) => {
     const userId = req.user!.id;
     const item = await prisma.orderItem.findFirst({
       where: { id: req.params.orderItemId, order: { userId } },
-      select: { heroId: true, productId: true, subcategoryId: true },
+      select: { heroId: true, productId: true },
     });
     if (!item) return res.json(null);
     const r = await prisma.review.findFirst({
-      where: {
-        userId,
-        heroId: item.heroId,
-        productId: item.productId,
-        subcategoryId: item.subcategoryId,
-      },
+      where: { userId, heroId: item.heroId, productId: item.productId },
     });
     res.json(r);
   } catch (e) {
@@ -1095,8 +1084,13 @@ router.get("/reviews/me/:orderItemId", async (req, res, next) => {
 
 router.get("/subcategories/:id/reviews", async (req, res, next) => {
   try {
+    const sub = await prisma.subcategory.findUnique({
+      where: { id: req.params.id },
+      select: { categoryId: true },
+    });
+    if (!sub) return res.json({ reviews: [], summary: { average: 0, count: 0 } });
     const reviews = await prisma.review.findMany({
-      where: { subcategoryId: req.params.id },
+      where: { categoryId: sub.categoryId },
       orderBy: { createdAt: "desc" },
       take: 30,
       include: {
@@ -1105,14 +1099,14 @@ router.get("/subcategories/:id/reviews", async (req, res, next) => {
       },
     });
     const agg = await prisma.review.aggregate({
-      where: { subcategoryId: req.params.id },
+      where: { categoryId: sub.categoryId },
       _avg: { rating: true },
       _count: true,
     });
     res.json({
       reviews,
       summary: {
-        average: Number(agg._avg.rating ?? 0),
+        average: Number(agg._avg?.rating ?? 0),
         count: agg._count,
       },
     });
