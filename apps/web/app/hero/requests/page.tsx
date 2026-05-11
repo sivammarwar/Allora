@@ -127,15 +127,20 @@ export default function HeroRequestsPage() {
   const acceptAll = useMutation({
     mutationFn: async (ids: string[]) => {
       let count = 0;
+      let lastError: unknown = null;
       for (const id of ids) {
         try {
           await api.post(`/api/hero/service-requests/${id}/accept`, {});
           count++;
-        } catch {
-          // ignore individual failures (already taken by another hero)
+        } catch (e) {
+          lastError = e;
+          // ignore if already taken by another hero (409), but keep last error
         }
       }
-      if (count === 0) throw new Error("All requests already taken");
+      if (count === 0) {
+        if (lastError instanceof ApiError) throw lastError;
+        throw new Error("All requests already taken");
+      }
       return count;
     },
     onSuccess: (count) => {
