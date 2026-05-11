@@ -451,9 +451,9 @@ export function CategoryReviews({ categoryId }: { categoryId: string }) {
       {/* Per-booking star ratings — shown for every unrated completed booking */}
       <ServiceRatingSection categoryId={categoryId} />
 
-      {/* Write / edit review — visible whenever user has a completed booking for this category */}
-      {canReviewData?.canReview && (
-        <WriteReview categoryId={categoryId} existingReview={myReview} />
+      {/* Write review — only shown when user has a completed booking but hasn't reviewed yet */}
+      {canReviewData?.canReview && !myReview && (
+        <WriteReview categoryId={categoryId} existingReview={null} />
       )}
 
       {/* Review list */}
