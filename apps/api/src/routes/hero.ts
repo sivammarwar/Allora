@@ -901,6 +901,7 @@ router.post("/service-requests/:id/complete", async (req, res, next) => {
     if (!profile) return res.status(404).json({ error: "Hero not found" });
     const request = await prisma.serviceRequest.findFirst({
       where: { id: req.params.id, heroId: profile.id },
+      include: { subcategory: { select: { name: true, category: { select: { name: true } } } } },
     });
     if (!request) return res.status(404).json({ error: "Not found" });
     if (request.status !== "ACCEPTED") return res.status(400).json({ error: "Not accepted" });
@@ -936,7 +937,11 @@ router.post("/service-requests/:id/complete", async (req, res, next) => {
       }
     }
 
-    emitService(`user:${request.userId}`, "service_request:completed", { requestId: request.id });
+    emitService(`user:${request.userId}`, "service_request:completed", {
+      requestId: request.id,
+      subcategoryName: request.subcategory.name,
+      categoryName: request.subcategory.category.name,
+    });
     res.json(updated);
   } catch (e) { next(e); }
 });

@@ -3,6 +3,7 @@
 import { Home, CalendarClock, User } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { UserHeaderActions } from "@/components/shared/UserHeaderActions";
+import { GlobalRatingPrompt } from "@/components/shared/GlobalRatingPrompt";
 
 const links = [
   { href: "/dashboard",          label: "Home",     icon: Home },
@@ -21,6 +22,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       headerRight={<UserHeaderActions />}
     >
       {children}
+      <GlobalRatingPrompt />
     </DashboardShell>
   );
 }
