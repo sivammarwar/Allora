@@ -292,6 +292,7 @@ const PUBLIC_GET = [
   /^\/subcategories\/[^/]+\/slots$/,
   /^\/subcategories\/[^/]+$/,
   /^\/browse$/,
+  /^\/my-agent$/,
 ];
 router.use((req, res, next) => {
   const isPublicGet = req.method === "GET" && PUBLIC_GET.some((re) => re.test(req.path));
@@ -464,7 +465,7 @@ const locationQuery = z.object({
 });
 
 // ─── Resolve agent for user's location ──────────────────────────────────────
-router.get("/my-agent", requireAuth, requireRole("USER"), async (req, res, next) => {
+router.get("/my-agent", async (req, res, next) => {
   try {
     const parsed = locationQuery.safeParse(req.query);
     if (!parsed.success) return res.status(400).json({ error: "lat & lng required" });

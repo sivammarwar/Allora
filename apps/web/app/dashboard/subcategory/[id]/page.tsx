@@ -92,6 +92,15 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [loc, setLoc] = useState<UserLocation | null>(null);
   useEffect(() => setLoc(getStoredLocation()), []);
 
+  // Fallback: resolve agentId from location when not in URL
+  const { data: myAgentData } = useQuery<{ agentId: string | null }>({
+    queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
+    queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
+    enabled: !!loc && !agentId,
+    retry: false,
+  });
+  const resolvedAgentId = agentId ?? myAgentData?.agentId ?? null;
+
   // Real-time clock — updates every minute so past slots fade automatically
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -142,14 +151,14 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
   // Fetch pricing via the subcategories endpoint (piggyback)
   const { data: pricingFromCat } = useQuery<AgentPricing | null>({
-    queryKey: ["sub-pricing", agentId, id],
+    queryKey: ["sub-pricing", resolvedAgentId, id],
     queryFn: async () => {
-      if (!agentId) return null;
-      const subs = await api.get<any[]>(`/api/user/categories/${sub!.category.id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}&agentId=${agentId}`);
+      if (!resolvedAgentId) return null;
+      const subs = await api.get<any[]>(`/api/user/categories/${sub!.category.id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}&agentId=${resolvedAgentId}`);
       const found = subs.find((s: any) => s.id === id);
       return found?.agentPricing ?? null;
     },
-    enabled: !!agentId && !!sub && !!loc,
+    enabled: !!resolvedAgentId && !!sub && !!loc,
   });
 
   const pricing = pricingFromCat;
@@ -160,9 +169,9 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const fromDate = todayStr();
 
   const { data: slotData } = useQuery<SlotState>({
-    queryKey: ["slots", id, agentId],
-    queryFn: () => api.get(`/api/user/subcategories/${id}/slots?agentId=${agentId}&from=${fromDate}&days=7`),
-    enabled: !!agentId,
+    queryKey: ["slots", id, resolvedAgentId],
+    queryFn: () => api.get(`/api/user/subcategories/${id}/slots?agentId=${resolvedAgentId}&from=${fromDate}&days=7`),
+    enabled: !!resolvedAgentId,
     refetchInterval: 30000,
   });
 
@@ -171,13 +180,13 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
   // Real-time slot updates
   useEffect(() => {
-    if (!agentId) return;
+    if (!resolvedAgentId) return;
     const s = getSocket("/service");
     s.emit("slots:watch", `${id}:${selectedDate}`);
     const onUpdate = () => qc.invalidateQueries({ queryKey: ["slots", id] });
     s.on("slot:updated", onUpdate);
     return () => { s.off("slot:updated", onUpdate); s.emit("slots:unwatch", `${id}:${selectedDate}`); };
-  }, [id, agentId, selectedDate, qc]);
+  }, [id, resolvedAgentId, selectedDate, qc]);
 
   // Real-time acceptance notification
   useEffect(() => {
@@ -194,7 +203,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     mutationFn: () =>
       api.post<any[]>("/api/user/service-requests/bulk", {
         subcategoryIds: Array.from(selectedSubIds),
-        agentId: agentId!,
+        agentId: resolvedAgentId!,
         scheduledDate: selectedDate,
         scheduledHour: selectedHour!,
         userName: form.name,
@@ -216,9 +225,9 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
 
   // Other subcategories of the same category for suggestions
   const { data: suggestions = [] } = useQuery<any[]>({
-    queryKey: ["sub-suggestions", sub?.category.id, agentId],
+    queryKey: ["sub-suggestions", sub?.category.id, resolvedAgentId],
     queryFn: () =>
-      api.get(`/api/user/categories/${sub!.category.id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}${agentId ? `&agentId=${agentId}` : ""}`),
+      api.get(`/api/user/categories/${sub!.category.id}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}${resolvedAgentId ? `&agentId=${resolvedAgentId}` : ""}`),
     enabled: !!sub && !!loc,
   });
   const otherSubs = suggestions.filter((s: any) => s.id !== id);
@@ -275,7 +284,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
       )}
 
       {/* ── Slot picker ── */}
-      {agentId && (
+      {resolvedAgentId && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg text-brand-text">Available Slots</h2>
@@ -477,7 +486,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               return (
                 <button
                   key={s.id}
-                  onClick={() => router.push(`/dashboard/subcategory/${s.id}${agentId ? `?agentId=${agentId}` : ""}`)}
+                  onClick={() => router.push(`/dashboard/subcategory/${s.id}${resolvedAgentId ? `?agentId=${resolvedAgentId}` : ""}`)}
                   className="text-left w-full"
                 >
                   <Card className="hover:border-brand-primary/50 transition-colors overflow-hidden">

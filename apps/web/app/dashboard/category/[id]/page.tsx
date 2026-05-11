@@ -120,7 +120,7 @@ export default function UserCategoryPage({
   const { data: agentData } = useQuery<{ agentId: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
-    enabled: !!loc && !!currentUser,
+    enabled: !!loc,
     retry: false,
   });
   const agentId = agentData?.agentId ?? null;
