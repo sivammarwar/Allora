@@ -15,11 +15,10 @@ interface SubcategoryResult {
   categoryId: string;
   categoryName: string;
   categoryType: "PRODUCT" | "SERVICE";
+  isActive: boolean;
   isPinned: boolean;
   viralPosition: number | null;
 }
-
-const TRENDING_LABELS = ["Haircut", "Massage", "Plumber", "Electrician", "Cleaning", "Mehendi"];
 
 export function UserHeaderActions() {
   const router = useRouter();
@@ -36,15 +35,22 @@ export function UserHeaderActions() {
 
   const trimmed = query.trim();
 
+  const activeSubs = allSubs.filter((s) => s.isActive);
+
   const results = trimmed.length < 2
     ? []
-    : allSubs
+    : activeSubs
         .filter(
           (s) =>
             s.name.toLowerCase().includes(trimmed.toLowerCase()) ||
             s.categoryName.toLowerCase().includes(trimmed.toLowerCase())
         )
         .slice(0, 15);
+
+  const trendingChips = activeSubs
+    .filter((s) => s.isPinned || s.viralPosition != null)
+    .sort((a, b) => (a.viralPosition ?? 999) - (b.viralPosition ?? 999))
+    .slice(0, 8);
 
   // Group by category
   const grouped = results.reduce<
@@ -166,14 +172,24 @@ export function UserHeaderActions() {
                       Trending
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {TRENDING_LABELS.map((label) => (
+                      {trendingChips.map((sub) => (
                         <button
-                          key={label}
-                          onClick={() => setQuery(label)}
+                          key={sub.id}
+                          onClick={() => setQuery(sub.name)}
                           className="flex items-center gap-1.5 text-sm text-gray-700 bg-gray-100 hover:bg-brand-primary/10 hover:text-brand-primary px-3 py-1.5 rounded-full transition-colors"
                         >
                           <Sparkles size={11} className="text-brand-primary" />
-                          {label}
+                          {sub.name}
+                        </button>
+                      ))}
+                      {trendingChips.length === 0 && activeSubs.slice(0, 6).map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => setQuery(sub.name)}
+                          className="flex items-center gap-1.5 text-sm text-gray-700 bg-gray-100 hover:bg-brand-primary/10 hover:text-brand-primary px-3 py-1.5 rounded-full transition-colors"
+                        >
+                          <Sparkles size={11} className="text-brand-primary" />
+                          {sub.name}
                         </button>
                       ))}
                     </div>
@@ -187,7 +203,7 @@ export function UserHeaderActions() {
                       </p>
                       <div className="grid grid-cols-2 gap-2">
                         {Array.from(
-                          new Map(allSubs.map((s) => [s.categoryId, { id: s.categoryId, name: s.categoryName }])).values()
+                          new Map(activeSubs.map((s) => [s.categoryId, { id: s.categoryId, name: s.categoryName }])).values()
                         ).slice(0, 6).map((cat) => (
                           <button
                             key={cat.id}
