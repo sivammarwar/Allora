@@ -18,14 +18,16 @@ import { roleLogin, type Role } from "@/lib/types";
 export function RoleGate({
   role,
   children,
+  guestOk = false,
 }: {
   role: Role;
   children: React.ReactNode;
+  /** When true, unauthenticated visitors can view — no redirect to login. */
+  guestOk?: boolean;
 }) {
   const router = useRouter();
   const qc = useQueryClient();
   const pathname = usePathname() ?? "";
-  // Treat any `/login` segment as a public auth route within this layout tree.
   const isPublicAuthRoute = pathname.endsWith("/login");
 
   const { data: user, isLoading } = useCurrentUser();
@@ -33,17 +35,23 @@ export function RoleGate({
   useEffect(() => {
     if (isPublicAuthRoute) return;
     if (isLoading) return;
+    // Guest-ok: only redirect if there IS a user but with the wrong role
+    if (guestOk) {
+      if (user && user.role !== role) {
+        qc.invalidateQueries({ queryKey: ["auth", "me"] });
+        router.replace(roleLogin[user.role]);
+      }
+      return;
+    }
     if (!user) {
       router.replace(roleLogin[role]);
       return;
     }
     if (user.role !== role) {
-      // Force a fresh /me fetch before redirecting — catches stale-cache mismatches
-      // where cookies belong to a different user than what's in the React Query cache.
       qc.invalidateQueries({ queryKey: ["auth", "me"] });
       router.replace(roleLogin[user.role]);
     }
-  }, [user, isLoading, role, router, isPublicAuthRoute, qc]);
+  }, [user, isLoading, role, router, isPublicAuthRoute, qc, guestOk]);
 
   if (isPublicAuthRoute) return <>{children}</>;
 
@@ -54,6 +62,8 @@ export function RoleGate({
       </div>
     );
   }
+  // Guest-ok: render even without a user
+  if (guestOk) return <>{children}</>;
   if (!user || user.role !== role) return null;
   return <>{children}</>;
 }

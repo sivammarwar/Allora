@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 import { RoleGate } from "@/components/shared/RoleGate";
+import { useCurrentUser } from "@/lib/auth";
 import { type Role } from "@/lib/types";
 
 export interface NavLink {
@@ -11,6 +12,8 @@ export interface NavLink {
   label: string;
   icon: LucideIcon;
   badge?: number;
+  /** If true, unauthenticated users are sent to /login instead */
+  requiresAuth?: boolean;
 }
 
 interface DashboardShellProps {
@@ -70,10 +73,10 @@ function TopHeader({
 
 function BottomNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname() ?? "";
-  // Limit to 5 tabs — if more, show first 5
+  const router = useRouter();
+  const { data: user } = useCurrentUser();
   const tabs = links.slice(0, 5);
 
-  // Most-specific match: longest matching href wins (prevents /dashboard matching /dashboard/bookings)
   const activeHref = [...tabs]
     .sort((a, b) => b.href.length - a.href.length)
     .find((t) => pathname === t.href || pathname.startsWith(t.href + "/"))?.href;
@@ -84,10 +87,11 @@ function BottomNav({ links }: { links: NavLink[] }) {
         {tabs.map((tab) => {
           const active = tab.href === activeHref;
           const Icon = tab.icon;
+          const blocked = tab.requiresAuth && !user;
           return (
-            <Link
+            <button
               key={tab.href}
-              href={tab.href}
+              onClick={() => blocked ? router.push("/login") : router.push(tab.href)}
               className="flex flex-col items-center gap-0.5 relative transition-colors px-3 py-2 flex-1"
             >
               {active && (
@@ -96,7 +100,7 @@ function BottomNav({ links }: { links: NavLink[] }) {
               <div className="relative">
                 <Icon
                   size={20}
-                  className={active ? "text-brand-primary" : "text-gray-400"}
+                  className={active ? "text-brand-primary" : blocked ? "text-gray-300" : "text-gray-400"}
                 />
                 {tab.badge != null && tab.badge > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
@@ -106,12 +110,12 @@ function BottomNav({ links }: { links: NavLink[] }) {
               </div>
               <span
                 className={`text-[10px] font-medium leading-none whitespace-nowrap ${
-                  active ? "text-brand-primary" : "text-gray-400"
+                  active ? "text-brand-primary" : blocked ? "text-gray-300" : "text-gray-400"
                 }`}
               >
                 {tab.label}
               </span>
-            </Link>
+            </button>
           );
         })}
       </div>
@@ -134,7 +138,7 @@ export function DashboardShell({
   const navTabs = bottomLinks ?? links;
 
   return (
-    <RoleGate role={role}>
+    <RoleGate role={role} guestOk={role === "USER"}>
       {isLogin ? (
         children
       ) : (

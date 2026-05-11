@@ -8,8 +8,8 @@ import { DashboardFooter } from "@/components/shared/DashboardFooter";
 
 const links = [
   { href: "/dashboard",          label: "Home",     icon: Home },
-  { href: "/dashboard/bookings", label: "Bookings", icon: CalendarClock },
-  { href: "/dashboard/profile",  label: "Profile",  icon: User },
+  { href: "/dashboard/bookings", label: "Bookings", icon: CalendarClock, requiresAuth: true },
+  { href: "/dashboard/profile",  label: "Profile",  icon: User,          requiresAuth: true },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { logger } from "../lib/logger";
 import * as turf from "@turf/turf";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, optionalAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
 import { getRazorpay } from "../lib/razorpay";
@@ -12,7 +12,7 @@ import { emitToUser, emitService } from "../socket";
 const router = Router();
 
 // Public categories endpoint (accessible to all authenticated users including heroes)
-router.get("/categories", requireAuth, async (_req, res, next) => {
+router.get("/categories", optionalAuth, async (_req, res, next) => {
   try {
     const rows = await prisma.category.findMany({
       where: { isActive: true },
@@ -36,7 +36,7 @@ router.get("/categories", requireAuth, async (_req, res, next) => {
 });
 
 // Public subcategories endpoint (accessible to all authenticated users including heroes)
-router.get("/subcategories", requireAuth, async (req, res, next) => {
+router.get("/subcategories", optionalAuth, async (req, res, next) => {
   try {
     const categoryId =
       typeof req.query.categoryId === "string" ? req.query.categoryId : undefined;
@@ -73,7 +73,7 @@ router.get("/subcategories", requireAuth, async (req, res, next) => {
 // Tier 1: agents whose assigned polygon CONTAINS the user's point (officially assigned).
 // Tier 2: agents within `radius` km (default 40) measured to nearest area edge.
 // Both tiers are returned together; tier-1 first, then tier-2 by ascending distance.
-router.get("/agents-nearby", requireAuth, async (req, res, next) => {
+router.get("/agents-nearby", optionalAuth, async (req, res, next) => {
   try {
     const lat = parseFloat(req.query.lat as string);
     const lng = parseFloat(req.query.lng as string);
@@ -178,7 +178,7 @@ router.get("/agents-nearby", requireAuth, async (req, res, next) => {
 });
 
 // ─── Viral / Pinned subcategories (accessible to all authenticated roles) ──────
-router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
+router.get("/viral-subcategories", optionalAuth, async (_req, res, next) => {
   try {
     const pinned = await prisma.subcategory.findMany({
       where: { isPinned: true, isActive: true, viralPosition: { not: null } },
@@ -209,7 +209,7 @@ router.get("/viral-subcategories", requireAuth, async (_req, res, next) => {
 });
 
 // ─── Newly Added subcategories (admin-curated, 6 slots) ─────────────────────
-router.get("/newly-added-subcategories", requireAuth, async (_req, res, next) => {
+router.get("/newly-added-subcategories", optionalAuth, async (_req, res, next) => {
   try {
     const items = await prisma.subcategory.findMany({
       where: { newlyAddedPosition: { not: null }, isActive: true },
@@ -240,7 +240,7 @@ router.get("/newly-added-subcategories", requireAuth, async (_req, res, next) =>
 });
 
 // ─── Most Rated subcategories (top 15 by category combined avg) ─────────────
-router.get("/most-rated-subcategories", requireAuth, async (_req, res, next) => {
+router.get("/most-rated-subcategories", optionalAuth, async (_req, res, next) => {
   try {
     const [reviewRows, ratingRows] = await Promise.all([
       prisma.review.groupBy({ by: ["categoryId"], where: { categoryId: { not: null } }, _avg: { rating: true }, _count: { id: true } }),

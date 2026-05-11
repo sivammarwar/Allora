@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { getStoredLocation, type UserLocation } from "@/lib/location";
 import { getSocket } from "@/lib/socket";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
+import { useCurrentUser } from "@/lib/auth";
 
 interface AgentPricing {
   id: string;
@@ -77,6 +78,12 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const searchParams = useSearchParams();
   const agentId = searchParams.get("agentId");
   const qc = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+
+  function requireLogin() {
+    if (!currentUser) { router.push("/login"); return true; }
+    return false;
+  }
 
   const [loc, setLoc] = useState<UserLocation | null>(null);
   useEffect(() => setLoc(getStoredLocation()), []);
@@ -336,7 +343,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 <CalendarCheck size={14} className="inline mr-1.5 text-brand-primary" />
                 {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtSlot(selectedHour, slotData?.slotDurationHours ?? 1)}
               </p>
-              <Button size="sm" onClick={() => { setSelectedSubIds(new Set([id])); if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
+              <Button size="sm" onClick={() => { if (requireLogin()) return; setSelectedSubIds(new Set([id])); if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
             </div>
           )}
         </div>
@@ -662,7 +669,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 )}
                 <Button
                   className="w-full"
-                  onClick={() => { setShowUpsell(false); setShowForm(true); }}
+                  onClick={() => { if (requireLogin()) return; setShowUpsell(false); setShowForm(true); }}
                   disabled={selected.length === 0}
                 >
                   <CalendarCheck size={15} />
