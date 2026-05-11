@@ -182,6 +182,7 @@ model User {
   orders               Order[]
   serviceRequests      ServiceRequest[]
   reviews              Review[]
+  bookingRatings       BookingRating[]
   reviewReactions      ReviewReaction[]
   notifications        Notification[]
 
@@ -406,6 +407,7 @@ model Category {
   subcategories            Subcategory[]
   agentCategoryConfigs     AgentCategoryConfig[]
   reviews                  Review[]
+  bookingRatings           BookingRating[]
 
   @@index([type, isActive])
 }
@@ -430,7 +432,6 @@ model Subcategory {
   pricing         HeroSubcategoryPricing[]
   agentPricing    AgentSubcategoryPricing[]
   serviceBookings ServiceBooking[]
-  reviews         Review[]
   orderItems      OrderItem[]
   serviceRequests ServiceRequest[]
 
@@ -590,30 +591,41 @@ model PaymentRecord {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Review {
-  id               String          @id @default(cuid())
-  userId           String
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  heroId           String?
-  hero             HeroProfile?    @relation(fields: [heroId], references: [id], onDelete: SetNull)
-  categoryId       String?
-  category         Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategoryId    String?
-  subcategory      Subcategory?    @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  productId        String?
-  product          Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  serviceRequestId String?         @unique
-  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
-  rating           Int             // 1..5, immutable after create
-  reviewText       String?         // max 40 words, editable
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heroId      String?
+  hero        HeroProfile? @relation(fields: [heroId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  productId   String?
+  product     Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  rating      Int          // 1..5
+  reviewText  String?      // max 40 words, editable
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  reactions        ReviewReaction[]
+  reactions   ReviewReaction[]
 
+  @@unique([userId, categoryId], map: "Review_userId_categoryId_key")
   @@index([heroId, createdAt])
   @@index([categoryId, createdAt])
-  @@index([subcategoryId, createdAt])
   @@index([productId, createdAt])
+}
+
+model BookingRating {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId       String
+  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  serviceRequestId String         @unique
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  rating           Int            // 1..5
+  createdAt        DateTime       @default(now())
+
+  @@index([categoryId, createdAt])
+  @@index([userId, categoryId])
 }
 
 model ReviewReaction {
@@ -744,7 +756,7 @@ model ServiceRequest {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  review    Review?
+  bookingRating BookingRating?
 
   @@index([userId, createdAt])
   @@index([heroId, status])

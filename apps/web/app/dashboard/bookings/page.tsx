@@ -94,7 +94,6 @@ export default function UserBookingsPage() {
   const [selected, setSelected] = useState<BookingGroup | null>(null);
   const [ratingPrompt, setRatingPrompt] = useState<{ requestId: string; label: string } | null>(null);
   const [promptRating, setPromptRating] = useState(0);
-  const [promptText, setPromptText] = useState("");
   const [promptHover, setPromptHover] = useState(0);
 
   const { data: bookings = [], isLoading } = useQuery<Booking[]>({
@@ -112,7 +111,6 @@ export default function UserBookingsPage() {
       const b = cached.find((x) => x.id === requestId);
       const label = b ? `${b.subcategory.name} – ${b.subcategory.category.name}` : "your service";
       setPromptRating(0);
-      setPromptText("");
       setRatingPrompt({ requestId, label });
     };
     s.on("service_request:completed", onCompleted);
@@ -121,18 +119,17 @@ export default function UserBookingsPage() {
 
   const submitRating = useMutation({
     mutationFn: () =>
-      api.post("/api/user/service-reviews", {
+      api.post("/api/user/booking-ratings", {
         serviceRequestId: ratingPrompt!.requestId,
         rating: promptRating,
-        reviewText: promptText.trim() || undefined,
       }),
     onSuccess: () => {
-      toast.success("Thank you for your review!");
+      toast.success("Thanks for rating!");
       setRatingPrompt(null);
       qc.invalidateQueries({ queryKey: ["category-avg-ratings"] });
     },
     onError: (e) => {
-      if (e instanceof ApiError && e.message.includes("Already reviewed")) {
+      if (e instanceof ApiError && e.message.includes("Already rated")) {
         setRatingPrompt(null);
       } else {
         toast.error(e instanceof ApiError ? e.message : "Failed");
@@ -395,30 +392,13 @@ export default function UserBookingsPage() {
               </p>
             </div>
 
-            {/* Optional text */}
-            <div className="relative">
-              <textarea
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                rows={3}
-                placeholder="Write a short review… (optional, max 40 words)"
-                className="w-full text-sm rounded-xl border border-brand-border bg-brand-bg p-3 pb-7 resize-none focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 placeholder:text-brand-textMuted/50"
-              />
-              <span className={`absolute bottom-2 right-3 text-[11px] font-mono ${
-                promptText.trim().split(/\s+/).filter(Boolean).length > 40 ? "text-red-500" : "text-brand-textMuted"
-              }`}>
-                {promptText.trim().split(/\s+/).filter(Boolean).length}/40
-              </span>
-            </div>
-
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => setRatingPrompt(null)}>
                 Skip
               </Button>
               <Button
                 className="flex-1"
-                disabled={promptRating === 0 || submitRating.isPending ||
-                  promptText.trim().split(/\s+/).filter(Boolean).length > 40}
+                disabled={promptRating === 0 || submitRating.isPending}
                 onClick={() => submitRating.mutate()}
                 loading={submitRating.isPending}
               >

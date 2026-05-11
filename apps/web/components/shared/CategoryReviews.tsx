@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -36,13 +36,6 @@ interface ReviewsData {
   totalCount: number;
   page: number;
   pages: number;
-}
-
-interface PendingBooking {
-  id: string;
-  scheduledDate: string;
-  scheduledHour: number;
-  subcategory: { name: string; category: { id: string; name: string } };
 }
 
 // ─── Star renderer ────────────────────────────────────────────────────────────
@@ -257,60 +250,46 @@ function ReviewCard({
 
 // ─── Write review form ────────────────────────────────────────────────────────
 function WriteReview({
-  pending,
   categoryId,
+  existingReview,
 }: {
-  pending: PendingBooking[];
   categoryId: string;
+  existingReview: { id: string; rating: number; reviewText: string | null } | null;
 }) {
   const qc = useQueryClient();
-  const [selectedRequest, setSelectedRequest] = useState<string>(pending[0]?.id ?? "");
-  const [rating, setRating] = useState(0);
-  const [text, setText] = useState("");
+  const [rating, setRating] = useState(existingReview?.rating ?? 0);
+  const [text, setText] = useState(existingReview?.reviewText ?? "");
+
+  useEffect(() => {
+    if (existingReview) {
+      setRating(existingReview.rating);
+      setText(existingReview.reviewText ?? "");
+    }
+  }, [existingReview?.id]);
 
   const words = countWords(text);
+  const isEditing = !!existingReview;
 
   const submit = useMutation({
     mutationFn: () =>
       api.post("/api/user/service-reviews", {
-        serviceRequestId: selectedRequest,
+        categoryId,
         rating,
         reviewText: text.trim() || undefined,
       }),
     onSuccess: () => {
-      toast.success("Review submitted!");
-      setRating(0);
-      setText("");
+      toast.success(isEditing ? "Review updated!" : "Review submitted!");
       qc.invalidateQueries({ queryKey: ["category-reviews", categoryId] });
-      qc.invalidateQueries({ queryKey: ["category-pending-reviews", categoryId] });
+      qc.invalidateQueries({ queryKey: ["my-review", categoryId] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
   });
 
-  function fmtHour(h: number) {
-    if (h === 0) return "12 AM"; if (h < 12) return `${h} AM`;
-    if (h === 12) return "12 PM"; return `${h - 12} PM`;
-  }
-
   return (
     <div className="rounded-xl border border-brand-primary/20 bg-gradient-to-br from-brand-primary/5 to-transparent p-4 space-y-3">
-      <p className="text-sm font-semibold text-brand-text">Share your experience</p>
-
-      {pending.length > 1 && (
-        <select
-          value={selectedRequest}
-          onChange={(e) => setSelectedRequest(e.target.value)}
-          className="w-full text-sm rounded-lg border border-brand-border bg-brand-bg px-3 py-2 focus:outline-none focus:border-brand-primary"
-        >
-          {pending.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.subcategory.name} —{" "}
-              {new Date(b.scheduledDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-              {" at "}{fmtHour(b.scheduledHour)}
-            </option>
-          ))}
-        </select>
-      )}
+      <p className="text-sm font-semibold text-brand-text">
+        {isEditing ? "Edit your review" : "Share your experience"}
+      </p>
 
       <div className="space-y-1">
         <p className="text-xs text-brand-textMuted">Your rating <span className="text-red-500">*</span></p>
@@ -337,12 +316,12 @@ function WriteReview({
 
       <Button
         className="w-full"
-        disabled={rating === 0 || words > 40 || !selectedRequest || submit.isPending}
+        disabled={rating === 0 || words > 40 || submit.isPending}
         onClick={() => submit.mutate()}
         loading={submit.isPending}
       >
         <Send size={14} />
-        Submit review
+        {isEditing ? "Update review" : "Submit review"}
       </Button>
     </div>
   );
@@ -358,9 +337,15 @@ export function CategoryReviews({ categoryId }: { categoryId: string }) {
     queryFn: () => api.get(`/api/user/categories/${categoryId}/reviews?page=${page}&limit=10`),
   });
 
-  const { data: pending = [] } = useQuery<PendingBooking[]>({
-    queryKey: ["category-pending-reviews", categoryId],
-    queryFn: () => api.get(`/api/user/categories/${categoryId}/reviews/my-pending`),
+  const { data: canReviewData } = useQuery<{ canReview: boolean }>({
+    queryKey: ["can-review", categoryId],
+    queryFn: () => api.get(`/api/user/categories/${categoryId}/can-review`),
+  });
+
+  const { data: myReview = null } = useQuery<{ id: string; rating: number; reviewText: string | null } | null>({
+    queryKey: ["my-review", categoryId],
+    queryFn: () => api.get(`/api/user/categories/${categoryId}/reviews/my-review`),
+    enabled: !!canReviewData?.canReview,
   });
 
   const invalidate = useCallback(() => {
@@ -382,9 +367,9 @@ export function CategoryReviews({ categoryId }: { categoryId: string }) {
         </div>
       </div>
 
-      {/* Write review — only if unrated completed bookings exist */}
-      {pending.length > 0 && (
-        <WriteReview pending={pending} categoryId={categoryId} />
+      {/* Write / edit review — visible whenever user has a completed booking for this category */}
+      {canReviewData?.canReview && (
+        <WriteReview categoryId={categoryId} existingReview={myReview} />
       )}
 
       {/* Review list */}
@@ -397,7 +382,7 @@ export function CategoryReviews({ categoryId }: { categoryId: string }) {
           <CardContent className="py-10 text-center">
             <Star size={28} className="mx-auto mb-3 text-brand-border" />
             <p className="text-sm text-brand-textMuted">No reviews yet.</p>
-            {pending.length === 0 && (
+            {!canReviewData?.canReview && (
               <p className="text-xs text-brand-textMuted mt-1">Book a service to leave the first review.</p>
             )}
           </CardContent>

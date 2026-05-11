@@ -431,23 +431,35 @@ router.get("/categories", async (req, res, next) => {
   }
 });
 
-// GET /api/user/categories/avg-ratings — bulk star averages for all categories
+// GET /api/user/categories/avg-ratings — bulk star averages (BookingRating + Review combined)
 router.get("/categories/avg-ratings", async (_req, res, next) => {
   try {
-    const rows = await prisma.review.groupBy({
-      by: ["categoryId"],
-      where: { categoryId: { not: null } },
-      _avg: { rating: true },
-      _count: { id: true },
-    });
+    const [reviewRows, ratingRows] = await Promise.all([
+      prisma.review.groupBy({
+        by: ["categoryId"],
+        where: { categoryId: { not: null } },
+        _avg: { rating: true },
+        _count: { id: true },
+      }),
+      prisma.bookingRating.groupBy({
+        by: ["categoryId"],
+        _avg: { rating: true },
+        _count: { id: true },
+      }),
+    ]);
+    const map: Record<string, { sum: number; count: number }> = {};
+    for (const r of reviewRows) {
+      if (r.categoryId) map[r.categoryId] = { sum: (r._avg.rating ?? 0) * r._count.id, count: r._count.id };
+    }
+    for (const r of ratingRows) {
+      const e = map[r.categoryId] ?? { sum: 0, count: 0 };
+      e.sum += (r._avg.rating ?? 0) * r._count.id;
+      e.count += r._count.id;
+      map[r.categoryId] = e;
+    }
     const result: Record<string, { avg: number; count: number }> = {};
-    for (const r of rows) {
-      if (r.categoryId) {
-        result[r.categoryId] = {
-          avg: Math.round((r._avg.rating ?? 0) * 10) / 10,
-          count: r._count.id,
-        };
-      }
+    for (const [id, { sum, count }] of Object.entries(map)) {
+      result[id] = { avg: count > 0 ? Math.round((sum / count) * 10) / 10 : 0, count };
     }
     res.json(result);
   } catch (e) { next(e); }
@@ -1550,57 +1562,85 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 
-// POST /api/user/service-reviews — create a new review tied to a completed service request
-router.post("/service-reviews", async (req, res, next) => {
+// POST /api/user/booking-ratings — quick star rating after every completed booking (category-wide)
+router.post("/booking-ratings", async (req, res, next) => {
   try {
     const userId = req.user!.id;
-    const { serviceRequestId, rating, reviewText } = req.body;
-
-    logger.info(`POST /reviews body: ${JSON.stringify({ serviceRequestId, rating: rating, ratingType: typeof rating, reviewText })} userId=${userId}`);
-
-    if (!serviceRequestId) {
-      return res.status(400).json({ error: "serviceRequestId is required" });
-    }
-    if (!rating && rating !== 0) {
-      return res.status(400).json({ error: "rating is required" });
-    }
+    const { serviceRequestId, rating } = req.body;
+    if (!serviceRequestId) return res.status(400).json({ error: "serviceRequestId is required" });
     if (typeof rating !== "number" || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: `Rating must be 1–5 (received: ${JSON.stringify(rating)}, type: ${typeof rating})` });
+      return res.status(400).json({ error: "Rating must be 1–5" });
     }
-    if (reviewText) {
-      const wordCount = reviewText.trim().split(/\s+/).filter(Boolean).length;
-      if (wordCount > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
-    }
-
-    // Verify the service request belongs to this user and is COMPLETED
     const sr = await prisma.serviceRequest.findUnique({
       where: { id: serviceRequestId },
       include: { subcategory: { select: { categoryId: true } } },
     });
     if (!sr || sr.userId !== userId) return res.status(404).json({ error: "Booking not found" });
-    if (sr.status !== "COMPLETED") return res.status(400).json({ error: "Can only review completed bookings" });
+    if (sr.status !== "COMPLETED") return res.status(400).json({ error: "Booking is not completed" });
+    const br = await prisma.bookingRating.create({
+      data: { userId, categoryId: sr.subcategory.categoryId, serviceRequestId, rating },
+    });
+    res.status(201).json(br);
+  } catch (e: any) {
+    if (e?.code === "P2002") return res.status(409).json({ error: "Already rated this booking" });
+    next(e);
+  }
+});
 
-    // One review per completed booking (enforced by @unique on serviceRequestId)
-    const review = await prisma.review.create({
-      data: {
-        userId,
-        ...(sr.heroId ? { heroId: sr.heroId } : {}),
-        categoryId: sr.subcategory.categoryId,
-        subcategoryId: sr.subcategoryId,
-        serviceRequestId,
-        rating,
-        reviewText: reviewText?.trim() ?? null,
-      },
+// POST /api/user/service-reviews — upsert user's ONE review per category (create or edit)
+router.post("/service-reviews", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { categoryId, rating, reviewText } = req.body;
+    if (!categoryId) return res.status(400).json({ error: "categoryId is required" });
+    if (typeof rating !== "number" || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be 1–5" });
+    }
+    if (reviewText) {
+      const words = reviewText.trim().split(/\s+/).filter(Boolean).length;
+      if (words > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
+    }
+    const hasBooking = await prisma.serviceRequest.findFirst({
+      where: { userId, status: "COMPLETED", subcategory: { categoryId } },
+      select: { id: true },
+    });
+    if (!hasBooking) return res.status(403).json({ error: "You must have a completed booking to review" });
+    const review = await prisma.review.upsert({
+      where: { userId_categoryId: { userId, categoryId } },
+      create: { userId, categoryId, rating, reviewText: reviewText?.trim() ?? null },
+      update: { rating, reviewText: reviewText?.trim() ?? null },
       include: {
         user: { select: { name: true, profileImageUrl: true } },
         reactions: true,
       },
     });
     res.status(201).json(review);
-  } catch (e: any) {
-    if (e?.code === "P2002") return res.status(409).json({ error: "Already reviewed this booking" });
-    next(e);
-  }
+  } catch (e) { next(e); }
+});
+
+// GET /api/user/categories/:id/reviews/my-review — current user's review for this category
+router.get("/categories/:id/reviews/my-review", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const categoryId = req.params.id;
+    const review = await prisma.review.findUnique({
+      where: { userId_categoryId: { userId, categoryId } },
+    });
+    res.json(review ?? null);
+  } catch (e) { next(e); }
+});
+
+// GET /api/user/categories/:id/can-review — has user had a completed booking for this category?
+router.get("/categories/:id/can-review", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const categoryId = req.params.id;
+    const booking = await prisma.serviceRequest.findFirst({
+      where: { userId, status: "COMPLETED", subcategory: { categoryId } },
+      select: { id: true },
+    });
+    res.json({ canReview: !!booking });
+  } catch (e) { next(e); }
 });
 
 // GET /api/user/categories/:id/reviews?page=1&limit=10
@@ -1646,20 +1686,26 @@ router.get("/categories/:id/reviews", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PUT /api/user/service-reviews/:id — edit review text only (rating is immutable)
+// PUT /api/user/service-reviews/:id — edit rating + text
 router.put("/service-reviews/:id", async (req, res, next) => {
   try {
     const userId = req.user!.id;
-    const { reviewText } = req.body;
+    const { rating, reviewText } = req.body;
+    if (rating !== undefined && (typeof rating !== "number" || rating < 1 || rating > 5)) {
+      return res.status(400).json({ error: "Rating must be 1–5" });
+    }
     if (reviewText !== undefined && reviewText !== null) {
-      const wordCount = String(reviewText).trim().split(/\s+/).filter(Boolean).length;
-      if (wordCount > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
+      const words = String(reviewText).trim().split(/\s+/).filter(Boolean).length;
+      if (words > 40) return res.status(400).json({ error: "Review must be 40 words or fewer" });
     }
     const review = await prisma.review.findUnique({ where: { id: req.params.id } });
     if (!review || review.userId !== userId) return res.status(404).json({ error: "Review not found" });
     const updated = await prisma.review.update({
       where: { id: req.params.id },
-      data: { reviewText: reviewText?.trim() ?? null },
+      data: {
+        ...(rating !== undefined ? { rating } : {}),
+        reviewText: reviewText?.trim() ?? null,
+      },
       include: { user: { select: { name: true, profileImageUrl: true } }, reactions: true },
     });
     res.json(updated);
@@ -1682,7 +1728,7 @@ router.post("/service-reviews/:id/react", async (req, res, next) => {
   try {
     const userId = req.user!.id;
     const reviewId = req.params.id;
-    const { type } = req.body; // "LIKE" | "DISLIKE"
+    const { type } = req.body;
     if (type !== "LIKE" && type !== "DISLIKE") {
       return res.status(400).json({ error: "type must be LIKE or DISLIKE" });
     }
@@ -1691,11 +1737,9 @@ router.post("/service-reviews/:id/react", async (req, res, next) => {
     });
     if (existing) {
       if (existing.type === type) {
-        // Toggle off
         await prisma.reviewReaction.delete({ where: { reviewId_userId: { reviewId, userId } } });
         return res.json({ action: "removed" });
       }
-      // Switch type
       await prisma.reviewReaction.update({
         where: { reviewId_userId: { reviewId, userId } },
         data: { type: type as any },
@@ -1704,31 +1748,6 @@ router.post("/service-reviews/:id/react", async (req, res, next) => {
     }
     await prisma.reviewReaction.create({ data: { reviewId, userId, type: type as any } });
     res.json({ action: "added", type });
-  } catch (e) { next(e); }
-});
-
-// GET /api/user/categories/:id/reviews/my-pending — completed bookings without a review
-router.get("/categories/:id/reviews/my-pending", async (req, res, next) => {
-  try {
-    const userId = req.user!.id;
-    const categoryId = req.params.id;
-    const pending = await prisma.serviceRequest.findMany({
-      where: {
-        userId,
-        status: "COMPLETED",
-        review: null,
-        subcategory: { categoryId },
-      },
-      select: {
-        id: true,
-        scheduledDate: true,
-        scheduledHour: true,
-        subcategory: { select: { name: true, category: { select: { id: true, name: true } } } },
-      },
-      orderBy: { completedAt: "desc" },
-      take: 5,
-    });
-    res.json(pending);
   } catch (e) { next(e); }
 });
 
