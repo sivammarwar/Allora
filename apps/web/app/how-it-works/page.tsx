@@ -8,7 +8,7 @@ const STEPS = [
     num: "01",
     icon: MapPin,
     title: "Share your location",
-    desc: "We show you only the verified heroes serving your neighborhood, polygon-checked by our agents. No random listings — every result is physically nearby.",
+    desc: "We show you only verified heroes who actually serve your neighborhood — checked and confirmed by our agents. No random listings. Every result is physically nearby.",
   },
   {
     num: "02",
@@ -27,11 +27,11 @@ const STEPS = [
 const FAQS = [
   {
     q: "Who are 'Heroes'?",
-    a: "Heroes are local service providers — barbers, tailors, electricians, chemists, and more. Each one is physically visited and polygon-mapped by an Allora Regional Officer before going live.",
+    a: "Heroes are local service providers — barbers, tailors, electricians, chemists, and more. Each one is physically visited and verified by an Allora Regional Officer before going live.",
   },
   {
     q: "How does location matching work?",
-    a: "When you open Allora we capture your GPS coordinates. We then check which agent-drawn service polygons contain your point. Only heroes assigned to those areas appear for you.",
+    a: "When you open Allora we use your GPS location to show only the verified heroes who actually cover your area. Every hero's service zone is confirmed by our agents — so you only ever see providers who can genuinely reach you.",
   },
   {
     q: "What payment methods are accepted?",
@@ -93,12 +93,12 @@ export default function HowItWorksPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
-              { label: "Agent-verified",      desc: "Every hero is visited in person before activation." },
-              { label: "Polygon-mapped",       desc: "Service areas are drawn on a map, not guessed." },
-              { label: "90% to heroes",        desc: "Honest payouts — reconciled daily." },
-            ].map(({ label, desc }) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-100 p-5 space-y-1.5">
-                <p className="font-bold text-gray-900 text-sm">{label}</p>
+              { title: "Agent-verified",      desc: "Every hero is visited in person before activation." },
+              { title: "Hyperlocal by design",  desc: "Service areas are carefully defined — only real, nearby heroes show up for you." },
+              { title: "90% to heroes",        desc: "Honest payouts — reconciled daily." },
+            ].map(({ title, desc }) => (
+              <div key={title} className="bg-white rounded-xl border border-gray-100 p-5 space-y-1.5">
+                <p className="font-bold text-gray-900 text-sm">{title}</p>
                 <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
               </div>
             ))}

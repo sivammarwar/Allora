@@ -65,8 +65,8 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { title: "Verified, not just listed",   desc: "Every hero is visited and polygon-mapped by an Allora agent before going live." },
-              { title: "Hyperlocal, by design",       desc: "Listings are filtered by your live location and each hero's service polygon — no fluff, no fakes." },
+              { title: "Verified, not just listed",   desc: "Every hero is physically visited and verified by an Allora agent before going live." },
+              { title: "Hyperlocal, by design",       desc: "Listings are filtered by your live location — only heroes who genuinely cover your area appear." },
               { title: "Honest payouts",              desc: "90% goes to the hero. Daily reconciliation by a dedicated Payment Manager." },
             ].map(({ title, desc }) => (
               <div key={title} className="space-y-2">
