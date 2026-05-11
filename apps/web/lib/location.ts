@@ -6,6 +6,19 @@ export interface UserLocation {
   lat: number;
   lng: number;
   capturedAt: number;
+  name?: string;
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=neighborhood,locality,place,district&language=en`
+    );
+    const data = await res.json();
+    if (data.features?.length > 0) return data.features[0].place_name as string;
+  } catch {}
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
 export function getStoredLocation(): UserLocation | null {

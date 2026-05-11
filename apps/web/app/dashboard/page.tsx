@@ -4,17 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, Loader2, TrendingUp, Star, Grid2X2, ChevronRight, Navigation } from "lucide-react";
+import { MapPin, Loader2, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   detectLocation,
   getStoredLocation,
+  setStoredLocation,
+  reverseGeocode,
   type UserLocation,
 } from "@/lib/location";
 import { ViralGrid, type ViralSubcategory } from "@/components/shared/ViralGrid";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
+import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
 import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -61,11 +64,19 @@ export default function UserDashboardPage() {
   const [loc, setLoc] = useState<UserLocation | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     const stored = getStoredLocation();
     if (stored) {
       setLoc(stored);
+      if (!stored.name) {
+        reverseGeocode(stored.lat, stored.lng).then((name) => {
+          const updated = { ...stored, name };
+          setStoredLocation(updated);
+          setLoc(updated);
+        });
+      }
     } else {
       requestLocation();
     }
@@ -77,8 +88,11 @@ export default function UserDashboardPage() {
     setLocError(null);
     try {
       const v = await detectLocation();
-      setLoc(v);
-    } catch (e) {
+      const name = await reverseGeocode(v.lat, v.lng);
+      const withName = { ...v, name };
+      setStoredLocation(withName);
+      setLoc(withName);
+    } catch {
       setLocError("Couldn't detect your location. Please allow location access.");
     } finally {
       setLocating(false);
@@ -150,19 +164,30 @@ export default function UserDashboardPage() {
     <div className="page-enter space-y-0">
 
       {/* ── Location bar ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 text-xs text-brand-textMuted pb-6">
-        <MapPin size={12} className="text-brand-primary shrink-0" />
-        <span>Showing services near</span>
-        <span className="font-semibold text-brand-text">
-          {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
-        </span>
-        <button
-          onClick={requestLocation}
-          className="ml-1 text-brand-primary underline underline-offset-2 hover:no-underline"
-        >
-          change
-        </button>
-      </div>
+      <button
+        onClick={() => setPickerOpen(true)}
+        className="flex items-center gap-2 mb-6 group w-fit"
+      >
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/8 border border-brand-primary/20 hover:border-brand-primary/40 transition-colors">
+          <MapPin size={12} className="text-brand-primary shrink-0" />
+          <span className="text-xs font-semibold text-brand-text max-w-[200px] truncate">
+            {loc.name ?? `${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)}`}
+          </span>
+          <ChevronDown size={11} className="text-brand-primary" />
+        </div>
+      </button>
+
+      {pickerOpen && (
+        <LocationPickerModal
+          initialLoc={loc}
+          onConfirm={(newLoc) => {
+            setStoredLocation(newLoc);
+            setLoc(newLoc);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
