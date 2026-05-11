@@ -907,7 +907,7 @@ router.post("/service-requests/:id/complete", async (req, res, next) => {
     if (request.status !== "ACCEPTED") return res.status(400).json({ error: "Not accepted" });
     const updated = await prisma.serviceRequest.update({
       where: { id: request.id },
-      data: { status: "COMPLETED", completedAt: new Date() },
+      data: { status: "COMPLETED", completedAt: new Date(), slotId: null },
     });
 
     const dateStr = (request.scheduledDate as Date).toISOString().split("T")[0];
