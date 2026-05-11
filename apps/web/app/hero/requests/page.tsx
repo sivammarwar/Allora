@@ -138,7 +138,7 @@ export default function HeroRequestsPage() {
         }
       }
       if (count === 0) {
-        if (lastError instanceof ApiError) throw lastError;
+        if (lastError) throw lastError;
         throw new Error("All requests already taken");
       }
       return count;
