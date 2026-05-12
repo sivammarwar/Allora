@@ -193,7 +193,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
     queryKey: ["slots", id, resolvedAgentId],
     queryFn: () => api.get(`/api/user/subcategories/${id}/slots?agentId=${resolvedAgentId}&from=${fromDate}&days=7`),
     enabled: !!resolvedAgentId,
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   // 7 day columns

@@ -1327,7 +1327,16 @@ router.get("/subcategories/:id/slots", async (req, res, next) => {
       select: { id: true, workingDays: true },
     });
     const heroIds = heroes.map((h) => h.id);
-    if (heroIds.length === 0) return res.json({ slots: [], slotStartHour, slotEndHour, slotDurationHours });
+    if (heroIds.length === 0) {
+      // Build date range so we return a consistent Record shape (not [])
+      const emptySlots: Record<string, never[]> = {};
+      for (let d = 0; d < daysAhead; d++) {
+        const dt = new Date(fromDate);
+        dt.setDate(dt.getDate() + d);
+        emptySlots[dt.toISOString().split("T")[0]] = [];
+      }
+      return res.json({ slots: emptySlots, slotStartHour, slotEndHour, slotDurationHours });
+    }
 
     // Build date range
     const dates: string[] = [];

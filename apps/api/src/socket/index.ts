@@ -85,20 +85,44 @@ export function initSocket(httpServer: HttpServer): IOServer {
   });
 
   // ─── /service namespace ───────────────────────────────────────────────────
+  // Auth is OPTIONAL here: authenticated users get user/hero rooms,
+  // but unauthenticated guests can still join slot rooms for real-time availability.
   const nService = io.of("/service");
-  nService.use(authMiddleware);
+  nService.use((socket, next) => {
+    try {
+      const cookieHeader = socket.handshake.headers.cookie ?? "";
+      const parsed = cookie.parse(cookieHeader);
+      const token =
+        parsed.access_token ||
+        (socket.handshake.auth?.token as string | undefined);
+      if (token) {
+        const payload = verifyAccessToken(token);
+        (socket.data as any).user = {
+          id: payload.sub,
+          role: payload.role,
+          email: payload.email,
+        };
+      }
+    } catch {
+      // Invalid / missing token — allow as guest (slots:watch still works)
+    }
+    next();
+  });
   nService.on("connection", (socket) => {
     const u = (socket.data as any).user;
-    socket.join(`user:${u.id}`);
+    // Authenticated users join their personal room for booking notifications
+    if (u) socket.join(`user:${u.id}`);
 
-    // Hero joins their hero room to receive booking broadcasts
+    // Hero joins their hero room to receive booking broadcasts (auth required)
     socket.on("hero:join", (heroId: string) => {
+      if (!u) return;
       if (typeof heroId === "string" && heroId.length) {
         socket.join(`hero:${heroId}`);
       }
     });
 
     // Users/heroes watch slots for a subcategory (for real-time availability)
+    // No auth required — guests browsing the booking page need this too.
     socket.on("slots:watch", (key: string) => {
       if (typeof key === "string" && key.length) {
         socket.join(`slots:${key}`);
