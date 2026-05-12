@@ -46,7 +46,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(46,26,26,0.5)] backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[rgba(46,26,26,0.55)] backdrop-blur-sm animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -54,7 +54,8 @@ export function Dialog({
       <div
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full bg-brand-surface border border-brand-border rounded-lg shadow-soft-lg flex flex-col overflow-hidden animate-fade-slide-up",
+          "relative w-full bg-white border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[88vh]",
+          "animate-fade-slide-up",
           sizeMap[size],
           className
         )}
@@ -80,7 +81,7 @@ export function Dialog({
             </div>
           </div>
         )}
-        <div className="flex-1 overflow-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto overscroll-contain">{children}</div>
       </div>
     </div>
   );
