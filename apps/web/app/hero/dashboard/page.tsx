@@ -121,12 +121,27 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { data: availData } = useQuery<{ isAvailable: boolean }>({ queryKey: ["hero", "me"], queryFn: () => api.get("/api/hero/me").then((d: any) => ({ isAvailable: d.profile?.isAvailable ?? true })) });
-  const isAvailable = availData?.isAvailable ?? profile?.isAvailable ?? true;
+  const { data: meData } = useQuery<MeResponse>({
+    queryKey: ["hero", "me"],
+    queryFn: () => api.get("/api/hero/me"),
+  });
+  const isAvailable = meData?.profile?.isAvailable ?? profile?.isAvailable ?? true;
 
   const toggleAvail = useMutation({
     mutationFn: (v: boolean) => api.put("/api/hero/availability", { isAvailable: v }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["hero", "me"] }),
+    onMutate: async (newValue: boolean) => {
+      await qc.cancelQueries({ queryKey: ["hero", "me"] });
+      const previous = qc.getQueryData<MeResponse>(["hero", "me"]);
+      qc.setQueryData<MeResponse>(["hero", "me"], (old) =>
+        old ? { ...old, profile: { ...old.profile, isAvailable: newValue } } : old
+      );
+      return { previous };
+    },
+    onError: (_err: any, _vars: any, context: any) => {
+      if (context?.previous) qc.setQueryData(["hero", "me"], context.previous);
+      toast.error("Failed to update availability");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["hero", "me"] }),
   });
 
   const { data: incoming = [] } = useQuery<any[]>({ queryKey: ["hero", "service-requests", "incoming"], queryFn: () => api.get("/api/hero/service-requests/incoming"), refetchInterval: 30000 });
