@@ -699,6 +699,23 @@ router.put("/availability", async (req, res, next) => {
       data: { isAvailable: Boolean(isAvailable) },
       select: { isAvailable: true },
     });
+
+    // Notify slot watchers: re-evaluate availability for all this hero's subcategories
+    // across the next 7 days so users see the change immediately (no 30s wait).
+    const today = new Date();
+    for (const subId of profile.subcategoryIds) {
+      for (let d = 0; d < 7; d++) {
+        const dt = new Date(today);
+        dt.setDate(dt.getDate() + d);
+        const dateStr = dt.toISOString().split("T")[0];
+        emitService(`slots:${subId}:${dateStr}`, "slot:updated", {
+          date: dateStr,
+          availabilityChanged: true,
+          isAvailable: updated.isAvailable,
+        });
+      }
+    }
+
     res.json(updated);
   } catch (e) { next(e); }
 });
