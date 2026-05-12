@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/lib/auth";
-import { roleLogin, type Role } from "@/lib/types";
+import { roleLogin, roleHome, type Role } from "@/lib/types";
 
 /**
  * Client-side gate: redirects to the role's login if the user is unauthenticated
@@ -38,8 +38,7 @@ export function RoleGate({
     // Guest-ok: only redirect if there IS a user but with the wrong role
     if (guestOk) {
       if (user && user.role !== role) {
-        qc.invalidateQueries({ queryKey: ["auth", "me"] });
-        router.replace(roleLogin[user.role]);
+        router.replace(roleHome[user.role]);
       }
       return;
     }
