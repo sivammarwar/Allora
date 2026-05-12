@@ -1316,7 +1316,7 @@ router.get("/subcategories/:id/slots", async (req, res, next) => {
     });
     if (pricing) slotDurationHours = pricing.slotDurationHours;
 
-    // Get all heroes for this agent+subcategory
+    // Get all heroes for this agent+subcategory (include workingDays for per-date filtering)
     const heroes = await prisma.heroProfile.findMany({
       where: {
         verifiedByAgentId: agentId,
@@ -1324,7 +1324,7 @@ router.get("/subcategories/:id/slots", async (req, res, next) => {
         isAvailable: true,
         subcategoryIds: { has: subcategoryId },
       },
-      select: { id: true },
+      select: { id: true, workingDays: true },
     });
     const heroIds = heroes.map((h) => h.id);
     if (heroIds.length === 0) return res.json({ slots: [], slotStartHour, slotEndHour, slotDurationHours });
@@ -1349,18 +1349,33 @@ router.get("/subcategories/:id/slots", async (req, res, next) => {
       select: { heroId: true, date: true, hour: true },
     });
 
-    // For each date+hour, a slot starting at h is available if at least one hero
-    // has ALL hours h..h+duration-1 unblocked (multi-hour duration support).
+    // Combined-availability rule:
+    //   A slot is AVAILABLE  if ≥1 hero who works that day has all required hours free.
+    //   A slot is UNAVAILABLE only when EVERY hero who works that day is blocked.
+    //   Heroes with no workingDays configured are treated as working all days.
     const result: Record<string, { hour: number; available: boolean }[]> = {};
     for (const dateStr of dates) {
       result[dateStr] = [];
+      // Day-of-week for this date (0=Sun … 6=Sat)
+      const dow = new Date(dateStr + "T12:00:00").getDay();
+      // Only heroes who work on this day of the week
+      const heroesForDate = heroes.filter(
+        (h) => !h.workingDays || h.workingDays.length === 0 || h.workingDays.includes(dow)
+      );
+      if (heroesForDate.length === 0) {
+        // No hero works this day — mark all slots unavailable
+        for (let h = slotStartHour; h <= slotEndHour - slotDurationHours; h++) {
+          result[dateStr].push({ hour: h, available: false });
+        }
+        continue;
+      }
       // Only generate start hours where the full duration fits within the window
       for (let h = slotStartHour; h <= slotEndHour - slotDurationHours; h++) {
-        const available = heroIds.some((heroId) => {
+        const available = heroesForDate.some((hero) => {
           for (let offset = 0; offset < slotDurationHours; offset++) {
             const blocked = blockedSlots.some(
               (s) =>
-                s.heroId === heroId &&
+                s.heroId === hero.id &&
                 s.date.toISOString().split("T")[0] === dateStr &&
                 s.hour === h + offset
             );
