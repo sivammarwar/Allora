@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ export function Dialog({
 
   if (!open) return null;
 
-  return (
+  const overlay = (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[rgba(46,26,26,0.55)] backdrop-blur-sm animate-fade-in"
       onClick={onClose}
@@ -85,4 +86,7 @@ export function Dialog({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return overlay;
+  return createPortal(overlay, document.body);
 }
