@@ -366,7 +366,7 @@ export default function UserProfilePage() {
       <button
         onClick={async () => {
           await api.post("/api/auth/logout", {});
-          router.replace("/login");
+          router.replace("/dashboard");
         }}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-colors"
       >
