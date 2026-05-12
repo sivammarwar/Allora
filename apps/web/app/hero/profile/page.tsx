@@ -2,9 +2,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   UserCircle, Phone, MapPin, Briefcase, Store, ShieldCheck,
-  Calendar, Clock, Star, Loader2, CheckCircle2, XCircle,
+  Calendar, Clock, Star, Loader2, CheckCircle2, XCircle, LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useLogout } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -43,6 +45,8 @@ interface PricingResponse {
 
 export default function HeroProfilePage() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const logoutMut = useLogout();
 
   const { data: me, isLoading } = useQuery<{ state: string; profile: HeroProfile }>({
     queryKey: ["hero", "me"],
@@ -271,9 +275,22 @@ export default function HeroProfilePage() {
         </div>
       )}
 
-      <p className="text-center text-[11px] text-brand-textMuted pb-4">
+      <p className="text-center text-[11px] text-brand-textMuted pb-2">
         Member since {new Date(profile.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
       </p>
+
+      {/* ── Sign out ── */}
+      <button
+        disabled={logoutMut.isPending}
+        onClick={async () => {
+          await logoutMut.mutateAsync();
+          router.replace("/hero/login");
+        }}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50"
+      >
+        {logoutMut.isPending ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
+        Sign out
+      </button>
     </div>
   );
 }
