@@ -1,5 +1,6 @@
 import http from "http";
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -16,6 +17,9 @@ import { prisma } from "./lib/prisma";
 const app = express();
 
 app.set("trust proxy", 1);
+
+// ── Compression ───────────────────────────────────────────
+app.use(compression());
 
 // ── Security ──────────────────────────────────────────────
 app.use(
