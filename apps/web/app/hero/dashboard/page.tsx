@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { getSocket } from "@/lib/socket";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 
 interface Category {
   id: string;
@@ -119,6 +120,7 @@ export default function HeroDashboardPage() {
 // ─── Hero Verified Dashboard ─────────────────────────────────────────────────
 function HeroVerifiedDashboard({ profile }: { profile: any }) {
   const router = useRouter();
+  const t = useT();
   const qc = useQueryClient();
 
   const { data: meData } = useQuery<MeResponse>({
@@ -172,11 +174,10 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
             <ShieldCheck size={24} />
           </div>
           <h1 className="font-heading text-2xl text-brand-text">
-            You're verified
+            {t("hero.verified")}
           </h1>
           <p className="text-brand-textMuted text-sm">
-            Welcome, {profile?.serviceName ?? profile?.shopName ?? "Hero"}. Manage your
-            products or services below.
+            {t("hero.verifiedDesc", { name: profile?.serviceName ?? profile?.shopName ?? "Hero" })}
           </p>
         </CardContent>
       </Card>
@@ -186,10 +187,10 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
         <CardContent className="py-4 flex items-center justify-between gap-4">
           <div>
             <p className="font-medium text-brand-text text-sm">
-              {isAvailable ? "You are available" : "You are unavailable"}
+              {isAvailable ? t("hero.available") : t("hero.unavailable")}
             </p>
             <p className="text-xs text-brand-textMuted mt-0.5">
-              {isAvailable ? "Users can send you booking requests." : "Booking requests are paused for you."}
+              {isAvailable ? t("hero.usersCanBook") : t("hero.bookingsPaused")}
             </p>
           </div>
           <button
@@ -284,8 +285,8 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
               <CalendarClock size={24} />
             </div>
             <div>
-              <h2 className="font-heading text-lg text-brand-text">My Slots</h2>
-              <p className="text-sm text-brand-textMuted">Manage your weekly time slots</p>
+              <h2 className="font-heading text-lg text-brand-text">{t("hero.mySlots")}</h2>
+              <p className="text-sm text-brand-textMuted">{t("hero.slotsDesc")}</p>
             </div>
           </CardContent>
         </Card>
@@ -296,8 +297,8 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
               <IndianRupee size={24} />
             </div>
             <div>
-              <h2 className="font-heading text-lg text-brand-text">Earnings</h2>
-              <p className="text-sm text-brand-textMuted">View service history & earnings</p>
+              <h2 className="font-heading text-lg text-brand-text">{t("hero.earnings")}</h2>
+              <p className="text-sm text-brand-textMuted">{t("hero.earningsDesc")}</p>
             </div>
           </CardContent>
         </Card>

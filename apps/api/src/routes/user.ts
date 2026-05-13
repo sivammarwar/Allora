@@ -55,6 +55,7 @@ router.get("/subcategories", optionalAuth, async (req, res, next) => {
         categoryName: s.category.name,
         categoryType: s.category.type,
         name: s.name,
+        nameHi: s.nameHi ?? null,
         imageUrl: s.imageUrl,
         pageContent: s.pageContent,
         isActive: s.isActive,
@@ -195,7 +196,7 @@ router.get("/viral-subcategories", optionalAuth, async (_req, res, next) => {
         const ap = s.agentPricing[0] ?? null;
         const transport = ap?.agent?.categoryConfigs[0] ? Number(ap.agent.categoryConfigs[0].transportChargePerKm) : null;
         return {
-          id: s.id, name: s.name, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
+          id: s.id, name: s.name, nameHi: s.nameHi ?? null, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
           viralPosition: s.viralPosition, category: s.category,
           pricing: ap ? {
             baseServiceCharge: Number(ap.baseServiceCharge),
@@ -226,7 +227,7 @@ router.get("/newly-added-subcategories", optionalAuth, async (_req, res, next) =
         const ap = s.agentPricing[0] ?? null;
         const transport = ap?.agent?.categoryConfigs[0] ? Number(ap.agent.categoryConfigs[0].transportChargePerKm) : null;
         return {
-          id: s.id, name: s.name, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
+          id: s.id, name: s.name, nameHi: s.nameHi ?? null, imageUrl: s.imageUrl, viralImageUrl: s.viralImageUrl,
           newlyAddedPosition: s.newlyAddedPosition, category: s.category,
           pricing: ap ? {
             baseServiceCharge: Number(ap.baseServiceCharge),
@@ -273,6 +274,7 @@ router.get("/most-rated-subcategories", optionalAuth, async (_req, res, next) =>
     res.json(scored.map((s) => ({
       id: s.id,
       name: s.name,
+      nameHi: s.nameHi ?? null,
       imageUrl: s.imageUrl,
       categoryName: s.category.name,
       categoryType: s.category.type,

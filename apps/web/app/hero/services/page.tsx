@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, FileText, Save } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ function SubcategoryPricingForm({
   existingPricing,
   onSave,
   isSaving,
+  t,
 }: {
   subcategory: Subcategory;
   existingPricing?: HeroPricing;
@@ -63,6 +65,7 @@ function SubcategoryPricingForm({
     deliveryCharge10km: number;
   }) => void;
   isSaving: boolean;
+  t: (key: string) => string;
 }) {
   const [form, setForm] = useState({
     serviceCharge: existingPricing?.serviceCharge || 0,
@@ -82,35 +85,35 @@ function SubcategoryPricingForm({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Input
-          label="Service Charge (₹)"
+          label={t("services.serviceCharge")}
           type="number"
           step="0.01"
           value={form.serviceCharge}
           onChange={(e) => setForm({ ...form, serviceCharge: Number(e.target.value) })}
         />
         <Input
-          label="Delivery Charge (2km) (₹)"
+          label={t("services.delivery2km")}
           type="number"
           step="0.01"
           value={form.deliveryCharge2km}
           onChange={(e) => setForm({ ...form, deliveryCharge2km: Number(e.target.value) })}
         />
         <Input
-          label="Delivery Charge (5km) (₹)"
+          label={t("services.delivery5km")}
           type="number"
           step="0.01"
           value={form.deliveryCharge5km}
           onChange={(e) => setForm({ ...form, deliveryCharge5km: Number(e.target.value) })}
         />
         <Input
-          label="Delivery Charge (7km) (₹)"
+          label={t("services.delivery7km")}
           type="number"
           step="0.01"
           value={form.deliveryCharge7km}
           onChange={(e) => setForm({ ...form, deliveryCharge7km: Number(e.target.value) })}
         />
         <Input
-          label="Delivery Charge (10km) (₹)"
+          label={t("services.delivery10km")}
           type="number"
           step="0.01"
           value={form.deliveryCharge10km}
@@ -123,7 +126,7 @@ function SubcategoryPricingForm({
         loading={isSaving}
       >
         <Save size={14} className="mr-2" />
-        Save Pricing
+        {t("services.savePricing")}
       </Button>
     </div>
   );
@@ -131,6 +134,7 @@ function SubcategoryPricingForm({
 
 export default function HeroServicesPage() {
   const qc = useQueryClient();
+  const t = useT();
 
   const { data: profile, isLoading } = useQuery<HeroMeResponse>({
     queryKey: ["hero", "me"],
@@ -194,9 +198,9 @@ export default function HeroServicesPage() {
   return (
     <div className="page-enter space-y-6">
       <div>
-        <h1 className="font-heading text-3xl text-brand-text">Services</h1>
+        <h1 className="font-heading text-3xl text-brand-text">{t("services.title")}</h1>
         <p className="text-brand-textMuted text-sm mt-1">
-          Set pricing for your verified subcategories
+          {t("services.subtitle")}
         </p>
       </div>
 
@@ -204,7 +208,7 @@ export default function HeroServicesPage() {
       {serviceCategories.length > 0 && (
         <Card>
           <CardContent className="py-6 space-y-4">
-            <h2 className="font-heading text-lg text-brand-text">Verified Service Categories</h2>
+            <h2 className="font-heading text-lg text-brand-text">{t("services.verifiedCategories")}</h2>
             <div className="flex flex-wrap gap-2">
               {serviceCategories.map((c) => (
                 <span key={c.id} className="px-3 py-1.5 rounded-sm bg-brand-primary/10 text-brand-primary text-sm">
@@ -219,10 +223,10 @@ export default function HeroServicesPage() {
       {/* Subcategory Pricing */}
       <Card>
         <CardContent className="py-6 space-y-6">
-          <h2 className="font-heading text-lg text-brand-text">Subcategory Pricing</h2>
+          <h2 className="font-heading text-lg text-brand-text">{t("services.subcategoryPricing")}</h2>
           {serviceSubcategories.length === 0 ? (
             <div className="text-center py-8 text-brand-textMuted">
-              No subcategories configured for pricing
+              {t("services.noPricing")}
             </div>
           ) : (
             <div className="space-y-6">
@@ -233,6 +237,7 @@ export default function HeroServicesPage() {
                   existingPricing={pricingMap.get(subcategory.id)}
                   onSave={updateMutation.mutate}
                   isSaving={updateMutation.isPending}
+                  t={t as any}
                 />
               ))}
             </div>

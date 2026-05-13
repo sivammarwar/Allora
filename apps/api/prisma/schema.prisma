@@ -417,6 +417,8 @@ model Subcategory {
   categoryId      String
   category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   name            String
+  nameHi          String?  // Hindi name shown when user switches to हिंदी
+  descriptionHi   String?  // Hindi description for bilingual service pages
   // Icon name from Lucide set (e.g. "Pizza", "Sparkles"). Stored in imageUrl for back-compat.
   imageUrl        String?
   pageContent     Json?    // { html, assets: [{name,url}], css? } — for SERVICE pages

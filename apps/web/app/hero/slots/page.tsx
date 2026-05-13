@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function fmtHour(h: number) {
@@ -44,6 +45,7 @@ interface SlotRecord {
 
 export default function HeroSlotsPage() {
   const qc = useQueryClient();
+  const t = useT();
   const days = getNext7Days();
   const from = toDateStr(days[0]);
   const to = toDateStr(days[6]);
@@ -73,8 +75,8 @@ export default function HeroSlotsPage() {
     <div className="page-enter space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-3xl text-brand-text">My Slots</h1>
-          <p className="text-brand-textMuted text-sm mt-1">Manage your weekly availability. Click a slot to mark it busy or free.</p>
+          <h1 className="font-heading text-3xl text-brand-text">{t("slots.title")}</h1>
+          <p className="text-brand-textMuted text-sm mt-1">{t("slots.subtitle")}</p>
         </div>
         <span className="text-sm text-brand-textMuted">
           {days[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
@@ -110,9 +112,9 @@ export default function HeroSlotsPage() {
                     const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
 
                     let cellClass = "bg-brand-bg border border-brand-border/30 rounded-sm cursor-pointer hover:bg-brand-surface transition-colors";
-                    let label = "Free";
-                    if (isBooked) { cellClass = "bg-green-500/20 border border-green-500/30 rounded-sm cursor-not-allowed"; label = "Booked"; }
-                    else if (isBusy) { cellClass = "bg-orange-400/20 border border-orange-400/30 rounded-sm cursor-pointer hover:bg-orange-400/30 transition-colors"; label = "Busy"; }
+                    let label = t("slots.free");
+                    if (isBooked) { cellClass = "bg-green-500/20 border border-green-500/30 rounded-sm cursor-not-allowed"; label = t("slots.booked"); }
+                    else if (isBusy) { cellClass = "bg-orange-400/20 border border-orange-400/30 rounded-sm cursor-pointer hover:bg-orange-400/30 transition-colors"; label = t("slots.busy"); }
                     if (isPast) cellClass += " opacity-40 pointer-events-none";
 
                     return (
@@ -138,9 +140,9 @@ export default function HeroSlotsPage() {
       )}
 
       <div className="flex flex-wrap gap-3 text-xs">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-bg border border-brand-border inline-block" /> Free</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-400/20 border border-orange-400/30 inline-block" /> Busy (by you)</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-500/20 border border-green-500/30 inline-block" /> Booked</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-bg border border-brand-border inline-block" /> {t("slots.free")}</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-400/20 border border-orange-400/30 inline-block" /> {t("slots.busyByYou")}</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-500/20 border border-green-500/30 inline-block" /> {t("slots.booked")}</span>
       </div>
     </div>
   );

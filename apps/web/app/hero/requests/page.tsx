@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { getSocket } from "@/lib/socket";
+import { useT } from "@/lib/i18n";
 
 function fmtHour(h: number) {
   if (h === 0) return "12:00 AM";
@@ -79,6 +80,7 @@ function groupRequests(list: ServiceRequest[]): RequestGroup[] {
 
 export default function HeroRequestsPage() {
   const qc = useQueryClient();
+  const t = useT();
   const [tab, setTab] = useState<"incoming" | "accepted" | "history">("incoming");
   const [selected, setSelected] = useState<RequestGroup | null>(null);
 
@@ -192,9 +194,9 @@ export default function HeroRequestsPage() {
   }
 
   const tabs = [
-    { key: "incoming", label: "Incoming", count: incomingGroups.length },
-    { key: "accepted", label: "Accepted",  count: acceptedGroups.length },
-    { key: "history",  label: "History",   count: null },
+    { key: "incoming", label: t("requests.incoming"), count: incomingGroups.length },
+    { key: "accepted", label: t("requests.accepted"),  count: acceptedGroups.length },
+    { key: "history",  label: t("requests.history"),   count: null },
   ] as const;
 
   const currentGroups =
@@ -208,8 +210,8 @@ export default function HeroRequestsPage() {
   return (
     <div className="page-enter space-y-6">
       <div>
-        <h1 className="font-heading text-3xl text-brand-text">Service Requests</h1>
-        <p className="text-brand-textMuted text-sm mt-1">Accept incoming requests. First to accept wins the booking.</p>
+        <h1 className="font-heading text-3xl text-brand-text">{t("requests.title")}</h1>
+        <p className="text-brand-textMuted text-sm mt-1">{t("requests.subtitle")}</p>
       </div>
 
       <div className="flex gap-1 border-b border-brand-border">
@@ -235,8 +237,8 @@ export default function HeroRequestsPage() {
             ? <Bell size={32} className="mx-auto mb-3 opacity-30" />
             : <CheckSquare2 size={32} className="mx-auto mb-3 opacity-30" />}
           <p className="text-sm">
-            {tab === "incoming" ? "No incoming requests right now." :
-             tab === "accepted" ? "No accepted requests." : "No completed services yet."}
+            {tab === "incoming" ? t("requests.noIncoming") :
+             tab === "accepted" ? t("requests.noAccepted") : t("requests.noHistory")}
           </p>
         </div>
       ) : (
@@ -286,23 +288,23 @@ export default function HeroRequestsPage() {
               {bulkPct > 0 && (
                 <div className="space-y-1.5 pt-1 border-t border-brand-border">
                   <div className="flex items-center justify-between text-sm text-brand-textMuted">
-                    <span>Subtotal ({selected.requests.length} services)</span>
+                    <span>{t("requests.subtotal", { n: selected.requests.length })}</span>
                     <span>₹{subtotal.toFixed(0)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-brand-success font-medium">Bulk discount ({selected.requests.length} services · {bulkPct}% off)</span>
+                    <span className="text-brand-success font-medium">{t("requests.bulkDiscount", { n: selected.requests.length, pct: bulkPct })}</span>
                     <span className="text-brand-success font-medium">−₹{bulkSaving.toFixed(0)}</span>
                   </div>
                 </div>
               )}
               <div className="flex items-center justify-between pt-1 border-t border-brand-border">
-                <p className="text-sm font-semibold text-brand-text">Total earnings</p>
+                <p className="text-sm font-semibold text-brand-text">{t("requests.totalEarnings")}</p>
                 <p className="font-heading text-xl text-brand-text">₹{selected.totalFinal.toFixed(0)}</p>
               </div>
 
               {/* Customer info */}
               <div className="p-3 rounded-lg bg-brand-primary/5 border border-brand-primary/20 space-y-1 text-xs">
-                <p className="font-medium text-brand-text mb-1">Customer</p>
+                <p className="font-medium text-brand-text mb-1">{t("requests.customer")}</p>
                 <p className="flex items-center gap-1.5 text-brand-textMuted">
                   <User size={11} /> {selected.userName}
                   {selected.userGender && <span>· {selected.userGender.toLowerCase()}</span>}
@@ -323,7 +325,7 @@ export default function HeroRequestsPage() {
                   loading={acceptAll.isPending}
                 >
                   <CheckCircle size={14} />
-                  Accept all {selected.requests.length} booking{selected.requests.length > 1 ? "s" : ""}
+                  {t("requests.acceptAll", { n: selected.requests.length })}
                 </Button>
               )}
               {tab === "accepted" && (
@@ -334,7 +336,7 @@ export default function HeroRequestsPage() {
                   loading={completeAll.isPending}
                 >
                   <CheckSquare2 size={14} />
-                  Mark all {selected.requests.length} as completed
+                  {t("requests.markCompleted", { n: selected.requests.length })}
                 </Button>
               )}
             </div>

@@ -66,6 +66,11 @@
     text-rendering: optimizeLegibility;
   }
 
+  html[lang="hi"],
+  html[lang="hi"] body {
+    font-family: var(--font-devanagari), var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
   body {
     background-image:
       radial-gradient(at 12% 8%, rgba(192, 98, 106, 0.10) 0px, transparent 55%),

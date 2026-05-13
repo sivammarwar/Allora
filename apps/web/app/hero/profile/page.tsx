@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useLogout } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -46,6 +47,7 @@ interface PricingResponse {
 export default function HeroProfilePage() {
   const qc = useQueryClient();
   const router = useRouter();
+  const t = useT();
   const logoutMut = useLogout();
 
   const { data: me, isLoading } = useQuery<{ state: string; profile: HeroProfile }>({
@@ -72,7 +74,7 @@ export default function HeroProfilePage() {
 
   const profile = me?.profile;
   if (!profile) {
-    return <div className="text-center py-16 text-brand-textMuted text-sm">Profile not available.</div>;
+    return <div className="text-center py-16 text-brand-textMuted text-sm">{t("profile.notAvailable")}</div>;
   }
 
   const groupedServices = pricingRows.reduce<Record<string, PricingEntry[]>>((acc, row) => {
@@ -84,8 +86,8 @@ export default function HeroProfilePage() {
   return (
     <div className="page-enter space-y-6">
       <div>
-        <h1 className="font-heading text-3xl text-brand-text">My Profile</h1>
-        <p className="text-brand-textMuted text-sm mt-1">Your professional details and service info.</p>
+        <h1 className="font-heading text-3xl text-brand-text">{t("profile.title")}</h1>
+        <p className="text-brand-textMuted text-sm mt-1">{t("profile.subtitle")}</p>
       </div>
 
       {/* ── Identity card ── */}
@@ -118,11 +120,11 @@ export default function HeroProfilePage() {
               <div className="flex items-center gap-2 mt-1.5">
                 {profile.isVerifiedByAgent ? (
                   <span className="flex items-center gap-1 text-[11px] text-brand-success font-medium bg-brand-success/10 px-2 py-0.5 rounded-full">
-                    <ShieldCheck size={11} /> Verified
+                    <ShieldCheck size={11} /> {t("profile.verified")}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-[11px] text-amber-600 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full">
-                    <XCircle size={11} /> Pending
+                    <XCircle size={11} /> {t("profile.pending")}
                   </span>
                 )}
                 {profile.gender && (
@@ -140,9 +142,9 @@ export default function HeroProfilePage() {
       <Card>
         <CardContent className="py-4 flex items-center justify-between">
           <div>
-            <p className="font-medium text-brand-text text-sm">Availability</p>
+            <p className="font-medium text-brand-text text-sm">{t("profile.availability")}</p>
             <p className="text-xs text-brand-textMuted mt-0.5">
-              {profile.isAvailable ? "You are accepting new bookings" : "You are not accepting bookings"}
+              {profile.isAvailable ? t("profile.accepting") : t("profile.notAccepting")}
             </p>
           </div>
           <button
@@ -164,7 +166,7 @@ export default function HeroProfilePage() {
       {/* ── Contact & location ── */}
       <Card>
         <CardContent className="py-4 space-y-3">
-          <p className="font-medium text-brand-text text-sm mb-1">Contact & Location</p>
+          <p className="font-medium text-brand-text text-sm mb-1">{t("profile.contactLocation")}</p>
           <div className="flex items-start gap-3 text-sm text-brand-textMuted">
             <Phone size={14} className="mt-0.5 shrink-0 text-brand-primary" />
             <span>{profile.phone}</span>
@@ -184,7 +186,7 @@ export default function HeroProfilePage() {
       {(profile.workingDays?.length > 0 || profile.activeFrom) && (
         <Card>
           <CardContent className="py-4 space-y-3">
-            <p className="font-medium text-brand-text text-sm mb-1">Working Schedule</p>
+            <p className="font-medium text-brand-text text-sm mb-1">{t("profile.workingSchedule")}</p>
             {profile.workingDays?.length > 0 && (
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-brand-primary shrink-0" />
@@ -220,7 +222,7 @@ export default function HeroProfilePage() {
       {profile.verifiedByAgent && (
         <Card>
           <CardContent className="py-4">
-            <p className="font-medium text-brand-text text-sm mb-2">Verified By</p>
+            <p className="font-medium text-brand-text text-sm mb-2">{t("profile.verifiedBy")}</p>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-brand-success/10 flex items-center justify-center shrink-0">
                 <ShieldCheck size={16} className="text-brand-success" />
@@ -239,7 +241,7 @@ export default function HeroProfilePage() {
       {/* ── Services & pricing ── */}
       {Object.keys(groupedServices).length > 0 && (
         <div>
-          <p className="text-sm font-semibold text-brand-text mb-3">My Services</p>
+          <p className="text-sm font-semibold text-brand-text mb-3">{t("profile.myServices")}</p>
           <div className="space-y-3">
             {Object.entries(groupedServices).map(([cat, rows]) => (
               <Card key={cat}>
@@ -289,7 +291,7 @@ export default function HeroProfilePage() {
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50"
       >
         {logoutMut.isPending ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
-        Sign out
+        {t("profile.signOut")}
       </button>
     </div>
   );

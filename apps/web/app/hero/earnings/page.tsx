@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 
 function fmtHour(h: number) {
   if (h === 0) return "12 AM";
@@ -40,6 +41,7 @@ function earnedAmt(e: HistoryEntry) {
 }
 
 export default function HeroEarningsPage() {
+  const t = useT();
   const { data, isLoading } = useQuery<{ totalEarnings: number; history: HistoryEntry[] }>({
     queryKey: ["hero", "earnings"],
     queryFn: () => api.get("/api/hero/earnings"),
@@ -101,8 +103,8 @@ export default function HeroEarningsPage() {
   return (
     <div className="page-enter space-y-6">
       <div>
-        <h1 className="font-heading text-3xl text-brand-text">Earnings</h1>
-        <p className="text-brand-textMuted text-sm mt-1">Your service revenue at a glance.</p>
+        <h1 className="font-heading text-3xl text-brand-text">{t("earnings.title")}</h1>
+        <p className="text-brand-textMuted text-sm mt-1">{t("earnings.subtitle")}</p>
       </div>
 
       {isLoading ? (
@@ -117,9 +119,9 @@ export default function HeroEarningsPage() {
                   <IndianRupee size={22} />
                 </div>
                 <div>
-                  <p className="text-xs text-brand-textMuted uppercase tracking-wide">Total Earnings</p>
+                  <p className="text-xs text-brand-textMuted uppercase tracking-wide">{t("earnings.total")}</p>
                   <p className="font-heading text-3xl text-brand-text">₹{(data?.totalEarnings ?? 0).toFixed(0)}</p>
-                  <p className="text-xs text-brand-textMuted">{history.length} service{history.length !== 1 ? "s" : ""} completed</p>
+                  <p className="text-xs text-brand-textMuted">{t("earnings.servicesCompleted", { n: history.length })}</p>
                 </div>
               </CardContent>
             </Card>
@@ -128,7 +130,7 @@ export default function HeroEarningsPage() {
               <CardContent className="py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <CalendarDays size={14} className="text-brand-primary" />
-                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">This Month</p>
+                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">{t("earnings.thisMonth")}</p>
                 </div>
                 <p className="font-heading text-xl text-brand-text">₹{stats.month.toFixed(0)}</p>
               </CardContent>
@@ -138,7 +140,7 @@ export default function HeroEarningsPage() {
               <CardContent className="py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp size={14} className="text-brand-success" />
-                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">This Week</p>
+                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">{t("earnings.thisWeek")}</p>
                 </div>
                 <p className="font-heading text-xl text-brand-text">₹{stats.week.toFixed(0)}</p>
               </CardContent>
@@ -148,7 +150,7 @@ export default function HeroEarningsPage() {
               <CardContent className="py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Star size={14} className="text-amber-500" />
-                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">Avg / Job</p>
+                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">{t("earnings.avgJob")}</p>
                 </div>
                 <p className="font-heading text-xl text-brand-text">₹{stats.avg.toFixed(0)}</p>
               </CardContent>
@@ -158,7 +160,7 @@ export default function HeroEarningsPage() {
               <CardContent className="py-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Briefcase size={14} className="text-blue-500" />
-                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">Services</p>
+                  <p className="text-[11px] text-brand-textMuted uppercase tracking-wide">{t("earnings.services")}</p>
                 </div>
                 <p className="font-heading text-xl text-brand-text">{history.length}</p>
               </CardContent>
@@ -168,15 +170,15 @@ export default function HeroEarningsPage() {
           {!hasData ? (
             <div className="text-center py-16 text-brand-textMuted">
               <TrendingUp size={40} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-medium">No completed services yet.</p>
-              <p className="text-xs mt-1">Your charts will appear here once you complete bookings.</p>
+              <p className="text-sm font-medium">{t("earnings.noData")}</p>
+              <p className="text-xs mt-1">{t("earnings.noDataHint")}</p>
             </div>
           ) : (
             <>
               {/* ── Last 7 days bar chart ── */}
               <Card>
                 <CardContent className="pt-5 pb-4">
-                  <p className="text-sm font-semibold text-brand-text mb-4">Last 7 Days</p>
+                  <p className="text-sm font-semibold text-brand-text mb-4">{t("earnings.last7Days")}</p>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={barData} barSize={28}>
                       <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
@@ -196,7 +198,7 @@ export default function HeroEarningsPage() {
               {pieData.length > 0 && (
                 <Card>
                   <CardContent className="pt-5 pb-4">
-                    <p className="text-sm font-semibold text-brand-text mb-4">By Service</p>
+                    <p className="text-sm font-semibold text-brand-text mb-4">{t("earnings.byService")}</p>
                     <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie
@@ -229,7 +231,7 @@ export default function HeroEarningsPage() {
 
               {/* ── Transaction history ── */}
               <div>
-                <p className="text-sm font-semibold text-brand-text mb-3">Recent Transactions</p>
+                <p className="text-sm font-semibold text-brand-text mb-3">{t("earnings.recentTx")}</p>
                 <div className="space-y-2">
                   {history.map((e) => (
                     <Card key={e.id}>

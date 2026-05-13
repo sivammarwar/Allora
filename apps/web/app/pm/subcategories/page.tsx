@@ -30,6 +30,8 @@ interface Subcategory {
   categoryName: string;
   categoryType: "PRODUCT" | "SERVICE";
   name: string;
+  nameHi: string | null;
+  descriptionHi: string | null;
   imageUrl: string | null;
   pageContent: PageContent | null;
   isActive: boolean;
@@ -42,6 +44,8 @@ interface Subcategory {
 interface FormState {
   categoryId: string;
   name: string;
+  nameHi: string;
+  descriptionHi: string;
   imageUrl: string | null;
   isActive: boolean;
   isPinned: boolean;
@@ -51,6 +55,8 @@ interface FormState {
 const emptyForm = (categoryId = ""): FormState => ({
   categoryId,
   name: "",
+  nameHi: "",
+  descriptionHi: "",
   imageUrl: null,
   isActive: true,
   isPinned: false,
@@ -99,10 +105,16 @@ export default function PMSubcategoriesPage() {
   );
 
   const save = useMutation({
-    mutationFn: (input: FormState) =>
-      editingId
-        ? api.put(`/api/pm/subcategories/${editingId}`, input)
-        : api.post("/api/pm/subcategories", input),
+    mutationFn: (input: FormState) => {
+      const payload = {
+        ...input,
+        nameHi: input.nameHi.trim() || null,
+        descriptionHi: input.descriptionHi.trim() || null,
+      };
+      return editingId
+        ? api.put(`/api/pm/subcategories/${editingId}`, payload)
+        : api.post("/api/pm/subcategories", payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pm", "subcategories"] });
       qc.invalidateQueries({ queryKey: ["pm", "stats"] });
@@ -132,6 +144,8 @@ export default function PMSubcategoriesPage() {
     setForm({
       categoryId: s.categoryId,
       name: s.name,
+      nameHi: s.nameHi ?? "",
+      descriptionHi: s.descriptionHi ?? "",
       imageUrl: s.imageUrl,
       isActive: s.isActive,
       isPinned: s.isPinned,
@@ -238,6 +252,7 @@ export default function PMSubcategoriesPage() {
                 <tr className="text-left text-brand-textMuted">
                   <th className="px-4 py-3 font-medium">Image</th>
                   <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">हिंदी नाम</th>
                   <th className="px-4 py-3 font-medium">Category</th>
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium">Products</th>
@@ -266,6 +281,13 @@ export default function PMSubcategoriesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-brand-text">{s.name}</td>
+                    <td className="px-4 py-3 text-brand-textMuted">
+                      {s.nameHi ? (
+                        <span className="text-brand-text">{s.nameHi}</span>
+                      ) : (
+                        <span className="text-xs text-brand-warning italic">Not set</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-brand-text">{s.categoryName}</td>
                     <td className="px-4 py-3">
                       <span className="text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 rounded-sm bg-brand-bg border border-brand-border">
@@ -346,11 +368,29 @@ export default function PMSubcategoriesPage() {
             </select>
           </div>
           <Input
-            label="Name"
+            label="Name (English)"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             autoFocus
           />
+          <Input
+            label="Name in Hindi / हिंदी में नाम (optional)"
+            value={form.nameHi}
+            onChange={(e) => setForm({ ...form, nameHi: e.target.value })}
+            placeholder="जैसे: पुरुष सैलून"
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-brand-text">
+              Description in Hindi / हिंदी विवरण (optional)
+            </label>
+            <textarea
+              value={form.descriptionHi}
+              onChange={(e) => setForm({ ...form, descriptionHi: e.target.value })}
+              rows={3}
+              placeholder="जैसे: बालों की कटाई और स्टाइलिंग…"
+              className="w-full p-3 rounded-sm bg-brand-bg border border-brand-border text-sm text-brand-text focus:outline-none focus:border-brand-primary resize-none"
+            />
+          </div>
           <ImageUpload
             label="Image"
             value={form.imageUrl}

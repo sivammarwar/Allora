@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Playfair_Display, JetBrains_Mono, Cormorant_Garamond } from "next/font/google";
+import { DM_Sans, Playfair_Display, JetBrains_Mono, Cormorant_Garamond, Noto_Sans_Devanagari } from "next/font/google";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -32,6 +32,13 @@ const cormorant = Cormorant_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
+const devanagari = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  display: "swap",
+  variable: "--font-devanagari",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Allora — Local Services & Delivery",
   description:
@@ -54,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${playfair.variable} ${jetbrains.variable} ${cormorant.variable}`}
+      className={`${dmSans.variable} ${playfair.variable} ${jetbrains.variable} ${cormorant.variable} ${devanagari.variable}`}
     >
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>

@@ -5,19 +5,22 @@ import { DashboardShell } from "@/components/shared/DashboardShell";
 import { UserHeaderActions } from "@/components/shared/UserHeaderActions";
 import { GlobalRatingPrompt } from "@/components/shared/GlobalRatingPrompt";
 import { DashboardFooter } from "@/components/shared/DashboardFooter";
-
-const links = [
-  { href: "/dashboard",          label: "Home",     icon: Home },
-  { href: "/dashboard/bookings", label: "Bookings", icon: CalendarClock, requiresAuth: true },
-  { href: "/dashboard/profile",  label: "Profile",  icon: User,          requiresAuth: true },
-];
+import { useLanguage } from "@/lib/i18n";
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useLanguage();
+
+  const links = [
+    { href: "/dashboard",          label: t("nav.home"),     icon: Home },
+    { href: "/dashboard/bookings", label: t("nav.bookings"), icon: CalendarClock, requiresAuth: true },
+    { href: "/dashboard/profile",  label: t("nav.profile"),  icon: User,          requiresAuth: true },
+  ];
+
   return (
     <DashboardShell
       role="USER"
-      title="Allora"
-      subtitle="Shop & book services near you"
+      title={t("shell.userTitle")}
+      subtitle={t("shell.userSubtitle")}
       Icon={Home}
       links={links}
       headerRight={<UserHeaderActions />}

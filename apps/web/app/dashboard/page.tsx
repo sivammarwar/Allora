@@ -18,6 +18,7 @@ import { BentoGrid, BentoGridSkeleton, type BentoItem } from "@/components/share
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
 import { useCurrentUser } from "@/lib/auth";
+import { useT, useLanguage } from "@/lib/i18n";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +86,8 @@ interface BrowseResponse {
 
 export default function UserDashboardPage() {
   const router = useRouter();
+  const t = useT();
+  const { lang } = useLanguage();
   const { data: currentUser } = useCurrentUser();
   const [loc, setLoc] = useState<UserLocation | null>(null);
   const [locating, setLocating] = useState(false);
@@ -151,6 +154,7 @@ export default function UserDashboardPage() {
   const viralBento: BentoItem[] = viralRaw.map((s) => ({
     id: s.id,
     name: s.name,
+    nameHi: (s as any).nameHi ?? null,
     imageUrl: s.imageUrl,
     viralImageUrl: s.viralImageUrl,
     position: s.viralPosition ?? 0,
@@ -162,6 +166,7 @@ export default function UserDashboardPage() {
   const newlyBento: BentoItem[] = newlyAddedRaw.map((s) => ({
     id: s.id,
     name: s.name,
+    nameHi: (s as any).nameHi ?? null,
     imageUrl: s.imageUrl,
     viralImageUrl: s.viralImageUrl,
     position: s.newlyAddedPosition ?? 0,
@@ -211,9 +216,9 @@ export default function UserDashboardPage() {
       ) : (
         <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-primary/8 border border-brand-primary/20">
           <Navigation size={14} className="text-brand-primary shrink-0" />
-          <p className="text-xs text-brand-text font-medium flex-1">Share your location to see services near you</p>
+          <p className="text-xs text-brand-text font-medium flex-1">{t("home.shareLocation")}</p>
           <Button size="sm" onClick={requestLocation} loading={locating} className="text-xs h-7 px-3">
-            {locError ? "Retry" : "Detect"}
+            {locError ? t("home.retry") : t("home.detect")}
           </Button>
         </div>
       )}
@@ -238,9 +243,9 @@ export default function UserDashboardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <TrendingUp size={16} className="text-brand-primary" />
-                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Trending</span>
+                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">{t("home.trending")}</span>
                 </div>
-                <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Most Used</h2>
+                <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">{t("home.mostUsed")}</h2>
               </div>
             </div>
             {viralLoading ? (
@@ -251,7 +256,7 @@ export default function UserDashboardPage() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-brand-border py-10 text-center text-sm text-brand-textMuted">
-                No featured services yet.
+                {t("home.noFeatured")}
               </div>
             )}
           </section>
@@ -273,12 +278,12 @@ export default function UserDashboardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <Grid2X2 size={16} className="text-brand-primary" />
-                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Browse</span>
+                  <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">{t("home.browse")}</span>
                 </div>
-                <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Services</h2>
+                <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">{t("home.services")}</h2>
               </div>
               {browseData?.services && browseData.services.length > 0 && (
-                <span className="text-xs text-brand-textMuted">{browseData.services.length} categories</span>
+                <span className="text-xs text-brand-textMuted">{browseData.services.length} {t("home.categories")}</span>
               )}
             </div>
             {browseLoading ? (
@@ -313,8 +318,8 @@ export default function UserDashboardPage() {
                             <ChevronRight size={14} className="text-white" />
                           </div>
                           <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-8">
-                            <h3 className="text-white font-bold text-lg leading-snug">{cat.name}</h3>
-                            <p className="text-white/60 text-xs mt-0.5">{cat.subcategories.length} service{cat.subcategories.length !== 1 ? "s" : ""} available</p>
+                            <h3 className="text-white font-bold text-lg leading-snug">{lang === "hi" && (cat as any).nameHi ? (cat as any).nameHi : cat.name}</h3>
+                            <p className="text-white/60 text-xs mt-0.5">{cat.subcategories.length} {t("home.servicesAvailable")}</p>
                           </div>
                         </div>
                       </div>
@@ -324,7 +329,7 @@ export default function UserDashboardPage() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-brand-border py-10 text-center text-sm text-brand-textMuted">
-                No services available in your area yet.
+                {t("home.noServices")}
               </div>
             )}
           </section>
@@ -346,9 +351,9 @@ export default function UserDashboardPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
                       <Sparkles size={16} className="text-brand-primary" />
-                      <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Fresh</span>
+                      <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">{t("home.fresh")}</span>
                     </div>
-                    <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">Newly Added</h2>
+                    <h2 className="text-3xl font-extrabold text-black tracking-tight leading-none">{t("home.newlyAdded")}</h2>
                   </div>
                 </div>
                 {newlyLoading ? (
@@ -379,9 +384,9 @@ export default function UserDashboardPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <Star size={15} className="text-amber-500 fill-amber-400" />
-                    <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">Top Rated</span>
+                    <span className="text-[10px] font-sans font-semibold text-brand-primary uppercase tracking-widest">{t("home.topRated")}</span>
                   </div>
-                  <h2 className="text-2xl font-extrabold text-black tracking-tight leading-none">Most Rated</h2>
+                  <h2 className="text-2xl font-extrabold text-black tracking-tight leading-none">{t("home.mostRated")}</h2>
                 </div>
               </div>
               {mostRatedLoading ? (
@@ -412,7 +417,7 @@ export default function UserDashboardPage() {
                       </div>
                       <div className="px-3 py-2.5">
                         <p className="text-[9px] uppercase tracking-widest text-stone-400 font-light truncate">{sub.categoryName}</p>
-                        <h4 className="font-cormorant font-semibold text-base text-gray-900 leading-snug line-clamp-2 mt-0.5">{sub.name}</h4>
+                        <h4 className="font-cormorant font-semibold text-base text-gray-900 leading-snug line-clamp-2 mt-0.5">{lang === "hi" && (sub as any).nameHi ? (sub as any).nameHi : sub.name}</h4>
                         <div className="flex items-center gap-1 mt-1.5">
                           <Star size={10} className="fill-amber-400 text-amber-400" />
                           <span className="text-[11px] font-semibold text-gray-700">{sub.avgRating.toFixed(1)}</span>

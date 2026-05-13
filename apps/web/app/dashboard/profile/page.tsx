@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 interface SavedAddress {
   id: string;
@@ -37,6 +38,7 @@ const LABEL_PRESETS = ["Home", "Office", "Partner's place", "Other"];
 export default function UserProfilePage() {
   const qc = useQueryClient();
   const router = useRouter();
+  const t = useT();
   const { data: currentUser, isLoading: authLoading } = useCurrentUser();
 
   useEffect(() => {
@@ -154,7 +156,7 @@ export default function UserProfilePage() {
                 onClick={handleEditProfile}
                 className="flex items-center gap-1.5 text-xs font-medium text-brand-primary bg-brand-primary/10 px-3 py-1.5 rounded-full hover:bg-brand-primary/20 transition-colors"
               >
-                <Pencil size={12} /> Edit
+                <Pencil size={12} /> {t("profile.edit")}
               </button>
             ) : (
               <div className="flex gap-2">
@@ -169,7 +171,7 @@ export default function UserProfilePage() {
                   disabled={updateProfile.isPending}
                   className="flex items-center gap-1 text-xs font-medium text-white bg-brand-primary px-3 py-1.5 rounded-full"
                 >
-                  <Check size={12} /> Save
+                  <Check size={12} /> {t("profile.save")}
                 </button>
               </div>
             )}
@@ -178,16 +180,16 @@ export default function UserProfilePage() {
           {editingProfile ? (
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-500 font-medium block mb-1">Name</label>
+                <label className="text-xs text-gray-500 font-medium block mb-1">{t("profile.name")}</label>
                 <input
                   value={profileForm.name}
                   onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                  placeholder="Your name"
+                  placeholder={t("profile.namePlaceholder")}
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium block mb-1">Phone</label>
+                <label className="text-xs text-gray-500 font-medium block mb-1">{t("profile.phone")}</label>
                 <input
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
@@ -200,7 +202,7 @@ export default function UserProfilePage() {
             <div className="space-y-2.5">
               <div>
                 <p className="text-lg font-bold text-gray-900 leading-tight">
-                  {profile?.name ?? <span className="text-gray-400 font-normal">No name set</span>}
+                  {profile?.name ?? <span className="text-gray-400 font-normal">{t("profile.noName")}</span>}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -218,7 +220,7 @@ export default function UserProfilePage() {
                   onClick={handleEditProfile}
                   className="flex items-center gap-1.5 text-xs text-brand-primary"
                 >
-                  <Plus size={12} /> Add phone number
+                  <Plus size={12} /> {t("profile.addPhone")}
                 </button>
               )}
             </div>
@@ -231,7 +233,7 @@ export default function UserProfilePage() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
           <div className="flex items-center gap-2">
             <MapPin size={15} className="text-brand-primary" />
-            <h2 className="font-semibold text-gray-800 text-sm">Saved Addresses</h2>
+            <h2 className="font-semibold text-gray-800 text-sm">{t("profile.savedAddresses")}</h2>
             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-mono">
               {profile?.savedAddresses.length ?? 0}
             </span>
@@ -241,7 +243,7 @@ export default function UserProfilePage() {
               onClick={() => setAddingAddress(true)}
               className="flex items-center gap-1 text-xs font-medium text-brand-primary bg-brand-primary/10 px-3 py-1.5 rounded-full hover:bg-brand-primary/20 transition-colors"
             >
-              <Plus size={12} /> Add
+              <Plus size={12} /> {t("profile.add")}
             </button>
           )}
         </div>
@@ -251,7 +253,7 @@ export default function UserProfilePage() {
           <div className="px-5 py-4 border-b border-gray-50 bg-gray-50/60 space-y-3">
             {/* Label presets */}
             <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1.5">Label</label>
+              <label className="text-xs text-gray-500 font-medium block mb-1.5">{t("profile.label")}</label>
               <div className="flex flex-wrap gap-2">
                 {LABEL_PRESETS.map((l) => (
                   <button
@@ -278,12 +280,12 @@ export default function UserProfilePage() {
             </div>
             {/* Address input */}
             <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1">Address</label>
+              <label className="text-xs text-gray-500 font-medium block mb-1">{t("profile.address")}</label>
               <textarea
                 rows={2}
                 value={addrForm.address}
                 onChange={(e) => setAddrForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Full address, landmark, city…"
+                placeholder={t("profile.addressPlaceholder")}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               />
             </div>
@@ -294,21 +296,21 @@ export default function UserProfilePage() {
                 onChange={(e) => setAddrForm((f) => ({ ...f, isDefault: e.target.checked }))}
                 className="accent-brand-primary"
               />
-              Set as default address
+              {t("profile.setDefault")}
             </label>
             <div className="flex gap-2">
               <button
                 onClick={() => { setAddingAddress(false); setAddrForm({ label: "Home", address: "", isDefault: false }); setCustomLabel(""); }}
                 className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-100 transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleAddAddress}
                 disabled={addAddress.isPending}
                 className="flex-1 py-2 rounded-xl bg-brand-primary text-white text-sm font-medium hover:bg-brand-primary/90 transition-colors disabled:opacity-60"
               >
-                {addAddress.isPending ? "Saving…" : "Save Address"}
+                {addAddress.isPending ? t("common.saving") : t("profile.saveAddress")}
               </button>
             </div>
           </div>
@@ -318,8 +320,8 @@ export default function UserProfilePage() {
         {profile?.savedAddresses.length === 0 && !addingAddress ? (
           <div className="px-5 py-8 text-center">
             <MapPin size={28} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm text-gray-400">No saved addresses yet.</p>
-            <p className="text-xs text-gray-400 mt-0.5">Add one to speed up booking.</p>
+            <p className="text-sm text-gray-400">{t("profile.noAddresses")}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t("profile.addToSpeed")}</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
@@ -370,7 +372,7 @@ export default function UserProfilePage() {
         }}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-colors"
       >
-        <LogOut size={15} /> Sign out
+        <LogOut size={15} /> {t("profile.signOut")}
       </button>
     </div>
   );

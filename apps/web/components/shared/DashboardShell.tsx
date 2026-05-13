@@ -6,6 +6,7 @@ import { type LucideIcon } from "lucide-react";
 import { RoleGate } from "@/components/shared/RoleGate";
 import { useCurrentUser } from "@/lib/auth";
 import { type Role } from "@/lib/types";
+import { useLanguage } from "@/lib/i18n";
 
 export interface NavLink {
   href: string;
@@ -28,11 +29,25 @@ interface DashboardShellProps {
   children: React.ReactNode;
 }
 
-function greeting() {
+function useGreeting() {
+  const { t } = useLanguage();
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return t("greeting.morning");
+  if (h < 17) return t("greeting.afternoon");
+  return t("greeting.evening");
+}
+
+function LangToggle() {
+  const { lang, setLang } = useLanguage();
+  return (
+    <button
+      onClick={() => setLang(lang === "en" ? "hi" : "en")}
+      title={lang === "en" ? "Switch to Hindi" : "Switch to English"}
+      className="flex items-center justify-center h-7 px-2.5 rounded-full border border-brand-border bg-white hover:bg-brand-primary/10 hover:border-brand-primary/40 active:scale-95 transition-all text-[11px] font-semibold text-brand-text select-none"
+    >
+      {lang === "en" ? "हिं" : "EN"}
+    </button>
+  );
 }
 
 function TopHeader({
@@ -41,6 +56,7 @@ function TopHeader({
   Icon,
   headerRight,
 }: Pick<DashboardShellProps, "title" | "subtitle" | "Icon" | "headerRight">) {
+  const greeting = useGreeting();
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="flex items-center gap-3 px-4 h-14">
@@ -52,7 +68,7 @@ function TopHeader({
         {/* Title block */}
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-medium leading-none mb-0.5 text-gray-400">
-            {greeting()} 👋
+            {greeting} 👋
           </p>
           <h1 className="text-[15px] font-bold text-gray-900 leading-tight truncate">
             {title}
@@ -62,10 +78,11 @@ function TopHeader({
           )}
         </div>
 
-        {/* Right slot */}
-        {headerRight && (
-          <div className="flex items-center gap-2 flex-shrink-0">{headerRight}</div>
-        )}
+        {/* Right slot: language toggle + page-specific actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <LangToggle />
+          {headerRight && headerRight}
+        </div>
       </div>
     </header>
   );

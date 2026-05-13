@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { detectLocation } from "@/lib/location";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
+import { useT } from "@/lib/i18n";
 
 interface SubcategoryResult {
   id: string;
@@ -22,6 +23,7 @@ interface SubcategoryResult {
 
 export function UserHeaderActions() {
   const router = useRouter();
+  const t = useT();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [locating, setLocating] = useState(false);
@@ -107,7 +109,7 @@ export function UserHeaderActions() {
         >
           <Search size={13} className="text-gray-500 flex-shrink-0" />
           <span className="text-xs font-medium text-gray-500 hidden sm:block whitespace-nowrap">
-            Search services…
+            {t("search.pill")}
           </span>
         </button>
 
@@ -143,7 +145,7 @@ export function UserHeaderActions() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search services, salons, categories…"
+                  placeholder={t("search.placeholder")}
                   className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
                 />
                 {query && (
@@ -156,7 +158,7 @@ export function UserHeaderActions() {
                 onClick={() => setSearchOpen(false)}
                 className="text-sm font-medium text-brand-primary px-1 py-1 whitespace-nowrap"
               >
-                Cancel
+                {t("search.cancel")}
               </button>
             </div>
 
@@ -169,7 +171,7 @@ export function UserHeaderActions() {
                   {/* Trending */}
                   <div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-                      Trending
+                      {t("search.trending")}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {trendingChips.map((sub) => (
@@ -199,7 +201,7 @@ export function UserHeaderActions() {
                   {allSubs.length > 0 && (
                     <div>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-                        All Categories
+                        {t("search.allCategories")}
                       </p>
                       <div className="grid grid-cols-2 gap-2">
                         {Array.from(
@@ -228,8 +230,8 @@ export function UserHeaderActions() {
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
                     <Search size={22} className="text-gray-400" />
                   </div>
-                  <p className="text-sm font-medium text-gray-700">No results for "{trimmed}"</p>
-                  <p className="text-xs text-gray-400">Try a different keyword or browse categories</p>
+                  <p className="text-sm font-medium text-gray-700">{t("search.noResults", { query: trimmed })}</p>
+                  <p className="text-xs text-gray-400">{t("search.tryDifferent")}</p>
                 </div>
               )}
 
@@ -248,7 +250,7 @@ export function UserHeaderActions() {
                             ? "bg-blue-50 text-blue-500"
                             : "bg-orange-50 text-orange-500"
                         }`}>
-                          {group.catType === "SERVICE" ? "Service" : "Product"}
+                          {group.catType === "SERVICE" ? t("search.service") : t("search.product")}
                         </span>
                       </div>
                       {group.items.map((sub) => (

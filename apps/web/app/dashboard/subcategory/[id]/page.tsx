@@ -17,6 +17,7 @@ import { getStoredLocation, type UserLocation } from "@/lib/location";
 import { getSocket } from "@/lib/socket";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
 import { useCurrentUser } from "@/lib/auth";
+import { useT, useLanguage } from "@/lib/i18n";
 
 interface AgentPricing {
   id: string;
@@ -258,23 +259,27 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const transport = catConfig ? Number(catConfig.transportChargePerKm)
     : pricing ? Number((pricing as any).transportChargePerKm) : null;
 
-  if (!loc) return <Card><CardContent className="py-10 text-center text-sm">Set location first.</CardContent></Card>;
+  const t = useT();
+  const { lang } = useLanguage();
+  if (!loc) return <Card><CardContent className="py-10 text-center text-sm">{t("booking.setLocation")}</CardContent></Card>;
   if (subLoading || !sub) return <div className="flex justify-center py-16"><Loader2 className="animate-spin text-brand-primary" /></div>;
 
   const slotHours = slotData?.slots[selectedDate] ?? [];
 
   return (
     <div className="page-enter space-y-6 max-w-2xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={() => router.back()}><ArrowLeft size={14} /> Back</Button>
+      <Button variant="ghost" size="sm" onClick={() => router.back()}><ArrowLeft size={14} /> {t("booking.back")}</Button>
 
       {/* ── Pricing header ── */}
       <div className="rounded-lg border border-brand-border bg-brand-surface p-5 space-y-3">
-        <h1 className="font-heading text-2xl text-brand-text">{sub.name}</h1>
+        <h1 className="font-heading text-2xl text-brand-text">
+          {lang === "hi" && (sub as any).nameHi ? (sub as any).nameHi : sub.name}
+        </h1>
         <p className="text-xs text-brand-textMuted uppercase tracking-wide">{sub.category.name}</p>
         {pricing ? (
           <div className="flex flex-wrap gap-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Service charge</p>
+              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">{t("booking.serviceCharge")}</p>
               <div className="flex items-center gap-2">
                 {disc > 0 && <span className="line-through text-brand-textMuted text-sm">₹{base}</span>}
                 <span className="text-xl font-bold text-brand-primary">₹{discounted?.toFixed(0)}</span>
@@ -282,12 +287,12 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">Transport</p>
+              <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">{t("booking.transport")}</p>
               <span className="text-sm font-medium text-brand-text">₹{transport}/km</span>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-brand-textMuted">Pricing not set for your area yet.</p>
+          <p className="text-xs text-brand-textMuted">{t("booking.noPricing")}</p>
         )}
       </div>
 
@@ -308,7 +313,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
       {resolvedAgentId && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-brand-text">Available Slots</h2>
+            <h2 className="font-heading text-lg text-brand-text">{t("booking.availableSlots")}</h2>
             <span className="text-xs text-brand-textMuted">
               {new Date(fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {new Date(addDays(fromDate, 6)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </span>
@@ -366,7 +371,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             })}
             {slotHours.length === 0 && (
               <p className="col-span-full text-xs text-brand-textMuted text-center py-3">
-                No slots available on this day.
+                {t("booking.noSlots")}
               </p>
             )}
           </div>
@@ -377,7 +382,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 <CalendarCheck size={14} className="inline mr-1.5 text-brand-primary" />
                 {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })} at {fmtSlot(selectedHour, slotData?.slotDurationHours ?? 1)}
               </p>
-              <Button size="sm" onClick={() => { if (requireLogin()) return; setSelectedSubIds(new Set([id])); if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>Book this slot</Button>
+              <Button size="sm" onClick={() => { if (requireLogin()) return; setSelectedSubIds(new Set([id])); if (otherSubs.length > 0) setShowUpsell(true); else setShowForm(true); }}>{t("booking.bookThisSlot")}</Button>
             </div>
           )}
         </div>
@@ -388,7 +393,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         <Card className="border-brand-primary/30">
           <CardContent className="py-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg text-brand-text">Your details</h2>
+              <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
               <button onClick={() => setShowForm(false)}><X size={16} className="text-brand-textMuted" /></button>
             </div>
             {/* Booking summary */}
@@ -418,7 +423,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                   ))}
                   {allPriceable.length > 1 && (
                     <div className="flex items-center justify-between pt-1 border-t border-brand-primary/20 text-sm font-semibold">
-                      <span className="text-brand-text">Total</span>
+                      <span className="text-brand-text">{t("booking.total")}</span>
                       <div className="flex items-center gap-2">
                         {saved > 0.5 && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Save ₹{saved.toFixed(0)}</span>}
                         <span className="text-brand-primary">₹{totalF.toFixed(0)}</span>
@@ -429,18 +434,18 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               );
             })()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input label="Your name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-              <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              <Input label={t("booking.yourName")} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              <Input label={t("booking.phone")} type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-sm font-medium text-brand-text">Gender</label>
+                <label className="mb-1.5 block text-sm font-medium text-brand-text">{t("booking.gender")}</label>
                 <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text">
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                  <option value="OTHER">Other</option>
+                  <option value="MALE">{t("booking.male")}</option>
+                  <option value="FEMALE">{t("booking.female")}</option>
+                  <option value="OTHER">{t("booking.other")}</option>
                 </select>
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-sm font-medium text-brand-text">Address / landmark</label>
+                <label className="mb-1.5 block text-sm font-medium text-brand-text">{t("booking.addressLabel")}</label>
                 {savedAddresses.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
                     {savedAddresses.map((sa) => (
@@ -459,7 +464,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                     ))}
                   </div>
                 )}
-                <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Full address, landmark…" />
+                <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder={t("booking.addressPlaceholder")} />
               </div>
             </div>
             <Button
@@ -468,7 +473,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               loading={bookBulk.isPending}
               disabled={!form.name || !form.phone || !form.address}
             >
-              <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? `Confirm ${selectedSubIds.size} bookings` : "Send booking request"}
+              <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? t("booking.confirmMultiple", { n: selectedSubIds.size }) : t("booking.sendRequest")}
             </Button>
           </CardContent>
         </Card>
@@ -480,7 +485,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           <CardContent className="py-5 space-y-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={20} className="text-brand-success" />
-              <h3 className="font-medium text-brand-text">Booking accepted!</h3>
+              <h3 className="font-medium text-brand-text">{t("booking.bookingAccepted")}</h3>
             </div>
             {acceptedRequest.hero && (
               <div className="space-y-1 text-sm">

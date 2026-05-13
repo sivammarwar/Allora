@@ -135,6 +135,8 @@ router.get("/subcategories", async (req, res, next) => {
         categoryName: s.category.name,
         categoryType: s.category.type,
         name: s.name,
+        nameHi: s.nameHi ?? null,
+        descriptionHi: s.descriptionHi ?? null,
         // Icon name from Lucide set (e.g. "Pizza", "Sparkles")
         imageUrl: s.imageUrl,
         pageContent: s.pageContent,
@@ -153,6 +155,8 @@ router.get("/subcategories", async (req, res, next) => {
 const upsertSubcategorySchema = z.object({
   categoryId: z.string().min(1),
   name: z.string().trim().min(2).max(80),
+  nameHi: z.string().trim().max(80).optional().nullable(),
+  descriptionHi: z.string().trim().max(500).optional().nullable(),
   // Stores an image URL (e.g. Cloudinary URL).
   imageUrl: z.string().nullable().optional(),
   isActive: z.boolean().optional(),

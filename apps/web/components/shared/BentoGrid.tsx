@@ -2,11 +2,13 @@
 
 import { Plus, Pencil } from "lucide-react";
 import { CategoryIcon } from "./CategoryIcon";
+import { useLanguage } from "@/lib/i18n";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface BentoItem {
   id: string;
   name: string;
+  nameHi?: string | null;
   imageUrl: string | null;
   viralImageUrl?: string | null;
   position: number;        // 1–6
@@ -71,6 +73,12 @@ function PricingRow({ pricing, large }: { pricing: NonNullable<BentoItem["pricin
       )}
     </div>
   );
+}
+
+// ─── Language-aware name ──────────────────────────────────────────────────────
+function BentoItemName({ item }: { item: BentoItem }) {
+  const { lang } = useLanguage();
+  return <>{lang === "hi" && item.nameHi ? item.nameHi : item.name}</>;
 }
 
 // ─── Single card ─────────────────────────────────────────────────────────────
@@ -139,7 +147,7 @@ function BentoCard({
             large ? "text-xl sm:text-2xl line-clamp-2" : "text-sm line-clamp-1"
           }`}
         >
-          {item.name}
+          <BentoItemName item={item} />
         </h3>
         {item.pricing && <PricingRow pricing={item.pricing} large={large} />}
       </div>
