@@ -7,6 +7,7 @@ import BookingsScreen from "../screens/user/BookingsScreen";
 import ProfileScreen from "../screens/user/ProfileScreen";
 import CategoryDetailScreen from "../screens/user/CategoryDetailScreen";
 import SubcategoryDetailScreen from "../screens/user/SubcategoryDetailScreen";
+import OrderDetailScreen from "../screens/user/OrderDetailScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { UserTabParams, UserStackParams } from "./types";
 
@@ -72,7 +73,7 @@ export default function UserNavigator() {
       />
       <Stack.Screen
         name="OrderDetail"
-        component={BookingsScreen}
+        component={OrderDetailScreen}
         options={{ title: "Order", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>

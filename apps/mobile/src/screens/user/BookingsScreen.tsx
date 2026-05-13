@@ -4,9 +4,14 @@ import {
   TouchableOpacity, ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
+import type { UserStackParams } from "../../navigation/types";
+
+type NavProp = NativeStackNavigationProp<UserStackParams>;
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "#f59e0b",
@@ -18,6 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function BookingsScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation<NavProp>();
 
   const { data: bookings = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["my-bookings"],
@@ -49,7 +55,7 @@ export default function BookingsScreen() {
         </View>
       }
       renderItem={({ item }) => (
-        <View style={styles.card}>
+        <TouchableOpacity key={item.id} style={styles.card} onPress={() => navigation.navigate("OrderDetail", { id: item.id })}>
           <View style={styles.cardTop}>
             <View style={{ flex: 1 }}>
               <Text style={styles.serviceName}>{item.subcategory?.name ?? "Service"}</Text>
@@ -71,7 +77,7 @@ export default function BookingsScreen() {
               <Text style={styles.price}>₹{item.totalCharge}</Text>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
       )}
     />
   );

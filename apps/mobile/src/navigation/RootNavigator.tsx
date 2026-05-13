@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import AuthNavigator from "./AuthNavigator";
 import UserNavigator from "./UserNavigator";
 import HeroNavigator from "./HeroNavigator";
+import AgentNavigator from "./AgentNavigator";
 import { BRAND_PRIMARY } from "../lib/config";
 import type { RootStackParams } from "./types";
 
@@ -26,7 +27,8 @@ export default function RootNavigator() {
   }
 
   if (user.role === "HERO") return <HeroNavigator />;
+  if (user.role === "AGENT") return <AgentNavigator />;
 
-  // USER, AGENT, DELIVERY_BOY, etc. → User app for now
+  // USER, DELIVERY_BOY, ADMIN, etc.
   return <UserNavigator />;
 }

@@ -2,6 +2,8 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text, View } from "react-native";
 import HeroHomeScreen from "../screens/hero/HeroHomeScreen";
+import HeroRequestsScreen from "../screens/hero/HeroRequestsScreen";
+import HeroSlotsScreen from "../screens/hero/HeroSlotsScreen";
 import HeroProfileScreen from "../screens/hero/HeroProfileScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { HeroTabParams } from "./types";
@@ -30,12 +32,12 @@ export default function HeroNavigator() {
       />
       <Tab.Screen
         name="HeroRequests"
-        component={HeroHomeScreen}
+        component={HeroRequestsScreen}
         options={{ title: "Requests", tabBarLabel: "Requests", tabBarIcon: ({ focused }) => <TabIcon emoji="📥" focused={focused} /> }}
       />
       <Tab.Screen
         name="HeroSlots"
-        component={HeroHomeScreen}
+        component={HeroSlotsScreen}
         options={{ title: "Slots", tabBarLabel: "Slots", tabBarIcon: ({ focused }) => <TabIcon emoji="🗓️" focused={focused} /> }}
       />
       <Tab.Screen
