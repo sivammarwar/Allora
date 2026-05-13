@@ -131,13 +131,13 @@ export function LocationPickerModal({ initialLoc, onConfirm, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-x-0 top-14 bottom-20 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-x-0 top-14 bottom-20 z-50 flex items-end md:items-center justify-center md:px-4 bg-black/60 backdrop-blur-sm">
       <div
-        className="relative flex flex-col bg-white w-full max-w-lg rounded-t-2xl overflow-hidden shadow-2xl"
+        className="relative flex flex-col bg-white w-full md:max-w-lg rounded-t-2xl md:rounded-2xl overflow-hidden shadow-2xl"
         style={{ height: "min(480px, 100%)" }}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-2.5 pb-1 bg-white shrink-0">
+        {/* Drag handle — mobile only */}
+        <div className="flex md:hidden justify-center pt-2.5 pb-1 bg-white shrink-0">
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
 
