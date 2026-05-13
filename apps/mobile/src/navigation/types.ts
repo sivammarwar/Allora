@@ -29,13 +29,24 @@ export type HeroTabParams = {
   HeroHome: undefined;
   HeroRequests: undefined;
   HeroSlots: undefined;
+  HeroServices: undefined;
+  HeroEarnings: undefined;
   HeroProfile: undefined;
 };
 
 export type AgentTabParams = {
   AgentHome: undefined;
   AgentAreas: undefined;
+  AgentRequests: undefined;
+  AgentPriceControl: undefined;
   AgentProfile: undefined;
+};
+
+export type SecretShopTabParams = {
+  SecretShopHome: undefined;
+  SecretShopCart: undefined;
+  SecretShopOrders: undefined;
+  SecretShopProfile: undefined;
 };
 
 export type RootStackParams = {
@@ -43,4 +54,5 @@ export type RootStackParams = {
   UserApp: undefined;
   HeroApp: undefined;
   AgentApp: undefined;
+  SecretShopApp: undefined;
 };

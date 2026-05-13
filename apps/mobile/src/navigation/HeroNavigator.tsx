@@ -5,6 +5,8 @@ import HeroHomeScreen from "../screens/hero/HeroHomeScreen";
 import HeroRequestsScreen from "../screens/hero/HeroRequestsScreen";
 import HeroSlotsScreen from "../screens/hero/HeroSlotsScreen";
 import HeroProfileScreen from "../screens/hero/HeroProfileScreen";
+import HeroServicesScreen from "../screens/hero/HeroServicesScreen";
+import HeroEarningsScreen from "../screens/hero/HeroEarningsScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { HeroTabParams } from "./types";
 
@@ -39,6 +41,16 @@ export default function HeroNavigator() {
         name="HeroSlots"
         component={HeroSlotsScreen}
         options={{ title: "Slots", tabBarLabel: "Slots", tabBarIcon: ({ focused }) => <TabIcon emoji="🗓️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="HeroServices"
+        component={HeroServicesScreen}
+        options={{ title: "My Services", tabBarLabel: "Services", tabBarIcon: ({ focused }) => <TabIcon emoji="🛠️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="HeroEarnings"
+        component={HeroEarningsScreen}
+        options={{ title: "Earnings", tabBarLabel: "Earnings", tabBarIcon: ({ focused }) => <TabIcon emoji="💰" focused={focused} /> }}
       />
       <Tab.Screen
         name="HeroProfile"

@@ -3,6 +3,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text, View } from "react-native";
 import AgentHomeScreen from "../screens/agent/AgentHomeScreen";
 import AgentProfileScreen from "../screens/agent/AgentProfileScreen";
+import AgentAreasScreen from "../screens/agent/AgentAreasScreen";
+import AgentRequestsScreen from "../screens/agent/AgentRequestsScreen";
+import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { AgentTabParams } from "./types";
 
@@ -30,8 +33,18 @@ export default function AgentNavigator() {
       />
       <Tab.Screen
         name="AgentAreas"
-        component={AgentHomeScreen}
-        options={{ title: "Areas", tabBarLabel: "Areas", tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" focused={focused} /> }}
+        component={AgentAreasScreen}
+        options={{ title: "My Areas", tabBarLabel: "Areas", tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentRequests"
+        component={AgentRequestsScreen}
+        options={{ title: "Requests", tabBarLabel: "Requests", tabBarIcon: ({ focused }) => <TabIcon emoji="🛡️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentPriceControl"
+        component={AgentPriceControlScreen}
+        options={{ title: "Price Control", tabBarLabel: "Pricing", tabBarIcon: ({ focused }) => <TabIcon emoji="💲" focused={focused} /> }}
       />
       <Tab.Screen
         name="AgentProfile"
