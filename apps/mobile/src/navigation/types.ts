@@ -6,6 +6,7 @@ export type AuthStackParams = {
 export type UserTabParams = {
   Home: undefined;
   Bookings: undefined;
+  Notifications: undefined;
   Profile: undefined;
 };
 
@@ -14,6 +15,14 @@ export type UserStackParams = {
   SubcategoryDetail: { id: string; agentId?: string };
   CategoryDetail: { id: string };
   OrderDetail: { id: string };
+  Rate: { bookingId: string; heroName?: string; serviceName?: string };
+  Notifications: undefined;
+};
+
+export type DeliveryTabParams = {
+  DeliveryDashboard: undefined;
+  DeliveryOrders: undefined;
+  DeliveryProfile: undefined;
 };
 
 export type HeroTabParams = {

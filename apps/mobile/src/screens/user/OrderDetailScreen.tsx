@@ -158,6 +158,22 @@ export default function OrderDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      {/* Rate button for completed bookings */}
+      {order.status === "COMPLETED" && !order.userReview && (
+        <TouchableOpacity
+          style={styles.rateBtn}
+          onPress={() =>
+            navigation.navigate("Rate", {
+              bookingId: order.id,
+              heroName: order.hero?.name ?? undefined,
+              serviceName: order.subcategory?.name ?? undefined,
+            })
+          }
+        >
+          <Text style={styles.rateBtnText}>⭐ Leave a Review</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Cancel button */}
       {["PENDING", "CONFIRMED"].includes(order.status) && (
         <TouchableOpacity
@@ -210,6 +226,12 @@ const styles = StyleSheet.create({
   payStatusRow: { marginTop: 6 },
   payBadge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   payBadgeText: { fontSize: 12, fontWeight: "700" },
+  rateBtn: {
+    marginHorizontal: 16, marginTop: 8, height: 50,
+    borderRadius: 14, backgroundColor: "#f59e0b",
+    alignItems: "center", justifyContent: "center",
+  },
+  rateBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   cancelBtn: {
     marginHorizontal: 16, marginTop: 8, height: 50,
     borderRadius: 14, borderWidth: 1.5, borderColor: "#ef4444",

@@ -8,6 +8,8 @@ import ProfileScreen from "../screens/user/ProfileScreen";
 import CategoryDetailScreen from "../screens/user/CategoryDetailScreen";
 import SubcategoryDetailScreen from "../screens/user/SubcategoryDetailScreen";
 import OrderDetailScreen from "../screens/user/OrderDetailScreen";
+import NotificationsScreen from "../screens/user/NotificationsScreen";
+import RatingScreen from "../screens/user/RatingScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { UserTabParams, UserStackParams } from "./types";
 
@@ -49,6 +51,11 @@ function UserTabs() {
         options={{ tabBarLabel: "Bookings", tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} /> }}
       />
       <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: "Notifications", tabBarLabel: "Alerts", tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} /> }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{ tabBarLabel: "Profile", tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} /> }}
@@ -75,6 +82,16 @@ export default function UserNavigator() {
         name="OrderDetail"
         component={OrderDetailScreen}
         options={{ title: "Order", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="Rate"
+        component={RatingScreen}
+        options={{ title: "Leave a Review", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: "Notifications", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>
   );
