@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type LucideIcon } from "lucide-react";
+import { type LucideIcon, LogOut } from "lucide-react";
 import { RoleGate } from "@/components/shared/RoleGate";
-import { useCurrentUser } from "@/lib/auth";
+import { useCurrentUser, useLogout } from "@/lib/auth";
 import { type Role } from "@/lib/types";
 import { useLanguage } from "@/lib/i18n";
 
@@ -27,6 +27,21 @@ interface DashboardShellProps {
   bottomLinks?: NavLink[];
   headerRight?: React.ReactNode;
   children: React.ReactNode;
+}
+
+function HeroLogoutButton() {
+  const router = useRouter();
+  const logout = useLogout();
+  return (
+    <button
+      onClick={() => logout.mutate(undefined, { onSuccess: () => router.replace("/hero/login") })}
+      disabled={logout.isPending}
+      title="Sign out"
+      className="flex items-center justify-center h-7 w-7 rounded-full border border-brand-border bg-white hover:bg-red-50 hover:border-red-300 active:scale-95 transition-all text-brand-textMuted hover:text-red-500"
+    >
+      <LogOut size={13} />
+    </button>
+  );
 }
 
 function useGreeting() {
@@ -55,7 +70,8 @@ function TopHeader({
   subtitle,
   Icon,
   headerRight,
-}: Pick<DashboardShellProps, "title" | "subtitle" | "Icon" | "headerRight">) {
+  role,
+}: Pick<DashboardShellProps, "title" | "subtitle" | "Icon" | "headerRight" | "role">) {
   const greeting = useGreeting();
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
@@ -82,6 +98,7 @@ function TopHeader({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <LangToggle />
           {headerRight && headerRight}
+          {role === "HERO" && <HeroLogoutButton />}
         </div>
       </div>
     </header>
@@ -165,6 +182,7 @@ export function DashboardShell({
             subtitle={subtitle}
             Icon={Icon}
             headerRight={headerRight}
+            role={role}
           />
           <main className="pt-14 pb-20 min-h-screen bg-gray-50">
             <div className="px-4 sm:px-6 lg:px-8 py-5 w-full">{children}</div>
