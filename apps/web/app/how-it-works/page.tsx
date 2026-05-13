@@ -64,6 +64,8 @@ const C = {
   },
 };
 
+const ICONS = [MapPin, ShoppingBag, CheckCircle];
+
 export default function HowItWorksPage() {
   const { lang } = useLanguage();
   const c = C[lang] ?? C.en;
