@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, ShoppingCart, CreditCard, User, Search, X, Store } from "lucide-react";
 import { RoleGate } from "@/components/shared/RoleGate";
 import { api } from "@/lib/api";
 import { useSecretCart } from "@/lib/secretShopCart";
+import { SecretShopSearchContext } from "./searchContext";
 import Link from "next/link";
-
-// ─── Search context shared between header and dashboard ──────────────────────
-export const SecretShopSearchContext = createContext<{
-  search: string;
-  setSearch: (s: string) => void;
-}>({ search: "", setSearch: () => {} });
-
-export function useSecretShopSearch() { return useContext(SecretShopSearchContext); }
 
 const PROTECTED = ["/secret-shop/orders", "/secret-shop/past-orders", "/secret-shop/cart", "/secret-shop/payment-history", "/secret-shop/profile"];
 

@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationPicker } from "@/components/maps/LocationPicker";
-import { useSecretShopSearch } from "../layout";
+import { useSecretShopSearch } from "../searchContext";
 
 interface InventoryItem {
   id: string;
