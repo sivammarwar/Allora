@@ -1,69 +1,61 @@
-import Link from "next/link";
+"use client";
 
-export const metadata = { title: "Terms of Service · Allora" };
+import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
+import { PublicPageHeader } from "@/components/shared/PublicPageHeader";
+
+const EN_S = [
+  { t: "1. Acceptance",            b: "By accessing or using Allora you agree to these Terms. They apply to all users — Customers, Heroes, Agents, and Operators." },
+  { t: "2. The platform",          b: "Allora is a marketplace connecting customers with local Heroes. Allora is not itself a service provider. The contract for any service is between Customer and Hero." },
+  { t: "3. Accounts",              b: "You must provide a valid email to create an account. You are responsible for all activity under your account. Accounts are non-transferable." },
+  { t: "4. Hero verification",     b: "Heroes are verified by Allora Regional Officers through an in-person visit. Verification confirms existence and capability but is not an endorsement of quality." },
+  { t: "5. Payments",              b: "Service charges are displayed before booking confirmation. Payments are processed by Razorpay or PhonePe. Heroes receive 90% of the service charge." },
+  { t: "6. Cancellations",         b: "Cancellations before dispatch are free. Cancellations after dispatch may attract a fee at the Hero's discretion. See our Refund Policy for details." },
+  { t: "7. Prohibited conduct",    b: "You may not: (a) make fraudulent bookings; (b) harass Heroes or Allora staff; (c) reverse-engineer the platform; (d) create fake reviews." },
+  { t: "8. Limitation of liability", b: "Allora's liability for any claim is limited to the amount paid for the relevant transaction. We are not liable for Hero conduct or service quality." },
+  { t: "9. Governing law",         b: "These Terms are governed by the laws of India. Disputes are subject to the exclusive jurisdiction of courts in Bangalore, Karnataka." },
+  { t: "10. Contact",              b: "Legal inquiries: hello@allora.app" },
+];
+
+const HI_S = [
+  { t: "1. स्वीकृति",              b: "Allora का उपयोग करके आप इन शर्तों से सहमत होते हैं। ये सभी उपयोगकर्ताओं — ग्राहक, हीरो, एजेंट और ऑपरेटर — पर लागू होती हैं।" },
+  { t: "2. प्लेटफ़ॉर्म",           b: "Allora एक मार्केटप्लेस है जो ग्राहकों को स्थानीय हीरो से जोड़ता है। Allora स्वयं सेवा प्रदाता नहीं है। सेवा का अनुबंध ग्राहक और हीरो के बीच है।" },
+  { t: "3. खाते",                   b: "खाता बनाने के लिए वैध ईमेल आवश्यक है। आप अपने खाते की सभी गतिविधियों के लिए जिम्मेदार हैं। खाते हस्तांतरणीय नहीं हैं।" },
+  { t: "4. हीरो सत्यापन",           b: "हीरो को Allora रीजनल ऑफिसर व्यक्तिगत रूप से सत्यापित करते हैं। सत्यापन अस्तित्व और सेवा क्षमता की पुष्टि करता है, गुणवत्ता की गारंटी नहीं देता।" },
+  { t: "5. भुगतान",                 b: "बुकिंग से पहले सेवा शुल्क दिखाया जाता है। भुगतान Razorpay या PhonePe द्वारा प्रोसेस होता है। हीरो को सेवा शुल्क का 90% मिलता है।" },
+  { t: "6. रद्दीकरण",               b: "हीरो के रवाना होने से पहले रद्दीकरण मुफ़्त है। बाद में रद्द करने पर हीरो के विवेक पर शुल्क लग सकता है। विवरण के लिए हमारी रिफंड नीति देखें।" },
+  { t: "7. प्रतिबंधित आचरण",        b: "आप निम्नलिखित नहीं कर सकते: (क) धोखाधड़ी की बुकिंग; (ख) हीरो या Allora स्टाफ से दुर्व्यवहार; (ग) प्लेटफ़ॉर्म को रिवर्स-इंजीनियर करना; (घ) नकली समीक्षाएं।" },
+  { t: "8. देयता की सीमा",          b: "किसी भी दावे के लिए Allora की देयता लेनदेन की राशि तक सीमित है। हम हीरो के आचरण या सेवा गुणवत्ता के लिए उत्तरदायी नहीं हैं।" },
+  { t: "9. शासी कानून",             b: "ये शर्तें भारत के कानूनों द्वारा शासित हैं। विवाद बैंगलोर, कर्नाटक के न्यायालयों के अधिकार क्षेत्र में होंगे।" },
+  { t: "10. संपर्क",                b: "कानूनी पूछताछ: hello@allora.app" },
+];
 
 export default function TermsPage() {
+  const { lang } = useLanguage();
+  const sections = lang === "hi" ? HI_S : EN_S;
+  const isHi = lang === "hi";
   return (
     <main className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-4 py-14 space-y-10">
+      <PublicPageHeader />
+      <div className="max-w-2xl mx-auto px-4 py-10 space-y-10">
 
         <div className="space-y-2">
-          <Link href="/dashboard" className="text-xs text-brand-primary hover:underline">← Back to Allora</Link>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Terms of Service</h1>
-          <p className="text-sm text-gray-400">Last updated: May 2026</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            {isHi ? "सेवा की शर्तें" : "Terms of Service"}
+          </h1>
+          <p className="text-sm text-gray-400">{isHi ? "अंतिम अपडेट: मई 2026" : "Last updated: May 2026"}</p>
         </div>
 
-        {[
-          {
-            title: "1. Acceptance",
-            body: `By accessing or using Allora you agree to be bound by these Terms. If you do not agree, do not use the platform. These Terms apply to all users — Customers, Heroes, Agents, and Operators.`,
-          },
-          {
-            title: "2. The platform",
-            body: `Allora is a marketplace that connects customers with local service providers ("Heroes"). Allora is not itself a service provider. The contract for any service is between the Customer and the Hero. Allora facilitates discovery, booking, and payment.`,
-          },
-          {
-            title: "3. Accounts",
-            body: `You must provide a valid email address to create an account. You are responsible for all activity under your account. Accounts are non-transferable. We reserve the right to suspend or terminate accounts for violation of these Terms.`,
-          },
-          {
-            title: "4. Hero verification",
-            body: `Heroes are verified by Allora Regional Officers through an in-person visit. Verification confirms existence and service capability but does not constitute an endorsement or guarantee of service quality. Customers should exercise their own judgment.`,
-          },
-          {
-            title: "5. Payments",
-            body: `Service charges are displayed before booking confirmation. Payments are processed by Razorpay or PhonePe. Cash payments are settled directly with the Hero. Allora's platform fee is deducted before Hero payouts; Heroes receive 90% of the service charge.`,
-          },
-          {
-            title: "6. Cancellations",
-            body: `Cancellations made before a Hero is dispatched are free. Cancellations after dispatch may attract a cancellation fee at the Hero's discretion. See our Refund Policy for details.`,
-          },
-          {
-            title: "7. Prohibited conduct",
-            body: `You may not: (a) misuse the platform for fraudulent bookings; (b) harass, threaten, or abuse Heroes or Allora staff; (c) reverse-engineer or scrape the platform; (d) create fake reviews or ratings.`,
-          },
-          {
-            title: "8. Limitation of liability",
-            body: `To the maximum extent permitted by law, Allora's liability for any claim arising out of use of the platform is limited to the amount you paid for the relevant transaction. We are not liable for Hero conduct, service quality, or delivery delays.`,
-          },
-          {
-            title: "9. Governing law",
-            body: `These Terms are governed by the laws of India. Disputes shall be subject to the exclusive jurisdiction of courts in Bangalore, Karnataka.`,
-          },
-          {
-            title: "10. Contact",
-            body: `Legal inquiries: hello@allora.app`,
-          },
-        ].map(({ title, body }) => (
-          <section key={title} className="space-y-2">
-            <h2 className="font-bold text-gray-900">{title}</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+        {sections.map(({ t, b }) => (
+          <section key={t} className="space-y-2">
+            <h2 className="font-bold text-gray-900">{t}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">{b}</p>
           </section>
         ))}
 
         <div className="pt-6 border-t border-gray-100 flex gap-4 text-xs text-gray-400">
-          <Link href="/legal/privacy" className="hover:text-brand-primary">Privacy Policy</Link>
-          <Link href="/legal/refund" className="hover:text-brand-primary">Refund Policy</Link>
+          <Link href="/legal/privacy" className="hover:text-brand-primary">{isHi ? "गोपनीयता नीति" : "Privacy Policy"}</Link>
+          <Link href="/legal/refund" className="hover:text-brand-primary">{isHi ? "रिफंड नीति" : "Refund Policy"}</Link>
         </div>
       </div>
     </main>
