@@ -10,6 +10,7 @@ import SubcategoryDetailScreen from "../screens/user/SubcategoryDetailScreen";
 import OrderDetailScreen from "../screens/user/OrderDetailScreen";
 import NotificationsScreen from "../screens/user/NotificationsScreen";
 import RatingScreen from "../screens/user/RatingScreen";
+import PaymentScreen from "../screens/shared/PaymentScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { UserTabParams, UserStackParams } from "./types";
 
@@ -92,6 +93,11 @@ export default function UserNavigator() {
         name="Notifications"
         component={NotificationsScreen}
         options={{ title: "Notifications", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={PaymentScreen}
+        options={{ title: "Pay", headerTintColor: BRAND_PRIMARY, presentation: "modal" }}
       />
     </Stack.Navigator>
   );

@@ -17,6 +17,7 @@ export type UserStackParams = {
   OrderDetail: { id: string };
   Rate: { bookingId: string; heroName?: string; serviceName?: string };
   Notifications: undefined;
+  Payment: { orderId: string; amount: number; description: string; type: "secret-shop" | "booking" };
 };
 
 export type DeliveryTabParams = {
@@ -31,6 +32,9 @@ export type HeroTabParams = {
   HeroSlots: undefined;
   HeroServices: undefined;
   HeroEarnings: undefined;
+  HeroOrders: undefined;
+  HeroProducts: undefined;
+  HeroStore: undefined;
   HeroProfile: undefined;
 };
 
@@ -39,7 +43,22 @@ export type AgentTabParams = {
   AgentAreas: undefined;
   AgentRequests: undefined;
   AgentPriceControl: undefined;
+  AgentInventory: undefined;
+  AgentItems: undefined;
+  AgentSlotConfig: undefined;
+  AgentPaymentHistory: undefined;
+  AgentSecretOrders: undefined;
+  AgentSecretShops: undefined;
   AgentProfile: undefined;
+};
+
+export type PaymentParams = {
+  Payment: {
+    orderId: string;
+    amount: number;
+    description: string;
+    type: "secret-shop" | "booking";
+  };
 };
 
 export type SecretShopTabParams = {

@@ -6,6 +6,12 @@ import AgentProfileScreen from "../screens/agent/AgentProfileScreen";
 import AgentAreasScreen from "../screens/agent/AgentAreasScreen";
 import AgentRequestsScreen from "../screens/agent/AgentRequestsScreen";
 import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
+import AgentInventoryScreen from "../screens/agent/AgentInventoryScreen";
+import AgentItemsScreen from "../screens/agent/AgentItemsScreen";
+import AgentSlotConfigScreen from "../screens/agent/AgentSlotConfigScreen";
+import AgentPaymentHistoryScreen from "../screens/agent/AgentPaymentHistoryScreen";
+import AgentSecretOrdersScreen from "../screens/agent/AgentSecretOrdersScreen";
+import AgentSecretShopsScreen from "../screens/agent/AgentSecretShopsScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { AgentTabParams } from "./types";
 
@@ -45,6 +51,36 @@ export default function AgentNavigator() {
         name="AgentPriceControl"
         component={AgentPriceControlScreen}
         options={{ title: "Price Control", tabBarLabel: "Pricing", tabBarIcon: ({ focused }) => <TabIcon emoji="💲" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentInventory"
+        component={AgentInventoryScreen}
+        options={{ title: "Inventory", tabBarLabel: "Inventory", tabBarIcon: ({ focused }) => <TabIcon emoji="🏪" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentItems"
+        component={AgentItemsScreen}
+        options={{ title: "Catalog Items", tabBarLabel: "Items", tabBarIcon: ({ focused }) => <TabIcon emoji="🗂️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentSlotConfig"
+        component={AgentSlotConfigScreen}
+        options={{ title: "Slot Hours", tabBarLabel: "Slots", tabBarIcon: ({ focused }) => <TabIcon emoji="🕔" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentSecretOrders"
+        component={AgentSecretOrdersScreen}
+        options={{ title: "Secret Orders", tabBarLabel: "S.Orders", tabBarIcon: ({ focused }) => <TabIcon emoji="🛍️" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentSecretShops"
+        component={AgentSecretShopsScreen}
+        options={{ title: "Verify Shops", tabBarLabel: "Shops", tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="AgentPaymentHistory"
+        component={AgentPaymentHistoryScreen}
+        options={{ title: "Payments", tabBarLabel: "Payments", tabBarIcon: ({ focused }) => <TabIcon emoji="💳" focused={focused} /> }}
       />
       <Tab.Screen
         name="AgentProfile"
