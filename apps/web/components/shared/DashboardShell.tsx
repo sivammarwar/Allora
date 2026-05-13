@@ -29,12 +29,12 @@ interface DashboardShellProps {
   children: React.ReactNode;
 }
 
-function HeroLogoutButton() {
+function RoleLogoutButton({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
   const logout = useLogout();
   return (
     <button
-      onClick={() => logout.mutate(undefined, { onSuccess: () => router.replace("/hero/login") })}
+      onClick={() => logout.mutate(undefined, { onSuccess: () => router.replace(redirectTo) })}
       disabled={logout.isPending}
       title="Sign out"
       className="flex items-center justify-center h-7 w-7 rounded-full border border-brand-border bg-white hover:bg-red-50 hover:border-red-300 active:scale-95 transition-all text-brand-textMuted hover:text-red-500"
@@ -98,7 +98,8 @@ function TopHeader({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <LangToggle />
           {headerRight && headerRight}
-          {role === "HERO" && <HeroLogoutButton />}
+          {role === "HERO" && <RoleLogoutButton redirectTo="/hero/login" />}
+          {role === "AGENT" && <RoleLogoutButton redirectTo="/agent/login" />}
         </div>
       </div>
     </header>
