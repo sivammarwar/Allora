@@ -4,12 +4,14 @@ import {
   TouchableOpacity, ActivityIndicator, Alert, TextInput,
 } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
 import { useSecretCart } from "../../lib/secretShopCart";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 
 export default function SecretShopCartScreen() {
   const qc = useQueryClient();
+  const navigation = useNavigation<any>();
   const { items, inc, dec, remove, clear, total } = useSecretCart();
   const [notes, setNotes] = useState("");
   const [payMode, setPayMode] = useState<"COD" | "ONLINE">("COD");
@@ -21,10 +23,20 @@ export default function SecretShopCartScreen() {
         notes: notes.trim() || null,
         paymentMode: payMode,
       }) as any,
-    onSuccess: () => {
-      clear();
+    onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["secret-shop-orders"] });
-      Alert.alert("Order placed! 🎉", "Your order has been submitted to the agent.");
+      if (payMode === "ONLINE" && data?.id) {
+        clear();
+        navigation.navigate("Payment", {
+          orderId: data.id,
+          amount: Number(data.totalAmount ?? total()),
+          description: `Secret Shop Order #${String(data.id).slice(-8).toUpperCase()}`,
+          type: "secret-shop",
+        });
+      } else {
+        clear();
+        Alert.alert("Order placed! 🎉", "Your order has been submitted to the agent.");
+      }
     },
     onError: (e: any) => Alert.alert("Error", e?.message ?? "Failed to place order."),
   });

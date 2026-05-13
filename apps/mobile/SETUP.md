@@ -71,29 +71,57 @@ npx react-native run-ios
 
 ---
 
-## 6. Role-based navigation
+## 6. Razorpay Setup (required for Online Payments)
 
-| Role            | App shown         |
-|-----------------|-------------------|
-| `USER`          | User dashboard    |
-| `HERO`          | Hero dashboard    |
-| `AGENT`         | Agent dashboard   |
-| `DELIVERY_BOY`  | Delivery dashboard|
-| `ADMIN` etc.    | User dashboard    |
+### Install native module (already in package.json)
+```bash
+npm install react-native-razorpay
+cd ios && bundle exec pod install && cd ..   # iOS only
+```
+
+### Android — no extra gradle steps needed (auto-linked).
+
+### Backend — Razorpay credentials
+Your API must return from `POST /api/payments/create-order`:
+```json
+{ "keyId": "rzp_test_xxx", "amount": 25000, "razorpayOrderId": "order_xxx" }
+```
+And verify at `POST /api/payments/verify`.
+
+Set in your backend `.env`:
+```
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
+```
 
 ---
 
-## 7. Environment notes
+## 7. Role-based navigation
+
+| Role            | App shown                | Screens                                       |
+|-----------------|--------------------------|-----------------------------------------------|
+| `USER`          | User dashboard           | Home, Bookings, Notifications, Profile, Pay   |
+| `HERO`          | Hero dashboard           | Home, Requests, Slots, Orders, Products, Store, Services, Earnings, Profile |
+| `AGENT`         | Agent dashboard          | Home, Areas, Requests, PriceControl, Inventory, Items, SlotConfig, SecretOrders, SecretShops, Payments, Profile |
+| `DELIVERY_BOY`  | Delivery dashboard       | Dashboard, Orders, Profile                    |
+| `SECRET_SHOP`   | Secret shop              | Shop, Cart, Orders, Profile + Payment modal   |
+| `ADMIN` etc.    | User dashboard           | (web-only roles)                              |
+
+---
+
+## 8. Environment notes
 
 - Location uses `@react-native-community/geolocation` — permissions already declared in `AndroidManifest.xml`
 - Maps navigation uses `Linking.openURL` → Google Maps deep link
 - Socket.io connects to `/notifications` and `/service` namespaces
 - JWT stored in `AsyncStorage` (`access_token` / `refresh_token`)
 - FCM token sent to `/api/user/fcm-token` on login
+- Cart state persisted via Zustand + `AsyncStorage` (`secret_shop_cart`)
+- Razorpay: flow is `create-order → open SDK → verify signature`
 
 ---
 
-## 8. Build release APK
+## 9. Build release APK
 
 ```bash
 cd android && ./gradlew assembleRelease
