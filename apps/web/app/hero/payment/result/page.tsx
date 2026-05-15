@@ -36,7 +36,11 @@ export default function HeroPaymentResultPage() {
         );
         if (data.paid || data.state === "COMPLETED") {
           setStatus("paid");
-          setTimeout(() => router.push("/hero/dashboard"), 2500);
+          // Hard navigation to bypass any stale React Query cache so the
+          // dashboard refetches /api/hero/me and unlocks immediately.
+          setTimeout(() => {
+            window.location.href = "/hero/dashboard";
+          }, 2000);
         } else if (data.state === "FAILED") {
           setStatus("failed");
         } else {
@@ -86,7 +90,10 @@ export default function HeroPaymentResultPage() {
                 Your hero account is now active. Redirecting to your dashboard…
               </p>
             </div>
-            <Button className="w-full" onClick={() => router.push("/hero/dashboard")}>
+            <Button
+              className="w-full"
+              onClick={() => { window.location.href = "/hero/dashboard"; }}
+            >
               Go to Dashboard
             </Button>
           </CardContent>
