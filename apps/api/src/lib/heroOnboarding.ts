@@ -1,4 +1,4 @@
-import { prisma } from "../prisma";
+import { prisma } from "./prisma";
 
 /**
  * Compute expiry by adding `months` to `fromDate`. Uses calendar months
