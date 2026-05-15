@@ -10,8 +10,16 @@ import { createRedisClient } from "../lib/redis";
 let io: IOServer | null = null;
 
 export function initSocket(httpServer: HttpServer): IOServer {
+  const allowedOrigins = env.WEB_ORIGIN.split(",").map((o) => o.trim());
   io = new IOServer(httpServer, {
-    cors: { origin: env.WEB_ORIGIN, credentials: true },
+    cors: {
+      // Allow web origins AND React Native (no Origin header → origin is undefined/null)
+      origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`Socket CORS: ${origin} not allowed`));
+      },
+      credentials: true,
+    },
     transports: ["websocket", "polling"],
   });
 
@@ -118,14 +126,19 @@ export function initSocket(httpServer: HttpServer): IOServer {
   });
   nService.on("connection", (socket) => {
     const u = (socket.data as any).user;
+    console.log("[Socket] /service connection:", u ? `user=${u.id} role=${u.role}` : "guest");
     // Authenticated users join their personal room for booking notifications
-    if (u) socket.join(`user:${u.id}`);
+    if (u) {
+      socket.join(`user:${u.id}`);
+      console.log("[Socket] User joined room:", `user:${u.id}`);
+    }
 
     // Hero joins their hero room to receive booking broadcasts (auth required)
     socket.on("hero:join", (heroId: string) => {
       if (!u) return;
       if (typeof heroId === "string" && heroId.length) {
         socket.join(`hero:${heroId}`);
+        console.log("[Socket] Hero joined room:", `hero:${heroId}`);
       }
     });
 
@@ -158,5 +171,6 @@ export function emitToUser(userId: string, event: string, data: unknown) {
 /** Emit a service event to a specific user or hero via /service namespace. */
 export function emitService(room: string, event: string, data: unknown) {
   if (!io) return;
+  console.log("[Socket] Emitting to room:", room, "event:", event);
   io.of("/service").to(room).emit(event, data);
 }

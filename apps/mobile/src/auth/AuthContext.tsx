@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { storage } from "../lib/storage";
 import { disconnectAll } from "../lib/socket";
+import { registerFCMToken } from "../lib/notifications";
 
 export type Role =
   | "USER" | "HERO" | "AGENT" | "DELIVERY_BOY"
@@ -19,8 +20,9 @@ export interface CurrentUser {
 interface AuthState {
   user: CurrentUser | null;
   loading: boolean;
-  signInWithOTP: (email: string) => Promise<void>;
+  signInWithOTP: (email: string, role?: string) => Promise<{ hasPassword: boolean }>;
   verifyOTP: (email: string, otp: string) => Promise<CurrentUser>;
+  loginWithPassword: (email: string, password: string) => Promise<CurrentUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -38,29 +40,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = await storage.get("access_token");
         if (token) {
-          const me = await api.get("/api/auth/me") as unknown as CurrentUser;
-          setUser(me);
+          const me = await api.get("/api/auth/me") as any;
+          setUser(me?.user ?? me);
         }
-      } catch {
-        await storage.remove("access_token");
-        await storage.remove("refresh_token");
+      } catch (err: any) {
+        // Only clear tokens on 401 (invalid/expired token).
+        // Network errors (server unreachable) should NOT log the user out —
+        // their session is still valid, the server is just temporarily down.
+        const status = err?.status ?? err?.response?.status ?? err?.statusCode;
+        if (status === 401) {
+          await storage.remove("access_token");
+          await storage.remove("refresh_token");
+        }
+        // For network errors: keep tokens, user will retry on next launch.
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  const signInWithOTP = async (email: string) => {
-    await api.post("/api/auth/send-otp", { email });
+  const signInWithOTP = async (email: string, role?: string): Promise<{ hasPassword: boolean }> => {
+    const res = await api.post("/api/auth/send-otp", { email, ...(role ? { role } : {}) }) as any;
+    return { hasPassword: !!(res?.hasPassword) };
+  };
+
+  const loginWithPassword = async (email: string, password: string): Promise<CurrentUser> => {
+    const res = await api.post("/api/auth/login-password", { email, password }) as any;
+    await storage.set("access_token", res.accessToken);
+    if (res.refreshToken) await storage.set("refresh_token", res.refreshToken);
+    const me = await api.get("/api/auth/me") as unknown as { user: CurrentUser };
+    const currentUser = (me as any).user ?? me;
+    setUser(currentUser);
+    registerFCMToken().catch(() => {}); // Non-fatal
+    return currentUser;
   };
 
   const verifyOTP = async (email: string, otp: string): Promise<CurrentUser> => {
     const res = await api.post("/api/auth/verify-otp", { email, otp }) as any;
     await storage.set("access_token", res.accessToken);
     if (res.refreshToken) await storage.set("refresh_token", res.refreshToken);
-    const me = await api.get("/api/auth/me") as unknown as CurrentUser;
-    setUser(me);
-    return me;
+    const me = await api.get("/api/auth/me") as any;
+    const currentUser = me?.user ?? me;
+    setUser(currentUser);
+    registerFCMToken().catch(() => {}); // Non-fatal
+    return currentUser;
   };
 
   const logout = async () => {
@@ -73,13 +96,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = async () => {
     try {
-      const me = await api.get("/api/auth/me") as unknown as CurrentUser;
-      setUser(me);
+      const me = await api.get("/api/auth/me") as any;
+      setUser(me?.user ?? me);
     } catch { setUser(null); }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithOTP, verifyOTP, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, signInWithOTP, verifyOTP, loginWithPassword, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

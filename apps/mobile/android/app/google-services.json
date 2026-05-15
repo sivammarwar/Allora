@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "600329527965",
+    "project_id": "allora-4a950",
+    "storage_bucket": "allora-4a950.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:600329527965:android:ffdf03e66fdb9412b3ea74",
+        "android_client_info": {
+          "package_name": "com.alloraapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAB_O9P4dfrejcE3IGhffVunCsjvxx6Yv0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

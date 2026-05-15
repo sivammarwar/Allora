@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
@@ -23,25 +23,46 @@ interface PricingResponse {
 export default function HeroStoreScreen() {
   const { user } = useAuth();
 
-  const { data: pricingData, isLoading: lp } = useQuery<PricingResponse>({
+  const { data: pricingData, isLoading: lp, isError: eprice, refetch: refetchPricing } = useQuery<PricingResponse>({
     queryKey: ["hero-pricing"],
     queryFn: () => api.get("/api/hero/pricing") as any,
     enabled: !!user,
+    retry: false,
   });
 
-  const { data: myProducts = [], isLoading: lpr } = useQuery<HeroProduct[]>({
+  const { data: rawProducts, isLoading: lpr, isError: eprod, refetch: refetchProducts } = useQuery<HeroProduct[]>({
     queryKey: ["hero-my-products"],
     queryFn: () => api.get("/api/hero/my-products") as any,
     enabled: !!user,
+    retry: false,
   });
+  const myProducts: HeroProduct[] = Array.isArray(rawProducts) ? rawProducts : [];
 
-  const { data: me } = useQuery<any>({
+  const { data: me, isLoading: lme, refetch: refetchMe } = useQuery<any>({
     queryKey: ["hero-me"],
     queryFn: () => api.get("/api/hero/me") as any,
     enabled: !!user,
+    retry: false,
   });
 
-  if (lp || lpr) return <View style={s.center}><ActivityIndicator color={BRAND_PRIMARY} size="large" /></View>;
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchPricing(), refetchProducts(), refetchMe()]);
+    setRefreshing(false);
+  }, [refetchPricing, refetchProducts, refetchMe]);
+
+  if (lp || lpr || lme) return <View style={s.center}><ActivityIndicator color={BRAND_PRIMARY} size="large" /></View>;
+
+  if (eprice && eprod) {
+    return (
+      <View style={s.center}>
+        <Text style={s.notVerifiedIcon}>🔒</Text>
+        <Text style={s.notVerifiedTitle}>Store not available yet</Text>
+        <Text style={s.notVerifiedSub}>Your hero profile needs to be verified by an agent before you can access the store.</Text>
+      </View>
+    );
+  }
 
   const servicePricing = (pricingData?.pricing ?? []).filter(
     (p) => p.subcategory.category.type === "SERVICE"
@@ -52,7 +73,14 @@ export default function HeroStoreScreen() {
   const activeProducts = myProducts.filter((p) => p.isAvailable);
 
   return (
-    <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={s.screen}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh}
+          colors={[BRAND_PRIMARY]} tintColor={BRAND_PRIMARY} />
+      }
+    >
       {/* Summary cards */}
       <View style={s.statsRow}>
         {[
@@ -157,4 +185,7 @@ const s = StyleSheet.create({
   productPrice: { fontSize: 14, fontWeight: "800", color: BRAND_PRIMARY },
   availBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
   availText: { fontSize: 9, fontWeight: "700" },
+  notVerifiedIcon: { fontSize: 48, marginBottom: 14 },
+  notVerifiedTitle: { fontSize: 18, fontWeight: "700", color: "#111", marginBottom: 8, textAlign: "center" },
+  notVerifiedSub: { fontSize: 13, color: BRAND_MUTED, textAlign: "center", paddingHorizontal: 32, lineHeight: 20 },
 });

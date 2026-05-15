@@ -43,6 +43,11 @@ const schema = z.object({
 
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
 
+  // Firebase Cloud Messaging (FCM) for push notifications
+  FCM_PROJECT_ID: z.string().optional(),
+  FCM_PRIVATE_KEY: z.string().optional(),
+  FCM_CLIENT_EMAIL: z.string().optional(),
+
   ADMIN_EMAIL: z.string().email().default("admin@allora.app"),
   PRODUCT_MANAGER_EMAIL: z.string().email().default("pm@allora.app"),
   PAYMENT_MANAGER_EMAIL: z.string().email().default("payments@allora.app"),

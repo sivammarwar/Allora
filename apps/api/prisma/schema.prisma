@@ -185,6 +185,7 @@ model User {
   bookingRatings       BookingRating[]
   reviewReactions      ReviewReaction[]
   notifications        Notification[]
+  fcmTokens            FcmToken[]
 
   // Saved addresses
   savedAddresses    SavedAddress[]
@@ -300,6 +301,10 @@ model HeroProfile {
   isActive            Boolean          @default(true)
   isAvailable         Boolean          @default(true)
   gender              String?
+  // One-time onboarding fee tracking (paid after agent verification)
+  hasPaidOnboardingFee  Boolean        @default(false)
+  onboardingPaymentTxnId String?
+  onboardingPaidAt      DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -658,6 +663,30 @@ model Notification {
   @@index([userId, isRead, createdAt])
 }
 
+model FcmToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String
+  platform  String   // "ios" or "android"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, token])
+  @@index([userId])
+}
+
+model HeroDeclinedRequest {
+  id        String   @id @default(cuid())
+  heroId    String
+  requestId String
+  createdAt DateTime @default(now())
+
+  @@unique([heroId, requestId])
+  @@index([heroId])
+  @@index([requestId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SECRET SHOP
 // ─────────────────────────────────────────────────────────────────────────────
@@ -896,5 +925,6 @@ model SecretOrderItem {
 model GlobalSetting {
   id                 String   @id @default("global")
   userVisibilityRadiusKm Int  @default(5) // 1..10, set by ADMIN
+  heroOnboardingFee  Int      @default(999) // One-time fee charged to heroes after agent verification (in INR)
   updatedAt          DateTime @updatedAt
 }

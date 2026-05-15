@@ -8,6 +8,7 @@ import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
 import { getRazorpay } from "../lib/razorpay";
 import { emitToUser, emitService } from "../socket";
+import { sendPushNotification } from "../lib/push";
 
 const router = Router();
 
@@ -336,6 +337,26 @@ router.patch("/profile", validateBody(updateProfileSchema), async (req, res, nex
   } catch (e) { next(e); }
 });
 
+// ─── FCM Push Notifications ─────────────────────────────────────────────────────
+const fcmTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: z.enum(["ios", "android"]),
+});
+
+router.post("/fcm-token", validateBody(fcmTokenSchema), async (req, res, next) => {
+  try {
+    const { token, platform } = req.body as z.infer<typeof fcmTokenSchema>;
+    console.log("[FCM] Registering token for user:", req.user!.id, "platform:", platform);
+    const result = await prisma.fcmToken.upsert({
+      where: { userId_token: { userId: req.user!.id, token } },
+      create: { userId: req.user!.id, token, platform },
+      update: { platform },
+    });
+    console.log("[FCM] Token registered:", result.id);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 // ─── Saved addresses ──────────────────────────────────────────────────────────
 const savedAddressSchema = z.object({
   label:     z.string().trim().min(1).max(40),
@@ -585,8 +606,15 @@ router.get("/categories/:id", async (req, res, next) => {
 router.get("/categories/:id/subcategories", async (req, res, next) => {
   try {
     const parsed = locationQuery.safeParse(req.query);
-    if (!parsed.success)
-      return res.status(400).json({ error: "lat & lng required" });
+    if (!parsed.success) {
+      // No location — return all active subcategories for category browser
+      const allSubs = await prisma.subcategory.findMany({
+        where: { categoryId: req.params.id, isActive: true },
+        orderBy: { name: "asc" },
+        include: { category: { select: { id: true, name: true, type: true } } },
+      });
+      return res.json(allSubs);
+    }
 
     const heroes = await heroesInUserArea(parsed.data.lat, parsed.data.lng);
     const myHeroes = heroes.filter((h) => h.categoryIds.includes(req.params.id));
@@ -726,6 +754,8 @@ router.get("/subcategories/:id", async (req, res, next) => {
       profileImageUrl: string | null;
       distanceKm: number;
       pricing: PricingRow;
+      discountPercent: number;
+      transportChargePerKm: number;
     };
 
     // Load agent price-control entries for this subcategory, keyed by agentId
@@ -759,9 +789,13 @@ router.get("/subcategories/:id", async (req, res, next) => {
       const catCfg = h.verifiedByAgentId ? agentCatCfgMap.get(h.verifiedByAgentId) : null;
 
       let pricing: PricingRow | null;
+      let discountPercent = 0;
+      let transportChargePerKm = 0;
       if (agentPrice) {
         // Agent has overridden pricing — transport comes from category config
         const perKm = catCfg ? Number(catCfg.transportChargePerKm) : 0;
+        discountPercent = Number(agentPrice.discountPercent) || 0;
+        transportChargePerKm = perKm;
         pricing = {
           id: agentPrice.id,
           heroId: h.id,
@@ -777,6 +811,9 @@ router.get("/subcategories/:id", async (req, res, next) => {
         } as unknown as PricingRow;
       } else {
         pricing = h.pricing.find((p: PricingRow) => p.subcategoryId === sub.id) ?? null;
+        if (pricing) {
+          transportChargePerKm = Number((pricing as any).deliveryCharge2km) / 2 || 0;
+        }
       }
 
       // Heroes with neither agent pricing nor their own pricing are not bookable
@@ -792,6 +829,8 @@ router.get("/subcategories/:id", async (req, res, next) => {
         profileImageUrl: h.profileImageUrl,
         distanceKm,
         pricing,
+        discountPercent,
+        transportChargePerKm,
       });
     }
     // Sort by service charge ascending, tiebreaking by distance. This ensures
@@ -831,6 +870,8 @@ router.get("/subcategories/:id", async (req, res, next) => {
             }
           : null,
         pricing: top?.pricing ?? null,
+        discountPercent: top?.discountPercent ?? 0,
+        transportChargePerKm: top?.transportChargePerKm ?? 0,
         // Full sorted list of available providers for this service in the user's area.
         heroes: heroOptions,
       });
@@ -1464,7 +1505,7 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
       },
     });
 
-    // Broadcast to all eligible heroes
+    // Broadcast to all eligible heroes via socket
     const heroes = await prisma.heroProfile.findMany({
       where: {
         verifiedByAgentId: body.agentId,
@@ -1474,8 +1515,16 @@ router.post("/service-requests", requireAuth, requireRole("USER"), validateBody(
       },
       select: { userId: true },
     });
+    console.log("[Socket] Broadcasting to", heroes.length, "heroes");
     for (const h of heroes) {
+      console.log("[Socket] Emitting to room:", `user:${h.userId}`);
       emitService(`user:${h.userId}`, "service_request:new", request);
+      // Send push notification
+      sendPushNotification(
+        h.userId,
+        "New Service Request",
+        `${body.userName} needs ${request.subcategory.name} service. Tap to view.`
+      ).catch((e) => console.error("Push notification failed:", e));
     }
 
     res.status(201).json(request);
@@ -1577,8 +1626,16 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
         },
         select: { userId: true },
       });
+      console.log("[Bulk Request] Broadcasting to", heroes.length, "heroes for subcategory:", subcategoryId);
       for (const h of heroes) {
+        console.log("[Bulk Request] Emitting to room:", `user:${h.userId}`);
         emitService(`user:${h.userId}`, "service_request:new", request);
+        // Send push notification
+        sendPushNotification(
+          h.userId,
+          "New Service Request",
+          `${body.userName} needs ${request.subcategory.name} service. Tap to view.`
+        ).catch((e) => console.error("Push notification failed:", e));
       }
 
       created.push(request);
@@ -1675,6 +1732,20 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
 });
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
+
+// GET /api/user/my-reviews — all reviews written by the current user
+router.get("/my-reviews", async (req, res, next) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { name: true, imageUrl: true } },
+      },
+    });
+    res.json(reviews);
+  } catch (e) { next(e); }
+});
 
 // POST /api/user/booking-ratings — quick star rating after every completed booking (category-wide)
 router.post("/booking-ratings", async (req, res, next) => {

@@ -6,6 +6,7 @@ export type AuthStackParams = {
 export type UserTabParams = {
   Home: undefined;
   Bookings: undefined;
+  Categories: undefined;
   Notifications: undefined;
   Profile: undefined;
 };
@@ -18,6 +19,14 @@ export type UserStackParams = {
   Rate: { bookingId: string; heroName?: string; serviceName?: string };
   Notifications: undefined;
   Payment: { orderId: string; amount: number; description: string; type: "secret-shop" | "booking" };
+  GuestLogin: { role: "USER" | "HERO" };
+  GuestOTP: { email: string; role: "USER" | "HERO" };
+  GuestSetPassword: { popsAfterDone?: number } | undefined;
+  MyReviews: undefined;
+  SavedAddresses: undefined;
+  PaymentMethods: undefined;
+  HelpSupport: undefined;
+  PrivacyPolicy: undefined;
 };
 
 export type DeliveryTabParams = {
@@ -30,10 +39,7 @@ export type HeroTabParams = {
   HeroHome: undefined;
   HeroRequests: undefined;
   HeroSlots: undefined;
-  HeroServices: undefined;
   HeroEarnings: undefined;
-  HeroOrders: undefined;
-  HeroProducts: undefined;
   HeroStore: undefined;
   HeroProfile: undefined;
 };

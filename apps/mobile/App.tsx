@@ -13,12 +13,17 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
+import { LanguageProvider } from "./src/lib/i18n";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { registerFCMToken, onForegroundNotification } from "./src/lib/notifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
+    queries: { 
+      retry: 1, 
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
+    },
   },
 });
 
@@ -50,9 +55,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
           <AuthProvider>
             <AppInner />
           </AuthProvider>
+        </LanguageProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

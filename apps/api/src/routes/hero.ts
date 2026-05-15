@@ -3,13 +3,49 @@ import multer from "multer";
 import { z } from "zod";
 import * as turf from "@turf/turf";
 import { prisma } from "../lib/prisma";
+import { env } from "../env";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
 import { emitToUser, emitService } from "../socket";
 import { v2 as cloudinary } from "cloudinary";
+import { sendPushNotification } from "../lib/push";
+import { initiatePayment, getPaymentStatus, verifyCallbackToken } from "../lib/phonepe";
 
 const router = Router();
+
+// ─── PUBLIC: Hero onboarding payment S2S callback (no auth) ─────────────────
+// Mounted before requireAuth so PhonePe can hit it without a token.
+router.post("/onboarding-payment/callback", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"] as string | undefined;
+    if (authHeader) {
+      const valid = await verifyCallbackToken(authHeader);
+      if (!valid) return res.status(401).json({ ok: false, error: "Invalid token" });
+    }
+
+    const body = req.body as { merchantOrderId?: string; state?: string };
+    const merchantTxnId = body.merchantOrderId;
+    const state = body.state;
+    if (!merchantTxnId) return res.status(200).json({ ok: true });
+
+    const profile = await prisma.heroProfile.findFirst({
+      where: { onboardingPaymentTxnId: merchantTxnId },
+    });
+    if (profile && state === "COMPLETED" && !profile.hasPaidOnboardingFee) {
+      await prisma.heroProfile.update({
+        where: { id: profile.id },
+        data: { hasPaidOnboardingFee: true, onboardingPaidAt: new Date() },
+      });
+      emitToUser(profile.userId, "hero:onboarding_paid", { ok: true });
+    }
+
+    res.status(200).json({ ok: true });
+  } catch {
+    res.status(200).json({ ok: true });
+  }
+});
+
 router.use(requireAuth, requireRole("HERO"));
 
 // Multer configuration for file uploads
@@ -35,6 +71,12 @@ router.get("/me", async (req, res, next) => {
       },
     });
     if (profile?.isVerifiedByAgent && profile?.isActive) {
+      // Verified by agent but onboarding fee not yet paid → payment screen
+      if (!profile.hasPaidOnboardingFee) {
+        const settings = await prisma.globalSetting.findUnique({ where: { id: "global" } });
+        const feeAmount = settings?.heroOnboardingFee ?? 999;
+        return res.json({ state: "payment_required", profile, feeAmount });
+      }
       return res.json({ state: "verified", profile });
     }
 
@@ -57,6 +99,82 @@ router.get("/me", async (req, res, next) => {
       ...(profileRevoked && { revoked: true }),
     });
   } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Hero Onboarding Payment ─────────────────────────────────────────────────
+
+// POST /api/hero/onboarding-payment/initiate — start a PhonePe payment
+router.post("/onboarding-payment/initiate", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const profile = await prisma.heroProfile.findUnique({ where: { userId } });
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    if (!profile.isVerifiedByAgent) return res.status(403).json({ error: "Not verified by agent yet" });
+    if (profile.hasPaidOnboardingFee) return res.status(409).json({ error: "Onboarding fee already paid" });
+
+    const settings = await prisma.globalSetting.upsert({
+      where: { id: "global" },
+      update: {},
+      create: { id: "global", userVisibilityRadiusKm: 5, heroOnboardingFee: 999 },
+    });
+    const feeAmount = settings.heroOnboardingFee;
+
+    const merchantTxnId = `HO${profile.id.slice(-10)}${Date.now().toString().slice(-6)}`;
+    const origins = env.WEB_ORIGIN.split(",").map((o) => o.trim());
+    const webOrigin = origins.find((o) => o.startsWith("https://")) ?? origins[0];
+    const redirectUrl = `${webOrigin}/hero/payment/result?txn=${merchantTxnId}`;
+    const callbackUrl = `${env.API_PUBLIC_URL ?? env.NEXT_PUBLIC_API_URL}/api/hero/onboarding-payment/callback`;
+
+    const result = await initiatePayment({
+      merchantTransactionId: merchantTxnId,
+      merchantUserId: userId,
+      amountRupees: feeAmount,
+      redirectUrl,
+      callbackUrl,
+    });
+
+    await prisma.heroProfile.update({
+      where: { id: profile.id },
+      data: { onboardingPaymentTxnId: merchantTxnId },
+    });
+
+    res.json({ redirectUrl: result.redirectUrl, merchantTransactionId: merchantTxnId, amount: feeAmount });
+  } catch (e: any) {
+    console.error("[Hero Onboarding Payment] Initiate failed:", e?.message ?? e);
+    next(e);
+  }
+});
+
+// GET /api/hero/onboarding-payment/status/:merchantTransactionId — poll status
+router.get("/onboarding-payment/status/:merchantTransactionId", async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const { merchantTransactionId } = req.params;
+    const profile = await prisma.heroProfile.findUnique({ where: { userId } });
+    if (!profile || profile.onboardingPaymentTxnId !== merchantTransactionId) {
+      return res.status(404).json({ error: "Transaction not found" });
+    }
+
+    // Already marked paid (via callback) — return immediately
+    if (profile.hasPaidOnboardingFee) {
+      return res.json({ paid: true, state: "COMPLETED" });
+    }
+
+    // Otherwise, poll PhonePe
+    const status = await getPaymentStatus(merchantTransactionId);
+    if (status.success && !profile.hasPaidOnboardingFee) {
+      await prisma.heroProfile.update({
+        where: { id: profile.id },
+        data: { hasPaidOnboardingFee: true, onboardingPaidAt: new Date() },
+      });
+      return res.json({ paid: true, state: status.state });
+    }
+
+    res.json({ paid: false, state: status.state });
+  } catch (e: any) {
+    console.error("[Hero Onboarding Payment] Status check failed:", e?.message ?? e);
     next(e);
   }
 });
@@ -880,8 +998,15 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
       });
     });
 
-    // Notify user
+    // Notify user via socket
     emitService(`user:${request.userId}`, "service_request:accepted", updated);
+
+    // Notify user via push notification
+    sendPushNotification(
+      request.userId,
+      "Service Request Accepted",
+      `${updated.hero?.serviceName ?? "Hero"} has accepted your ${updated.subcategory?.name ?? "service"} request.`
+    ).catch((e) => console.error("Push notification failed:", e));
 
     // Get all other eligible heroes and notify them the booking is taken
     const otherHeroes = await prisma.heroProfile.findMany({
@@ -909,6 +1034,67 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
     if (e?.message === "SLOT_TAKEN") return res.status(409).json({ error: "Your slot for this time is already taken" });
     next(e);
   }
+});
+
+// POST /api/hero/service-requests/:id/decline
+router.post("/service-requests/:id/decline", async (req, res, next) => {
+  try {
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile || !profile.isVerifiedByAgent) return res.status(403).json({ error: "Not verified" });
+
+    const request = await prisma.serviceRequest.findUnique({ where: { id: req.params.id } });
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (request.status !== "PENDING") return res.status(409).json({ error: "Request already processed" });
+    if (request.agentId !== profile.verifiedByAgentId)
+      return res.status(403).json({ error: "Not in your area" });
+    if (!profile.subcategoryIds.includes(request.subcategoryId))
+      return res.status(403).json({ error: "Not your subcategory" });
+
+    // Track that this hero declined this request
+    await prisma.heroDeclinedRequest.create({
+      data: {
+        heroId: profile.id,
+        requestId: request.id,
+      },
+    });
+
+    // Check if all eligible heroes have declined
+    const totalHeroes = await prisma.heroProfile.count({
+      where: {
+        verifiedByAgentId: request.agentId,
+        isVerifiedByAgent: true,
+        isAvailable: true,
+        subcategoryIds: { has: request.subcategoryId },
+      },
+    });
+    const declinedCount = await prisma.heroDeclinedRequest.count({
+      where: { requestId: request.id },
+    });
+
+    console.log("[Decline] Total heroes:", totalHeroes, "Declined:", declinedCount);
+
+    // If all heroes have declined, update request status and notify user
+    if (declinedCount >= totalHeroes) {
+      await prisma.serviceRequest.update({
+        where: { id: request.id },
+        data: { status: "CANCELLED" },
+      });
+
+      // Notify user
+      emitService(`user:${request.userId}`, "service_request:all_declined", {
+        requestId: request.id,
+        message: "All heroes are busy. Please try a different slot on another day.",
+      });
+
+      sendPushNotification(
+        request.userId,
+        "Service Request Cancelled",
+        "All heroes are busy. Please try a different slot on another day."
+      ).catch((e) => console.error("Push notification failed:", e));
+    }
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 // POST /api/hero/service-requests/:id/complete
@@ -963,25 +1149,168 @@ router.post("/service-requests/:id/complete", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ─── Earnings ─────────────────────────────────────────────────────────────────
-router.get("/earnings", async (req, res, next) => {
+// POST /api/hero/service-requests/:id/cancel — hero cancels an accepted request
+router.post("/service-requests/:id/cancel", async (req, res, next) => {
   try {
     const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
     if (!profile) return res.status(404).json({ error: "Hero not found" });
-    const requests = await prisma.serviceRequest.findMany({
-      where: { heroId: profile.id, status: { in: ["ACCEPTED", "COMPLETED"] } },
-      include: { subcategory: { select: { name: true } } },
-      orderBy: { scheduledDate: "desc" },
+
+    const request = await prisma.serviceRequest.findFirst({
+      where: { id: req.params.id, heroId: profile.id },
     });
-    const totalEarnings = requests.reduce((sum, r) => {
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (!["PENDING", "ACCEPTED"].includes(request.status))
+      return res.status(400).json({ error: "Cannot cancel at this stage" });
+
+    const updated = await prisma.serviceRequest.update({
+      where: { id: request.id },
+      data: { status: "CANCELLED", heroId: null, slotId: null },
+    });
+
+    // Free the slot if it was locked
+    if (request.slotId) {
+      await prisma.heroSlot.update({
+        where: { id: request.slotId },
+        data: { isBooked: false },
+      }).catch(() => {});
+    }
+
+    emitService(`user:${request.userId}`, "service_request:cancelled", { requestId: request.id });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// ─── Earnings ─────────────────────────────────────────────────────────────────
+router.get("/stats", async (req, res, next) => {
+  try {
+    console.log("[Stats] Fetching stats for user:", req.user!.id);
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    console.log("[Stats] Hero profile:", profile ? `id=${profile.id} verified=${profile.isVerifiedByAgent}` : "NOT FOUND");
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+
+    // Count completed requests
+    const completedCount = await prisma.serviceRequest.count({
+      where: { heroId: profile.id, status: "COMPLETED" },
+    });
+    console.log("[Stats] Completed count:", completedCount);
+
+    // Count pending/accepted requests
+    const pendingCount = await prisma.serviceRequest.count({
+      where: { heroId: profile.id, status: { in: ["PENDING", "ACCEPTED"] } },
+    });
+    console.log("[Stats] Pending count:", pendingCount);
+
+    // Calculate average rating
+    const completedRequestsWithRatings = await prisma.serviceRequest.findMany({
+      where: { heroId: profile.id, status: "COMPLETED" },
+      include: { bookingRating: true },
+    });
+    const ratings = completedRequestsWithRatings
+      .map((r) => r.bookingRating?.rating)
+      .filter((r): r is number => r !== undefined);
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : 0;
+    console.log("[Stats] Reviews:", ratings.length, "Avg rating:", avgRating);
+
+    // Calculate total earnings
+    const completedRequests = await prisma.serviceRequest.findMany({
+      where: { heroId: profile.id, status: "COMPLETED" },
+      select: { charge: true, discountPercent: true },
+    });
+    const totalEarnings = completedRequests.reduce(
+      (sum, r) => sum + Number(r.charge) * (1 - Number(r.discountPercent ?? 0) / 100),
+      0
+    );
+    console.log("[Stats] Total earnings:", totalEarnings);
+
+    res.json({
+      completedCount,
+      pendingCount,
+      avgRating,
+      totalEarnings: Math.round(totalEarnings),
+    });
+  } catch (e) {
+    console.log("[Stats] Error:", e);
+    next(e);
+  }
+});
+
+router.get("/earnings", async (req, res, next) => {
+  try {
+    console.log("[Earnings] Fetching earnings for user:", req.user!.id);
+    const profile = await prisma.heroProfile.findUnique({ where: { userId: req.user!.id } });
+    console.log("[Earnings] Hero profile:", profile ? `id=${profile.id}` : "NOT FOUND");
+    if (!profile) return res.status(404).json({ error: "Hero not found" });
+    
+    const requests = await prisma.serviceRequest.findMany({
+      where: { heroId: profile.id, status: "COMPLETED" },
+      include: { subcategory: { select: { name: true } } },
+      orderBy: { completedAt: "desc" },
+    });
+    console.log("[Earnings] Found", requests.length, "completed requests");
+
+    // Group by date
+    const earningsByDate: Record<string, {
+      date: string;
+      total: number;
+      count: number;
+      transactions: any[];
+    }> = {};
+
+    let totalEarnings = 0;
+    for (const r of requests) {
       const base = Number(r.charge);
-      const disc = Number(r.discountPercent);
+      const disc = Number(r.discountPercent ?? 0);
       const bulkDisc = Number((r as any).bulkDiscountPercent ?? 0);
       const discounted = base * (1 - disc / 100) * (1 - bulkDisc / 100);
-      return sum + discounted + Number(r.transportCharge);
-    }, 0);
-    res.json({ totalEarnings, history: requests });
-  } catch (e) { next(e); }
+      const transport = Number(r.transportCharge ?? 0);
+      const final = discounted + transport;
+      
+      totalEarnings += final;
+      
+      const dateStr = r.completedAt ? new Date(r.completedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!earningsByDate[dateStr]) {
+        earningsByDate[dateStr] = {
+          date: dateStr,
+          total: 0,
+          count: 0,
+          transactions: [],
+        };
+      }
+      earningsByDate[dateStr].total += final;
+      earningsByDate[dateStr].count += 1;
+      earningsByDate[dateStr].transactions.push({
+        id: r.id,
+        service: r.subcategory?.name,
+        charge: base,
+        discount: disc,
+        final: Math.round(final),
+        completedAt: r.completedAt,
+      });
+    }
+
+    const dailyEarnings = Object.values(earningsByDate).sort((a, b) => b.date.localeCompare(a.date));
+    
+    console.log("[Earnings] Total earnings:", totalEarnings, "Days:", dailyEarnings.length);
+
+    res.json({
+      totalEarnings: Math.round(totalEarnings),
+      dailyEarnings,
+      allTransactions: requests.map(r => ({
+        id: r.id,
+        service: r.subcategory?.name,
+        charge: r.charge,
+        discountPercent: r.discountPercent,
+        transportCharge: r.transportCharge,
+        completedAt: r.completedAt,
+        scheduledDate: r.scheduledDate,
+      })),
+    });
+  } catch (e) {
+    console.log("[Earnings] Error:", e);
+    next(e);
+  }
 });
 
 export default router;

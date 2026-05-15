@@ -7,9 +7,10 @@ import { env } from "../env";
  *  - `pubClient` / `subClient` : socket.io adapter (created lazily by socket layer)
  */
 export const redis = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: true,
-  lazyConnect: false,
+  maxRetriesPerRequest: 0,     // fail fast — callers handle errors gracefully
+  enableReadyCheck: false,
+  lazyConnect: true,
+  retryStrategy: () => 3000,   // reconnect every 3s but don't block commands
 });
 
 redis.on("error", (err) => {

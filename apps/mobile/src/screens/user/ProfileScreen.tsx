@@ -3,18 +3,51 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   Image, ScrollView, Alert,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "../../auth/AuthContext";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
+import { useLanguage } from "../../lib/i18n";
+import type { UserStackParams } from "../../navigation/types";
+
+type NavProp = NativeStackNavigationProp<UserStackParams>;
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const navigation = useNavigation<NavProp>();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
-    Alert.alert("Log out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: logout },
+    Alert.alert(t("profile.logout"), "Are you sure?", [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("profile.logout"), style: "destructive", onPress: logout },
     ]);
   };
+
+  if (!user) {
+    return (
+      <View style={styles.guestContainer}>
+        <View style={styles.guestAvatarPlaceholder}>
+          <Text style={styles.guestAvatarIcon}>👤</Text>
+        </View>
+        <Text style={styles.guestTitle}>{t("profile.guestTitle")}</Text>
+        <Text style={styles.guestSub}>{t("profile.guestSub")}</Text>
+        <TouchableOpacity style={styles.loginBtn} onPress={() => navigation.navigate("GuestLogin", { role: "USER" })}>
+          <Text style={styles.loginBtnText}>{t("profile.signIn")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const menuItems = [
+    { icon: "📋", label: t("profile.myBookings"),     onPress: () => navigation.navigate("UserTabs", undefined as any) },
+    { icon: "⭐", label: t("profile.myReviews"),      onPress: () => navigation.navigate("MyReviews") },
+    { icon: "📍", label: t("profile.savedAddresses"), onPress: () => navigation.navigate("SavedAddresses") },
+    { icon: "💳", label: t("profile.paymentMethods"), onPress: () => navigation.navigate("PaymentMethods") },
+    { icon: "🔔", label: t("profile.notifications"),  onPress: () => navigation.navigate("Notifications") },
+    { icon: "❓", label: t("profile.helpSupport"),    onPress: () => navigation.navigate("HelpSupport") },
+    { icon: "📄", label: t("profile.privacyPolicy"),  onPress: () => navigation.navigate("PrivacyPolicy") },
+  ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -39,16 +72,8 @@ export default function ProfileScreen() {
 
       {/* Menu items */}
       <View style={styles.menu}>
-        {[
-          { icon: "📋", label: "My Bookings", onPress: () => {} },
-          { icon: "⭐", label: "My Reviews", onPress: () => {} },
-          { icon: "📍", label: "Saved Addresses", onPress: () => {} },
-          { icon: "💳", label: "Payment Methods", onPress: () => {} },
-          { icon: "🔔", label: "Notifications", onPress: () => {} },
-          { icon: "❓", label: "Help & Support", onPress: () => {} },
-          { icon: "📄", label: "Privacy Policy", onPress: () => {} },
-        ].map(({ icon, label, onPress }) => (
-          <TouchableOpacity key={label} style={styles.menuRow} onPress={onPress}>
+        {menuItems.map(({ icon, label, onPress }) => (
+          <TouchableOpacity key={label} style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
             <Text style={styles.menuIcon}>{icon}</Text>
             <Text style={styles.menuLabel}>{label}</Text>
             <Text style={styles.menuChevron}>›</Text>
@@ -57,10 +82,10 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log out</Text>
+        <Text style={styles.logoutText}>{t("profile.logout")}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Allora v1.0.0</Text>
+      <Text style={styles.version}>{t("profile.version")}</Text>
     </ScrollView>
   );
 }
@@ -99,4 +124,17 @@ const styles = StyleSheet.create({
   },
   logoutText: { fontSize: 15, fontWeight: "700", color: "#ef4444" },
   version: { textAlign: "center", color: BRAND_MUTED, fontSize: 11, marginTop: 20 },
+  guestContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: "#f9fafb" },
+  guestAvatarPlaceholder: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: "#e5e7eb", alignItems: "center", justifyContent: "center", marginBottom: 20,
+  },
+  guestAvatarIcon: { fontSize: 38 },
+  guestTitle: { fontSize: 20, fontWeight: "700", color: "#111", marginBottom: 8 },
+  guestSub: { fontSize: 14, color: BRAND_MUTED, textAlign: "center", marginBottom: 28, lineHeight: 20 },
+  loginBtn: {
+    height: 50, paddingHorizontal: 36, borderRadius: 14,
+    backgroundColor: BRAND_PRIMARY, alignItems: "center", justifyContent: "center",
+  },
+  loginBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });

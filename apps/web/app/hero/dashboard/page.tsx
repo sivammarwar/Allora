@@ -25,9 +25,10 @@ interface Subcategory {
 }
 
 interface MeResponse {
-  state: "needs_request" | "pending" | "verified";
+  state: "needs_request" | "pending" | "verified" | "payment_required";
   request?: { id: string; status: string; details: any; createdAt: string };
   profile?: any;
+  feeAmount?: number;
 }
 
 interface FormState {
@@ -83,6 +84,10 @@ export default function HeroDashboardPage() {
 
   if (!data || data.state === "needs_request") {
     return <HeroRegisterForm onSubmitted={() => qc.invalidateQueries({ queryKey: ["hero", "me"] })} />;
+  }
+
+  if (data.state === "payment_required") {
+    return <HeroOnboardingPayment feeAmount={data.feeAmount ?? 999} />;
   }
 
   if (data.state === "pending") {
@@ -636,6 +641,74 @@ function HeroRegisterForm({ onSubmitted }: { onSubmitted: () => void }) {
               Submit for verification
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Hero Onboarding Payment ─────────────────────────────────────────────────
+function HeroOnboardingPayment({ feeAmount }: { feeAmount: number }) {
+  const initiate = useMutation<{ redirectUrl: string; merchantTransactionId: string; amount: number }>({
+    mutationFn: () => api.post("/api/hero/onboarding-payment/initiate"),
+    onSuccess: (data) => {
+      try { sessionStorage.setItem("allora_hero_pending_txn", data.merchantTransactionId); } catch {}
+      window.location.href = data.redirectUrl;
+    },
+    onError: (e) => {
+      toast.error(e instanceof ApiError ? e.message : "Failed to start payment");
+    },
+  });
+
+  return (
+    <div className="page-enter max-w-xl mx-auto">
+      <Card>
+        <CardContent className="py-10 px-6 space-y-6">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-primary/10 text-brand-primary">
+              <ShieldCheck size={26} />
+            </div>
+            <h1 className="font-heading text-2xl text-brand-text">You&apos;re verified!</h1>
+            <p className="text-brand-textMuted text-sm">
+              Complete your one-time onboarding fee to activate your hero dashboard
+              and start receiving service requests.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-brand-border bg-brand-surface p-6 text-center">
+            <p className="text-xs uppercase tracking-wide text-brand-textMuted font-semibold">
+              Onboarding fee
+            </p>
+            <p className="text-5xl font-extrabold text-brand-primary my-2">
+              ₹{feeAmount}
+            </p>
+            <p className="text-xs text-brand-textMuted">
+              One-time payment · Non-refundable
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-brand-text">What you get:</p>
+            <ul className="text-sm text-brand-textMuted space-y-1.5">
+              <li>✓ Access to the full hero dashboard</li>
+              <li>✓ Receive real-time service requests</li>
+              <li>✓ Earnings tracking & analytics</li>
+              <li>✓ Slot management & availability</li>
+            </ul>
+          </div>
+
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => initiate.mutate()}
+            loading={initiate.isPending}
+          >
+            Pay ₹{feeAmount} via PhonePe
+          </Button>
+
+          <p className="text-xs text-center text-brand-textMuted">
+            You&apos;ll be redirected to PhonePe to complete the payment securely.
+          </p>
         </CardContent>
       </Card>
     </div>

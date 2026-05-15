@@ -315,16 +315,20 @@ router.get("/settings", async (_req, res, next) => {
     const s = await prisma.globalSetting.upsert({
       where: { id: "global" },
       update: {},
-      create: { id: "global", userVisibilityRadiusKm: 5 },
+      create: { id: "global", userVisibilityRadiusKm: 5, heroOnboardingFee: 999 },
     });
-    res.json({ userVisibilityRadiusKm: s.userVisibilityRadiusKm });
+    res.json({
+      userVisibilityRadiusKm: s.userVisibilityRadiusKm,
+      heroOnboardingFee: s.heroOnboardingFee,
+    });
   } catch (e) {
     next(e);
   }
 });
 
 const settingsSchema = z.object({
-  userVisibilityRadiusKm: z.number().int().min(1).max(10),
+  userVisibilityRadiusKm: z.number().int().min(1).max(10).optional(),
+  heroOnboardingFee: z.number().int().min(0).max(100000).optional(),
 });
 
 router.put(
@@ -332,13 +336,23 @@ router.put(
   validateBody(settingsSchema),
   async (req, res, next) => {
     try {
-      const { userVisibilityRadiusKm } = req.body as z.infer<typeof settingsSchema>;
+      const body = req.body as z.infer<typeof settingsSchema>;
+      const updateData: Record<string, number> = {};
+      if (typeof body.userVisibilityRadiusKm === "number") updateData.userVisibilityRadiusKm = body.userVisibilityRadiusKm;
+      if (typeof body.heroOnboardingFee === "number") updateData.heroOnboardingFee = body.heroOnboardingFee;
       const s = await prisma.globalSetting.upsert({
         where: { id: "global" },
-        update: { userVisibilityRadiusKm },
-        create: { id: "global", userVisibilityRadiusKm },
+        update: updateData,
+        create: {
+          id: "global",
+          userVisibilityRadiusKm: body.userVisibilityRadiusKm ?? 5,
+          heroOnboardingFee: body.heroOnboardingFee ?? 999,
+        },
       });
-      res.json({ userVisibilityRadiusKm: s.userVisibilityRadiusKm });
+      res.json({
+        userVisibilityRadiusKm: s.userVisibilityRadiusKm,
+        heroOnboardingFee: s.heroOnboardingFee,
+      });
     } catch (e) {
       next(e);
     }

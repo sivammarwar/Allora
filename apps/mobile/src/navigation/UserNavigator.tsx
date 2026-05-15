@@ -1,9 +1,11 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import HomeScreen from "../screens/user/HomeScreen";
 import BookingsScreen from "../screens/user/BookingsScreen";
+import CategoriesScreen from "../screens/user/CategoriesScreen";
 import ProfileScreen from "../screens/user/ProfileScreen";
 import CategoryDetailScreen from "../screens/user/CategoryDetailScreen";
 import SubcategoryDetailScreen from "../screens/user/SubcategoryDetailScreen";
@@ -11,21 +13,31 @@ import OrderDetailScreen from "../screens/user/OrderDetailScreen";
 import NotificationsScreen from "../screens/user/NotificationsScreen";
 import RatingScreen from "../screens/user/RatingScreen";
 import PaymentScreen from "../screens/shared/PaymentScreen";
+import GuestLoginScreen from "../screens/auth/GuestLoginScreen";
+import GuestOTPScreen from "../screens/auth/GuestOTPScreen";
+import GuestSetPasswordScreen from "../screens/auth/GuestSetPasswordScreen";
+import MyReviewsScreen from "../screens/user/MyReviewsScreen";
+import SavedAddressesScreen from "../screens/user/SavedAddressesScreen";
+import PaymentMethodsScreen from "../screens/user/PaymentMethodsScreen";
+import HelpSupportScreen from "../screens/user/HelpSupportScreen";
+import PrivacyPolicyScreen from "../screens/user/PrivacyPolicyScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { UserTabParams, UserStackParams } from "./types";
 
 const Tab = createBottomTabNavigator<UserTabParams>();
 const Stack = createNativeStackNavigator<UserStackParams>();
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return (
-    <View style={{ opacity: focused ? 1 : 0.5 }}>
-      <Text style={{ fontSize: 22 }}>{emoji}</Text>
-    </View>
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+function tabIcon(active: IoniconName, inactive: IoniconName) {
+  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+    <Ionicons name={focused ? active : inactive} size={size} color={color} />
   );
 }
 
 function UserTabs() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
   return (
     <Tab.Navigator
       screenOptions={{
@@ -34,9 +46,11 @@ function UserTabs() {
         tabBarInactiveTintColor: BRAND_MUTED,
         tabBarStyle: {
           backgroundColor: "#fff",
-          borderTopColor: "#f3f4f6",
-          height: 82,
-          paddingBottom: 20,
+          borderTopColor: "#f0f0f0",
+          borderTopWidth: 1,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom || 8,
+          paddingTop: 8,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
       }}
@@ -44,22 +58,43 @@ function UserTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: "Home", tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
+        options={{
+          tabBarLabel: "Home",
+          tabBarIcon: tabIcon("home", "home-outline"),
+        }}
       />
       <Tab.Screen
         name="Bookings"
         component={BookingsScreen}
-        options={{ tabBarLabel: "Bookings", tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} /> }}
+        options={{
+          tabBarLabel: "Bookings",
+          tabBarIcon: tabIcon("calendar", "calendar-outline"),
+        }}
+      />
+      <Tab.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{
+          tabBarLabel: "Categories",
+          tabBarIcon: tabIcon("grid", "grid-outline"),
+        }}
       />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: "Notifications", tabBarLabel: "Alerts", tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} /> }}
+        options={{
+          title: "Notifications",
+          tabBarLabel: "Alerts",
+          tabBarIcon: tabIcon("notifications", "notifications-outline"),
+        }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: "Profile", tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} /> }}
+        options={{
+          tabBarLabel: "Profile",
+          tabBarIcon: tabIcon("person", "person-outline"),
+        }}
       />
     </Tab.Navigator>
   );
@@ -98,6 +133,46 @@ export default function UserNavigator() {
         name="Payment"
         component={PaymentScreen}
         options={{ title: "Pay", headerTintColor: BRAND_PRIMARY, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="GuestLogin"
+        component={GuestLoginScreen}
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="GuestOTP"
+        component={GuestOTPScreen}
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="GuestSetPassword"
+        component={GuestSetPasswordScreen}
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="MyReviews"
+        component={MyReviewsScreen}
+        options={{ title: "My Reviews", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="SavedAddresses"
+        component={SavedAddressesScreen}
+        options={{ title: "Saved Addresses", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsScreen}
+        options={{ title: "Payment Methods", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="HelpSupport"
+        component={HelpSupportScreen}
+        options={{ title: "Help & Support", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: "Privacy Policy", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>
   );

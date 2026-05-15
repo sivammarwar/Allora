@@ -19,16 +19,22 @@ export function generateOtp(): string {
  * Otherwise increments the counter (TTL-bound) and returns nothing.
  */
 export async function assertOtpRateLimit(email: string): Promise<void> {
-  const key = `otp:rate:${email.toLowerCase()}`;
-  const count = await redis.incr(key);
-  if (count === 1) await redis.expire(key, RATE_WINDOW_SEC);
-  if (count > RATE_LIMIT) {
-    const ttl = await redis.ttl(key);
-    const err = new Error(
-      `Too many OTP requests. Try again in ${Math.max(ttl, 1)}s.`
-    );
-    (err as any).status = 429;
-    throw err;
+  try {
+    const key = `otp:rate:${email.toLowerCase()}`;
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, RATE_WINDOW_SEC);
+    if (count > RATE_LIMIT) {
+      const ttl = await redis.ttl(key);
+      const err = new Error(
+        `Too many OTP requests. Try again in ${Math.max(ttl, 1)}s.`
+      );
+      (err as any).status = 429;
+      throw err;
+    }
+  } catch (e: any) {
+    // If Redis is unavailable (e.g. local dev), skip rate limiting
+    if (e.status === 429) throw e;
+    console.warn("[otp] Redis unavailable, skipping rate limit:", e.message);
   }
 }
 

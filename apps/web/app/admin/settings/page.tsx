@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface GlobalSettings {
   userVisibilityRadiusKm: number;
+  heroOnboardingFee: number;
 }
 
 export default function AdminSettingsPage() {
@@ -19,13 +20,15 @@ export default function AdminSettingsPage() {
   });
 
   const [radius, setRadius] = useState<number>(5);
+  const [heroFee, setHeroFee] = useState<number>(999);
 
   useEffect(() => {
     if (data?.userVisibilityRadiusKm) setRadius(data.userVisibilityRadiusKm);
+    if (typeof data?.heroOnboardingFee === "number") setHeroFee(data.heroOnboardingFee);
   }, [data]);
 
   const save = useMutation({
-    mutationFn: (input: GlobalSettings) => api.put("/api/admin/settings", input),
+    mutationFn: (input: Partial<GlobalSettings>) => api.put("/api/admin/settings", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "settings"] });
       toast.success("Settings saved");
@@ -73,6 +76,40 @@ export default function AdminSettingsPage() {
               onClick={() => save.mutate({ userVisibilityRadiusKm: radius })}
               loading={save.isPending}
               disabled={isLoading || radius === data?.userVisibilityRadiusKm}
+            >
+              Save
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Hero onboarding fee</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-brand-textMuted">
+            One-time payment a hero must make after agent verification before
+            accessing their dashboard. Charged via PhonePe.
+          </p>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-medium text-brand-text">₹</span>
+            <input
+              type="number"
+              min={0}
+              max={100000}
+              step={1}
+              value={heroFee}
+              onChange={(e) => setHeroFee(Number(e.target.value))}
+              className="flex-1 px-4 py-2 border rounded-md font-mono text-lg text-brand-text"
+              disabled={isLoading}
+            />
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={() => save.mutate({ heroOnboardingFee: heroFee })}
+              loading={save.isPending}
+              disabled={isLoading || heroFee === data?.heroOnboardingFee || heroFee < 0}
             >
               Save
             </Button>

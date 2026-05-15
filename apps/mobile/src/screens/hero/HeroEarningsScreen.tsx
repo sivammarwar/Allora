@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator, FlatList,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, FlatList, RefreshControl,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
@@ -33,28 +33,40 @@ const COLORS = [BRAND_PRIMARY, "#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#14b
 export default function HeroEarningsScreen() {
   const { user } = useAuth();
 
-  const { data, isLoading } = useQuery<{ totalEarnings: number; history: HistoryEntry[] }>({
+  const { data, isLoading, refetch } = useQuery<{
+    totalEarnings: number;
+    dailyEarnings: { date: string; total: number; count: number; transactions: any[] }[];
+    allTransactions: any[];
+  }>({
     queryKey: ["hero-earnings"],
     queryFn: () => api.get("/api/hero/earnings") as any,
     enabled: !!user,
   });
 
-  const history = data?.history ?? [];
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  const dailyEarnings = data?.dailyEarnings ?? [];
+  const allTransactions = data?.allTransactions ?? [];
 
   const stats = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay());
     let month = 0, week = 0;
-    for (const e of history) {
-      const d = new Date(e.scheduledDate);
-      const amt = earned(e);
-      if (d >= startOfMonth) month += amt;
-      if (d >= startOfWeek)  week  += amt;
+    for (const day of dailyEarnings) {
+      const d = new Date(day.date);
+      if (d >= startOfMonth) month += day.total;
+      if (d >= startOfWeek)  week  += day.total;
     }
-    const avg = history.length ? (data?.totalEarnings ?? 0) / history.length : 0;
-    return { month, week, avg };
-  }, [history, data?.totalEarnings]);
+    const totalJobs = dailyEarnings.reduce((sum, d) => sum + d.count, 0);
+    const avg = totalJobs ? (data?.totalEarnings ?? 0) / totalJobs : 0;
+    return { month, week, avg, totalJobs };
+  }, [dailyEarnings, data?.totalEarnings]);
 
   // Last 7 days bar data
   const barData = useMemo(() => {
@@ -66,40 +78,46 @@ export default function HeroEarningsScreen() {
         amount: 0,
       };
     });
-    for (const e of history) {
-      const iso = new Date(e.scheduledDate).toISOString().split("T")[0];
-      const day = days.find((d) => d.date === iso);
-      if (day) day.amount += earned(e);
+    for (const day of dailyEarnings) {
+      const dayData = days.find((d) => d.date === day.date);
+      if (dayData) dayData.amount = day.total;
     }
     return days;
-  }, [history]);
+  }, [dailyEarnings]);
 
   const maxBar = Math.max(...barData.map((d) => d.amount), 1);
 
   // By service breakdown
   const byService = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of history) {
-      const k = e.subcategory.name;
-      map.set(k, (map.get(k) ?? 0) + earned(e));
+    for (const tx of allTransactions) {
+      const k = tx.service;
+      map.set(k, (map.get(k) ?? 0) + (tx.final || tx.charge));
     }
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value: Math.round(value) }))
       .sort((a, b) => b.value - a.value);
-  }, [history]);
+  }, [allTransactions]);
 
   if (isLoading) {
     return <View style={styles.center}><ActivityIndicator color={BRAND_PRIMARY} size="large" /></View>;
   }
 
   return (
-    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.screen}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh}
+          colors={[BRAND_PRIMARY]} tintColor={BRAND_PRIMARY} />
+      }
+    >
 
       {/* Total earnings banner */}
       <View style={styles.totalBanner}>
         <Text style={styles.totalLabel}>Total Earnings</Text>
         <Text style={styles.totalAmt}>₹{(data?.totalEarnings ?? 0).toFixed(0)}</Text>
-        <Text style={styles.totalSub}>{history.length} services completed</Text>
+        <Text style={styles.totalSub}>{stats.totalJobs} services completed</Text>
       </View>
 
       {/* Stat cards */}
@@ -108,7 +126,7 @@ export default function HeroEarningsScreen() {
           { label: "This Month", value: `₹${stats.month.toFixed(0)}`, icon: "📅" },
           { label: "This Week",  value: `₹${stats.week.toFixed(0)}`,  icon: "📈" },
           { label: "Avg / Job",  value: `₹${stats.avg.toFixed(0)}`,   icon: "⭐" },
-          { label: "Total Jobs", value: String(history.length),        icon: "💼" },
+          { label: "Total Jobs", value: String(stats.totalJobs),        icon: "💼" },
         ].map(({ label, value, icon }) => (
           <View key={label} style={styles.statCard}>
             <Text style={styles.statIcon}>{icon}</Text>
@@ -160,29 +178,31 @@ export default function HeroEarningsScreen() {
       )}
 
       {/* Transaction history */}
-      {history.length > 0 && (
+      {allTransactions.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Recent Transactions</Text>
-          {history.slice(0, 20).map((e) => (
+          {allTransactions.slice(0, 20).map((e: any) => (
             <View key={e.id} style={styles.txRow}>
               <View style={styles.txIcon}>
                 <Text style={styles.txIconText}>₹</Text>
               </View>
               <View style={styles.txInfo}>
-                <Text style={styles.txService}>{e.subcategory.name}</Text>
+                <Text style={styles.txService}>{e.service}</Text>
                 <Text style={styles.txDate}>
-                  {new Date(e.scheduledDate).toLocaleDateString("en-IN", {
+                  {e.completedAt ? new Date(e.completedAt).toLocaleDateString("en-IN", {
                     day: "numeric", month: "short", year: "numeric",
-                  })} · {fmtHour(e.scheduledHour)}
+                  }) : new Date(e.scheduledDate).toLocaleDateString("en-IN", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })}
                 </Text>
               </View>
-              <Text style={styles.txAmt}>+₹{earned(e).toFixed(0)}</Text>
+              <Text style={styles.txAmt}>+₹{e.final || Math.round(e.charge)}</Text>
             </View>
           ))}
         </View>
       )}
 
-      {history.length === 0 && (
+      {allTransactions.length === 0 && (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>📊</Text>
           <Text style={styles.emptyText}>No earnings yet</Text>

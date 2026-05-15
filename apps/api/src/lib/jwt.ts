@@ -35,7 +35,11 @@ export async function signRefreshToken(userId: string) {
     env.JWT_REFRESH_SECRET,
     { expiresIn: REFRESH_TTL_SEC }
   );
-  await redis.set(refreshKey(userId, jti), "1", "EX", REFRESH_TTL_SEC);
+  try {
+    await redis.set(refreshKey(userId, jti), "1", "EX", REFRESH_TTL_SEC);
+  } catch {
+    console.warn("[jwt] Redis unavailable, refresh token not stored in cache");
+  }
   return token;
 }
 
@@ -45,20 +49,27 @@ export function verifyAccessToken(token: string): AccessPayload {
 
 export async function verifyRefreshToken(token: string): Promise<RefreshPayload> {
   const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshPayload;
-  const exists = await redis.get(refreshKey(decoded.sub, decoded.jti));
-  if (!exists) throw new Error("Refresh token revoked");
+  try {
+    const exists = await redis.get(refreshKey(decoded.sub, decoded.jti));
+    if (exists === null) throw new Error("Refresh token revoked");
+  } catch (e: any) {
+    if (e.message === "Refresh token revoked") throw e;
+    console.warn("[jwt] Redis unavailable, skipping revocation check");
+  }
   return decoded;
 }
 
 export async function revokeRefreshToken(userId: string, jti: string) {
-  await redis.del(refreshKey(userId, jti));
+  try { await redis.del(refreshKey(userId, jti)); } catch {}
 }
 
 export async function revokeAllRefreshTokens(userId: string) {
-  const stream = redis.scanStream({ match: `rt:${userId}:*` });
-  for await (const keys of stream) {
-    if ((keys as string[]).length) await redis.del(...(keys as string[]));
-  }
+  try {
+    const stream = redis.scanStream({ match: `rt:${userId}:*` });
+    for await (const keys of stream) {
+      if ((keys as string[]).length) await redis.del(...(keys as string[]));
+    }
+  } catch {}
 }
 
 export const tokenTTL = { access: ACCESS_TTL_SEC, refresh: REFRESH_TTL_SEC };

@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView,
-  Switch, ActivityIndicator, Image,
+  Switch, ActivityIndicator, Image, RefreshControl,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth/AuthContext";
@@ -14,17 +14,24 @@ export default function HeroProfileScreen() {
   const { user, logout } = useAuth();
   const qc = useQueryClient();
 
-  const { data: me, isLoading } = useQuery<any>({
+  const { data: me, isLoading, refetch: refetchMe } = useQuery<any>({
     queryKey: ["hero-me"],
     queryFn: () => api.get("/api/hero/me") as any,
     enabled: !!user,
   });
 
-  const { data: pricingData } = useQuery<any>({
+  const { data: pricingData, refetch: refetchPricing } = useQuery<any>({
     queryKey: ["hero-pricing"],
     queryFn: () => api.get("/api/hero/pricing") as any,
     enabled: me?.state === "verified",
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMe(), refetchPricing()]);
+    setRefreshing(false);
+  }, [refetchMe, refetchPricing]);
 
   const toggleAvail = useMutation({
     mutationFn: (v: boolean) => api.put("/api/hero/availability", { isAvailable: v }) as any,
@@ -59,7 +66,14 @@ export default function HeroProfileScreen() {
   }, {});
 
   return (
-    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.screen}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh}
+          colors={[BRAND_PRIMARY]} tintColor={BRAND_PRIMARY} />
+      }
+    >
 
       {/* Identity */}
       <View style={styles.header}>

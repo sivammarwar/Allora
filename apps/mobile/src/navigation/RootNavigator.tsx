@@ -1,17 +1,12 @@
 import React from "react";
 import { View, ActivityIndicator } from "react-native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../auth/AuthContext";
-import AuthNavigator from "./AuthNavigator";
 import UserNavigator from "./UserNavigator";
 import HeroNavigator from "./HeroNavigator";
 import AgentNavigator from "./AgentNavigator";
 import DeliveryNavigator from "./DeliveryNavigator";
 import SecretShopNavigator from "./SecretShopNavigator";
 import { BRAND_PRIMARY } from "../lib/config";
-import type { RootStackParams } from "./types";
-
-const Stack = createNativeStackNavigator<RootStackParams>();
 
 export default function RootNavigator() {
   const { user, loading } = useAuth();
@@ -24,15 +19,13 @@ export default function RootNavigator() {
     );
   }
 
-  if (!user) {
-    return <AuthNavigator />;
-  }
+  // Staff roles with dedicated dashboards — require login
+  if (user?.role === "HERO") return <HeroNavigator />;
+  if (user?.role === "AGENT") return <AgentNavigator />;
+  if (user?.role === "DELIVERY_BOY") return <DeliveryNavigator />;
+  if (user?.role === "SECRET_SHOP") return <SecretShopNavigator />;
 
-  if (user.role === "HERO") return <HeroNavigator />;
-  if (user.role === "AGENT") return <AgentNavigator />;
-  if (user.role === "DELIVERY_BOY") return <DeliveryNavigator />;
-  if (user.role === "SECRET_SHOP") return <SecretShopNavigator />;
-
-  // USER, ADMIN, etc.
+  // Guests (no user) and regular USERs both get the browseable home screen.
+  // Booking/profile actions inside UserNavigator gate login when needed.
   return <UserNavigator />;
 }

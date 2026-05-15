@@ -23,12 +23,19 @@ export async function requestPushPermission(): Promise<boolean> {
 export async function registerFCMToken(): Promise<void> {
   try {
     const granted = await requestPushPermission();
-    if (!granted) return;
+    console.log("[FCM] Permission granted:", granted);
+    if (!granted) {
+      console.log("[FCM] Permission not granted, skipping token registration");
+      return;
+    }
     const token = await messaging().getToken();
+    console.log("[FCM] Token obtained:", token ? "YES" : "NO");
     if (token) {
       await api.post("/api/user/fcm-token", { token, platform: Platform.OS });
+      console.log("[FCM] Token registered successfully");
     }
-  } catch {
+  } catch (error) {
+    console.log("[FCM] Registration error:", error);
     // Non-fatal — don't block app startup
   }
 }
