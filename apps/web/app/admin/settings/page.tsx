@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface GlobalSettings {
   userVisibilityRadiusKm: number;
   heroOnboardingFee: number;
+  heroOnboardingValidityMonths: number;
 }
 
 export default function AdminSettingsPage() {
@@ -21,10 +22,12 @@ export default function AdminSettingsPage() {
 
   const [radius, setRadius] = useState<number>(5);
   const [heroFee, setHeroFee] = useState<number>(999);
+  const [heroValidity, setHeroValidity] = useState<number>(12);
 
   useEffect(() => {
     if (data?.userVisibilityRadiusKm) setRadius(data.userVisibilityRadiusKm);
     if (typeof data?.heroOnboardingFee === "number") setHeroFee(data.heroOnboardingFee);
+    if (typeof data?.heroOnboardingValidityMonths === "number") setHeroValidity(data.heroOnboardingValidityMonths);
   }, [data]);
 
   const save = useMutation({
@@ -89,8 +92,8 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-brand-textMuted">
-            One-time payment a hero must make after agent verification before
-            accessing their dashboard. Charged via PhonePe.
+            Payment a hero must make after agent verification before accessing
+            their dashboard. Charged via PhonePe.
           </p>
           <div className="flex items-center gap-3">
             <span className="text-2xl font-medium text-brand-text">₹</span>
@@ -110,6 +113,46 @@ export default function AdminSettingsPage() {
               onClick={() => save.mutate({ heroOnboardingFee: heroFee })}
               loading={save.isPending}
               disabled={isLoading || heroFee === data?.heroOnboardingFee || heroFee < 0}
+            >
+              Save
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Hero onboarding validity (months)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-brand-textMuted">
+            How many months the onboarding fee covers. The validity is
+            <strong> snapshotted at the moment of payment</strong> for each
+            hero — changing this value only affects heroes who pay <em>after</em>
+            the change. Existing paid heroes keep their original expiry.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={120}
+              step={1}
+              value={heroValidity}
+              onChange={(e) => setHeroValidity(Number(e.target.value))}
+              className="flex-1 px-4 py-2 border rounded-md font-mono text-lg text-brand-text"
+              disabled={isLoading}
+            />
+            <span className="text-sm text-brand-textMuted font-medium w-20">months</span>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={() => save.mutate({ heroOnboardingValidityMonths: heroValidity })}
+              loading={save.isPending}
+              disabled={
+                isLoading ||
+                heroValidity === data?.heroOnboardingValidityMonths ||
+                heroValidity < 1
+              }
             >
               Save
             </Button>

@@ -14,6 +14,43 @@ import { initiatePayment, getPaymentStatus, verifyCallbackToken } from "../lib/p
 
 const router = Router();
 
+/**
+ * Compute expiry by adding `months` to `fromDate`. Uses calendar months
+ * (e.g. Feb 28 + 1 month → Mar 28). If the resulting day overflows (e.g.
+ * Jan 31 + 1 month → Mar 3), JS Date handles it; we accept that behavior.
+ */
+function addMonths(fromDate: Date, months: number): Date {
+  const d = new Date(fromDate);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+/**
+ * Mark a hero as having paid the onboarding fee. Snapshots the CURRENT
+ * fee + validity from GlobalSetting at this moment, so future admin
+ * changes do not retroactively alter this hero's expiry.
+ */
+async function markHeroOnboardingPaid(heroProfileId: string) {
+  const settings = await prisma.globalSetting.upsert({
+    where: { id: "global" },
+    update: {},
+    create: { id: "global" },
+  });
+  const paidAt = new Date();
+  const validityMonths = settings.heroOnboardingValidityMonths;
+  const expiresAt = addMonths(paidAt, validityMonths);
+  return prisma.heroProfile.update({
+    where: { id: heroProfileId },
+    data: {
+      hasPaidOnboardingFee: true,
+      onboardingPaidAt: paidAt,
+      onboardingExpiresAt: expiresAt,
+      onboardingFeePaid: settings.heroOnboardingFee,
+      onboardingValidityMonths: validityMonths,
+    },
+  });
+}
+
 // ─── PUBLIC: Hero onboarding payment S2S callback (no auth) ─────────────────
 // Mounted before requireAuth so PhonePe can hit it without a token.
 router.post("/onboarding-payment/callback", async (req, res) => {
@@ -33,10 +70,7 @@ router.post("/onboarding-payment/callback", async (req, res) => {
       where: { onboardingPaymentTxnId: merchantTxnId },
     });
     if (profile && state === "COMPLETED" && !profile.hasPaidOnboardingFee) {
-      await prisma.heroProfile.update({
-        where: { id: profile.id },
-        data: { hasPaidOnboardingFee: true, onboardingPaidAt: new Date() },
-      });
+      await markHeroOnboardingPaid(profile.id);
       emitToUser(profile.userId, "hero:onboarding_paid", { ok: true });
     }
 
@@ -71,11 +105,26 @@ router.get("/me", async (req, res, next) => {
       },
     });
     if (profile?.isVerifiedByAgent && profile?.isActive) {
-      // Verified by agent but onboarding fee not yet paid → payment screen
-      if (!profile.hasPaidOnboardingFee) {
+      // Determine if the hero needs (re-)payment:
+      //   1. Never paid, OR
+      //   2. Their snapshot expiry has passed.
+      const now = new Date();
+      const expired =
+        profile.hasPaidOnboardingFee &&
+        profile.onboardingExpiresAt !== null &&
+        profile.onboardingExpiresAt.getTime() < now.getTime();
+
+      if (!profile.hasPaidOnboardingFee || expired) {
         const settings = await prisma.globalSetting.findUnique({ where: { id: "global" } });
         const feeAmount = settings?.heroOnboardingFee ?? 999;
-        return res.json({ state: "payment_required", profile, feeAmount });
+        const validityMonths = settings?.heroOnboardingValidityMonths ?? 12;
+        return res.json({
+          state: "payment_required",
+          profile,
+          feeAmount,
+          validityMonths,
+          expired,
+        });
       }
       return res.json({ state: "verified", profile });
     }
@@ -112,12 +161,20 @@ router.post("/onboarding-payment/initiate", async (req, res, next) => {
     const profile = await prisma.heroProfile.findUnique({ where: { userId } });
     if (!profile) return res.status(404).json({ error: "Profile not found" });
     if (!profile.isVerifiedByAgent) return res.status(403).json({ error: "Not verified by agent yet" });
-    if (profile.hasPaidOnboardingFee) return res.status(409).json({ error: "Onboarding fee already paid" });
+
+    // Allow new payment if (a) never paid, OR (b) previous validity expired.
+    const now = new Date();
+    const isExpired =
+      profile.onboardingExpiresAt !== null &&
+      profile.onboardingExpiresAt.getTime() < now.getTime();
+    if (profile.hasPaidOnboardingFee && !isExpired) {
+      return res.status(409).json({ error: "Onboarding fee already paid and active" });
+    }
 
     const settings = await prisma.globalSetting.upsert({
       where: { id: "global" },
       update: {},
-      create: { id: "global", userVisibilityRadiusKm: 5, heroOnboardingFee: 999 },
+      create: { id: "global" },
     });
     const feeAmount = settings.heroOnboardingFee;
 
@@ -135,12 +192,21 @@ router.post("/onboarding-payment/initiate", async (req, res, next) => {
       callbackUrl,
     });
 
+    // Reset payment state for a fresh attempt (renewal or first-time).
     await prisma.heroProfile.update({
       where: { id: profile.id },
-      data: { onboardingPaymentTxnId: merchantTxnId },
+      data: {
+        onboardingPaymentTxnId: merchantTxnId,
+        hasPaidOnboardingFee: false,
+      },
     });
 
-    res.json({ redirectUrl: result.redirectUrl, merchantTransactionId: merchantTxnId, amount: feeAmount });
+    res.json({
+      redirectUrl: result.redirectUrl,
+      merchantTransactionId: merchantTxnId,
+      amount: feeAmount,
+      validityMonths: settings.heroOnboardingValidityMonths,
+    });
   } catch (e: any) {
     console.error("[Hero Onboarding Payment] Initiate failed:", e?.message ?? e);
     next(e);
@@ -157,19 +223,24 @@ router.get("/onboarding-payment/status/:merchantTransactionId", async (req, res,
       return res.status(404).json({ error: "Transaction not found" });
     }
 
-    // Already marked paid (via callback) — return immediately
+    // Already marked paid (via callback) — return immediately with expiry
     if (profile.hasPaidOnboardingFee) {
-      return res.json({ paid: true, state: "COMPLETED" });
+      return res.json({
+        paid: true,
+        state: "COMPLETED",
+        expiresAt: profile.onboardingExpiresAt,
+      });
     }
 
     // Otherwise, poll PhonePe
     const status = await getPaymentStatus(merchantTransactionId);
     if (status.success && !profile.hasPaidOnboardingFee) {
-      await prisma.heroProfile.update({
-        where: { id: profile.id },
-        data: { hasPaidOnboardingFee: true, onboardingPaidAt: new Date() },
+      const updated = await markHeroOnboardingPaid(profile.id);
+      return res.json({
+        paid: true,
+        state: status.state,
+        expiresAt: updated.onboardingExpiresAt,
       });
-      return res.json({ paid: true, state: status.state });
     }
 
     res.json({ paid: false, state: status.state });

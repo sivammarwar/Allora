@@ -301,10 +301,15 @@ model HeroProfile {
   isActive            Boolean          @default(true)
   isAvailable         Boolean          @default(true)
   gender              String?
-  // One-time onboarding fee tracking (paid after agent verification)
+  // Onboarding fee tracking (paid after agent verification, validity-bound)
   hasPaidOnboardingFee  Boolean        @default(false)
   onboardingPaymentTxnId String?
   onboardingPaidAt      DateTime?
+  onboardingExpiresAt   DateTime?      // when paid validity ends — null means never expires / unpaid
+  // Snapshot of fee amount + validity months at the moment of payment, so
+  // later admin changes do NOT retroactively affect already-paid heroes.
+  onboardingFeePaid     Int?           // INR rupees the hero actually paid
+  onboardingValidityMonths Int?        // months of validity granted at payment
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -925,6 +930,7 @@ model SecretOrderItem {
 model GlobalSetting {
   id                 String   @id @default("global")
   userVisibilityRadiusKm Int  @default(5) // 1..10, set by ADMIN
-  heroOnboardingFee  Int      @default(999) // One-time fee charged to heroes after agent verification (in INR)
+  heroOnboardingFee  Int      @default(999) // Fee charged to heroes after agent verification (in INR)
+  heroOnboardingValidityMonths Int @default(12) // How many months the hero onboarding fee covers — applies to NEW payments only
   updatedAt          DateTime @updatedAt
 }

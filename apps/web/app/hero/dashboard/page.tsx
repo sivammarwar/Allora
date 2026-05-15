@@ -29,6 +29,8 @@ interface MeResponse {
   request?: { id: string; status: string; details: any; createdAt: string };
   profile?: any;
   feeAmount?: number;
+  validityMonths?: number;
+  expired?: boolean;
 }
 
 interface FormState {
@@ -87,7 +89,14 @@ export default function HeroDashboardPage() {
   }
 
   if (data.state === "payment_required") {
-    return <HeroOnboardingPayment feeAmount={data.feeAmount ?? 999} />;
+    return (
+      <HeroOnboardingPayment
+        feeAmount={data.feeAmount ?? 999}
+        validityMonths={data.validityMonths ?? 12}
+        expired={data.expired ?? false}
+        previousExpiresAt={data.profile?.onboardingExpiresAt ?? null}
+      />
+    );
   }
 
   if (data.state === "pending") {
@@ -648,7 +657,17 @@ function HeroRegisterForm({ onSubmitted }: { onSubmitted: () => void }) {
 }
 
 // ─── Hero Onboarding Payment ─────────────────────────────────────────────────
-function HeroOnboardingPayment({ feeAmount }: { feeAmount: number }) {
+function HeroOnboardingPayment({
+  feeAmount,
+  validityMonths,
+  expired,
+  previousExpiresAt,
+}: {
+  feeAmount: number;
+  validityMonths: number;
+  expired: boolean;
+  previousExpiresAt: string | null;
+}) {
   const initiate = useMutation<{ redirectUrl: string; merchantTransactionId: string; amount: number }>({
     mutationFn: () => api.post("/api/hero/onboarding-payment/initiate"),
     onSuccess: (data) => {
@@ -660,6 +679,12 @@ function HeroOnboardingPayment({ feeAmount }: { feeAmount: number }) {
     },
   });
 
+  const validityLabel = validityMonths === 1 ? "1 month" : `${validityMonths} months`;
+  const heading = expired ? "Your validity has expired" : "You're verified!";
+  const subheading = expired
+    ? "Renew your subscription to continue receiving service requests."
+    : "Complete your onboarding fee to activate your hero dashboard and start receiving service requests.";
+
   return (
     <div className="page-enter max-w-xl mx-auto">
       <Card>
@@ -668,11 +693,16 @@ function HeroOnboardingPayment({ feeAmount }: { feeAmount: number }) {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-primary/10 text-brand-primary">
               <ShieldCheck size={26} />
             </div>
-            <h1 className="font-heading text-2xl text-brand-text">You&apos;re verified!</h1>
-            <p className="text-brand-textMuted text-sm">
-              Complete your one-time onboarding fee to activate your hero dashboard
-              and start receiving service requests.
-            </p>
+            <h1 className="font-heading text-2xl text-brand-text">{heading}</h1>
+            <p className="text-brand-textMuted text-sm">{subheading}</p>
+            {expired && previousExpiresAt && (
+              <p className="text-xs text-amber-600 font-medium">
+                Previous validity ended on{" "}
+                {new Date(previousExpiresAt).toLocaleDateString("en-IN", {
+                  day: "2-digit", month: "short", year: "numeric",
+                })}
+              </p>
+            )}
           </div>
 
           <div className="rounded-lg border border-brand-border bg-brand-surface p-6 text-center">
@@ -683,14 +713,14 @@ function HeroOnboardingPayment({ feeAmount }: { feeAmount: number }) {
               ₹{feeAmount}
             </p>
             <p className="text-xs text-brand-textMuted">
-              One-time payment · Non-refundable
+              Valid for <strong className="text-brand-text">{validityLabel}</strong> · Non-refundable
             </p>
           </div>
 
           <div className="space-y-2">
             <p className="text-sm font-semibold text-brand-text">What you get:</p>
             <ul className="text-sm text-brand-textMuted space-y-1.5">
-              <li>✓ Access to the full hero dashboard</li>
+              <li>✓ {validityLabel} of full hero dashboard access</li>
               <li>✓ Receive real-time service requests</li>
               <li>✓ Earnings tracking & analytics</li>
               <li>✓ Slot management & availability</li>

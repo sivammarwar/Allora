@@ -30,11 +30,17 @@ interface StatusResponse {
 
 interface HeroOnboardingPaymentScreenProps {
   feeAmount: number;
+  validityMonths: number;
+  expired: boolean;
+  previousExpiresAt: string | null;
   onPaid: () => void;
 }
 
 export default function HeroOnboardingPaymentScreen({
   feeAmount,
+  validityMonths,
+  expired,
+  previousExpiresAt,
   onPaid,
 }: HeroOnboardingPaymentScreenProps) {
   const { logout } = useAuth();
@@ -122,22 +128,33 @@ export default function HeroOnboardingPaymentScreen({
           <Ionicons name="shield-checkmark" size={56} color={BRAND_PRIMARY} />
         </View>
 
-        <Text style={styles.title}>You're verified! 🎉</Text>
+        <Text style={styles.title}>{expired ? "Your validity has expired" : "You're verified! 🎉"}</Text>
         <Text style={styles.subtitle}>
-          Complete your one-time onboarding fee to activate your hero dashboard
-          and start receiving service requests.
+          {expired
+            ? "Renew your subscription to continue receiving service requests."
+            : "Complete your onboarding fee to activate your hero dashboard and start receiving service requests."}
         </Text>
+        {expired && previousExpiresAt && (
+          <Text style={styles.expiredNote}>
+            Previous validity ended on{" "}
+            {new Date(previousExpiresAt).toLocaleDateString("en-IN", {
+              day: "2-digit", month: "short", year: "numeric",
+            })}
+          </Text>
+        )}
 
         <View style={styles.feeCard}>
           <Text style={styles.feeLabel}>Onboarding fee</Text>
           <Text style={styles.feeAmount}>₹{feeAmount}</Text>
-          <Text style={styles.feeNote}>One-time payment · Non-refundable</Text>
+          <Text style={styles.feeNote}>
+            Valid for {validityMonths === 1 ? "1 month" : `${validityMonths} months`} · Non-refundable
+          </Text>
         </View>
 
         <View style={styles.benefits}>
           <Text style={styles.benefitsTitle}>What you get</Text>
           {[
-            "Access to the full hero dashboard",
+            `${validityMonths === 1 ? "1 month" : `${validityMonths} months`} of full hero dashboard access`,
             "Receive real-time service requests",
             "Earnings tracking & analytics",
             "Slot management & availability",
@@ -222,7 +239,14 @@ const styles = StyleSheet.create({
     color: BRAND_MUTED,
     textAlign: "center",
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: 12,
+  },
+  expiredNote: {
+    fontSize: 12,
+    color: "#d97706",
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 18,
   },
   feeCard: {
     backgroundColor: "#fff",

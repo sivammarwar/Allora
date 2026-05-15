@@ -43,6 +43,9 @@ export default function HeroNavigator() {
     return (
       <HeroOnboardingPaymentScreen
         feeAmount={me.feeAmount ?? 999}
+        validityMonths={me.validityMonths ?? 12}
+        expired={me.expired ?? false}
+        previousExpiresAt={me.profile?.onboardingExpiresAt ?? null}
         onPaid={() => qc.invalidateQueries({ queryKey: ["hero-me"] })}
       />
     );
