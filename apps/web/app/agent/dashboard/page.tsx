@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   MapPinned, ShieldCheck, ShieldAlert, Truck, User,
   Phone, MapPin, Package, ChevronDown, ChevronUp,
-  Pencil, Trash2, X, Save,
+  Pencil, Trash2, X, Save, Calendar, IndianRupee, AlertCircle,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,12 @@ interface VerifiedHero {
   requiresDelivery: boolean;
   profileImageUrl: string | null;
   createdAt: string;
+  hasPaidOnboardingFee: boolean;
+  onboardingPaidAt: string | null;
+  onboardingExpiresAt: string | null;
+  onboardingFeePaid: number | null;
+  onboardingValidityMonths: number | null;
+  onboardingPaymentTxnId: string | null;
   user: { name: string | null; email: string };
 }
 
@@ -211,6 +217,18 @@ export default function AgentDashboardPage() {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
   });
 
+  const togglePayment = useMutation({
+    mutationFn: ({ id, paid }: { id: string; paid: boolean }) =>
+      api.patch(`/api/agent/verified-heroes/${id}/payment-status`, { paid }),
+    onSuccess: (_data, vars) => {
+      toast.success(
+        vars.paid ? "Hero marked as paid — dashboard unlocked" : "Hero marked as unpaid"
+      );
+      qc.invalidateQueries({ queryKey: ["agent", "verified-heroes"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed to update"),
+  });
+
   const { data: deliveryBoys = [] } = useQuery<VerifiedDeliveryBoy[]>({
     queryKey: ["agent", "verified-delivery-boys"],
     queryFn: () => api.get("/api/agent/verified-delivery-boys"),
@@ -357,6 +375,101 @@ export default function AgentDashboardPage() {
                           })}
                         </div>
                       )}
+
+                      {/* Onboarding payment status + manual toggle */}
+                      {(() => {
+                        const expiresAt = hero.onboardingExpiresAt ? new Date(hero.onboardingExpiresAt) : null;
+                        const expired = expiresAt !== null && expiresAt.getTime() < Date.now();
+                        const active = hero.hasPaidOnboardingFee && !expired;
+                        return (
+                          <div
+                            className={`pt-2 border-t border-gray-100 space-y-2 ${
+                              active ? "" : "bg-amber-50/40 -mx-4 px-4 py-2 -mb-4 mt-2 rounded-b-md"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                                {active ? (
+                                  <>
+                                    <ShieldCheck size={14} className="text-green-600" />
+                                    <span className="text-green-700">Paid · Active</span>
+                                  </>
+                                ) : expired ? (
+                                  <>
+                                    <AlertCircle size={14} className="text-amber-600" />
+                                    <span className="text-amber-700">Expired</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle size={14} className="text-amber-600" />
+                                    <span className="text-amber-700">Unpaid</span>
+                                  </>
+                                )}
+                              </div>
+                              {/* Toggle */}
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={active}
+                                disabled={togglePayment.isPending}
+                                onClick={() => {
+                                  const next = !active;
+                                  if (
+                                    !next &&
+                                    !confirm(
+                                      `Mark ${hero.shopName ?? hero.user.name ?? "this hero"} as UNPAID? They'll lose dashboard access.`
+                                    )
+                                  ) return;
+                                  togglePayment.mutate({ id: hero.id, paid: next });
+                                }}
+                                className={`relative inline-flex h-5 w-10 flex-shrink-0 items-center rounded-full transition-colors ${
+                                  active ? "bg-green-500" : "bg-gray-300"
+                                } disabled:opacity-50`}
+                              >
+                                <span
+                                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                                    active ? "translate-x-[1.375rem]" : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+
+                            {/* Validity & meta */}
+                            {hero.hasPaidOnboardingFee && expiresAt && (
+                              <div className="space-y-0.5 text-[11px] text-brand-textMuted">
+                                <div className="flex items-center gap-1">
+                                  <Calendar size={10} />
+                                  <span>
+                                    Valid until{" "}
+                                    <strong className={expired ? "text-amber-700" : "text-brand-text"}>
+                                      {expiresAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                    </strong>
+                                    {hero.onboardingValidityMonths && (
+                                      <> ({hero.onboardingValidityMonths} mo)</>
+                                    )}
+                                  </span>
+                                </div>
+                                {hero.onboardingFeePaid !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <IndianRupee size={10} />
+                                    <span>Paid ₹{hero.onboardingFeePaid}</span>
+                                    {hero.onboardingPaidAt && (
+                                      <span className="text-brand-textMuted">
+                                        {" "}· {new Date(hero.onboardingPaidAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {!hero.hasPaidOnboardingFee && (
+                              <p className="text-[11px] text-amber-700">
+                                Toggle ON only after the hero has paid you offline. Validity is locked at this moment.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Action buttons */}
                       <div className="flex items-center gap-2 pt-1">

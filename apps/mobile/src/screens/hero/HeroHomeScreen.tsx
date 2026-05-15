@@ -122,6 +122,38 @@ export default function HeroHomeScreen() {
         </View>
       )}
 
+      {/* Validity badge */}
+      {isVerified && me?.profile?.onboardingExpiresAt && (() => {
+        const expiresAt = new Date(me.profile.onboardingExpiresAt);
+        const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const expiringSoon = daysLeft <= 30;
+        return (
+          <View style={[
+            styles.validityRow,
+            expiringSoon ? styles.validityRowWarning : styles.validityRowActive,
+          ]}>
+            <View style={styles.validityIcon}>
+              <Text style={{ fontSize: 16 }}>🛡️</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[
+                styles.validityTitle,
+                expiringSoon ? styles.validityTitleWarning : styles.validityTitleActive,
+              ]}>
+                Subscription valid until {expiresAt.toLocaleDateString("en-IN", {
+                  day: "2-digit", month: "short", year: "numeric",
+                })}
+              </Text>
+              {expiringSoon && daysLeft > 0 && (
+                <Text style={styles.validitySub}>
+                  {daysLeft} day{daysLeft === 1 ? "" : "s"} left
+                </Text>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Stats strip */}
       <View style={styles.statsRow}>
         {[
@@ -190,7 +222,18 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOpacity: 0.04, elevation: 2, gap: 12,
   },
   availLabel: { fontSize: 15, fontWeight: "700", color: "#111", marginBottom: 2 },
-  availSub: { fontSize: 12, color: BRAND_MUTED },
+  availSub: { fontSize: 13, color: "#6b7280" },
+  validityRow: {
+    flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginTop: 12,
+    borderRadius: 16, padding: 14, shadowColor: "#000", shadowOpacity: 0.04, elevation: 2, gap: 12,
+  },
+  validityRowActive: { backgroundColor: "#dcfce7" },
+  validityRowWarning: { backgroundColor: "#fef3c7" },
+  validityIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  validityTitle: { fontSize: 13, fontWeight: "600" },
+  validityTitleActive: { color: "#16a34a" },
+  validityTitleWarning: { color: "#d97706" },
+  validitySub: { fontSize: 11, color: "#d97706", marginTop: 2 },
   statsRow: { flexDirection: "row", padding: 16, gap: 10 },
   statCard: {
     flex: 1, backgroundColor: "#fff", borderRadius: 14,

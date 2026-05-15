@@ -193,6 +193,31 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
           <p className="text-brand-textMuted text-sm">
             {t("hero.verifiedDesc", { name: profile?.serviceName ?? profile?.shopName ?? "Hero" })}
           </p>
+          {profile?.onboardingExpiresAt && (() => {
+            const expiresAt = new Date(profile.onboardingExpiresAt);
+            const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            const expiringSoon = daysLeft <= 30;
+            return (
+              <div
+                className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  expiringSoon
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-brand-success/10 text-brand-success"
+                }`}
+              >
+                <ShieldCheck size={12} />
+                <span>
+                  Subscription valid until{" "}
+                  <strong>
+                    {expiresAt.toLocaleDateString("en-IN", {
+                      day: "2-digit", month: "short", year: "numeric",
+                    })}
+                  </strong>
+                  {expiringSoon && daysLeft > 0 && <> · {daysLeft} day{daysLeft === 1 ? "" : "s"} left</>}
+                </span>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

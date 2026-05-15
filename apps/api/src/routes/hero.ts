@@ -11,45 +11,9 @@ import { emitToUser, emitService } from "../socket";
 import { v2 as cloudinary } from "cloudinary";
 import { sendPushNotification } from "../lib/push";
 import { initiatePayment, getPaymentStatus, verifyCallbackToken } from "../lib/phonepe";
+import { markHeroOnboardingPaid } from "../lib/heroOnboarding";
 
 const router = Router();
-
-/**
- * Compute expiry by adding `months` to `fromDate`. Uses calendar months
- * (e.g. Feb 28 + 1 month → Mar 28). If the resulting day overflows (e.g.
- * Jan 31 + 1 month → Mar 3), JS Date handles it; we accept that behavior.
- */
-function addMonths(fromDate: Date, months: number): Date {
-  const d = new Date(fromDate);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
-/**
- * Mark a hero as having paid the onboarding fee. Snapshots the CURRENT
- * fee + validity from GlobalSetting at this moment, so future admin
- * changes do not retroactively alter this hero's expiry.
- */
-async function markHeroOnboardingPaid(heroProfileId: string) {
-  const settings = await prisma.globalSetting.upsert({
-    where: { id: "global" },
-    update: {},
-    create: { id: "global" },
-  });
-  const paidAt = new Date();
-  const validityMonths = settings.heroOnboardingValidityMonths;
-  const expiresAt = addMonths(paidAt, validityMonths);
-  return prisma.heroProfile.update({
-    where: { id: heroProfileId },
-    data: {
-      hasPaidOnboardingFee: true,
-      onboardingPaidAt: paidAt,
-      onboardingExpiresAt: expiresAt,
-      onboardingFeePaid: settings.heroOnboardingFee,
-      onboardingValidityMonths: validityMonths,
-    },
-  });
-}
 
 // ─── PUBLIC: Hero onboarding payment S2S callback (no auth) ─────────────────
 // Mounted before requireAuth so PhonePe can hit it without a token.
@@ -70,7 +34,7 @@ router.post("/onboarding-payment/callback", async (req, res) => {
       where: { onboardingPaymentTxnId: merchantTxnId },
     });
     if (profile && state === "COMPLETED" && !profile.hasPaidOnboardingFee) {
-      await markHeroOnboardingPaid(profile.id);
+      await markHeroOnboardingPaid(profile.id, { txnId: merchantTxnId, markedBy: "PHONEPE" });
       emitToUser(profile.userId, "hero:onboarding_paid", { ok: true });
     }
 

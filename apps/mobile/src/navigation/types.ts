@@ -48,6 +48,7 @@ export type AgentTabParams = {
   AgentHome: undefined;
   AgentAreas: undefined;
   AgentRequests: undefined;
+  AgentHeroes: undefined;
   AgentPriceControl: undefined;
   AgentInventory: undefined;
   AgentItems: undefined;

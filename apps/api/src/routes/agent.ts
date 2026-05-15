@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
 import { validateBody } from "../middleware/validate";
 import { emitToUser } from "../socket";
+import { markHeroOnboardingPaid, markHeroOnboardingUnpaid } from "../lib/heroOnboarding";
 
 const router = Router();
 router.use(requireAuth, requireRole("AGENT"));
@@ -872,6 +873,13 @@ router.get("/verified-heroes", async (req, res, next) => {
         requiresDelivery: true,
         profileImageUrl: true,
         createdAt: true,
+        // Onboarding payment status (for manual toggle + validity display)
+        hasPaidOnboardingFee: true,
+        onboardingPaidAt: true,
+        onboardingExpiresAt: true,
+        onboardingFeePaid: true,
+        onboardingValidityMonths: true,
+        onboardingPaymentTxnId: true,
         user: { select: { name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -881,6 +889,48 @@ router.get("/verified-heroes", async (req, res, next) => {
     next(e);
   }
 });
+
+// ─── Manual hero onboarding-payment toggle ───────────────────────────────────
+// Agents can mark a verified hero as paid (e.g. they accepted cash offline)
+// or revoke a previously-marked-paid status. When toggled to paid, the
+// helper snapshots the CURRENT fee + validity months from GlobalSetting
+// so future admin changes don't retroactively alter this hero's expiry.
+const heroPaymentToggleSchema = z.object({
+  paid: z.boolean(),
+});
+
+router.patch(
+  "/verified-heroes/:id/payment-status",
+  validateBody(heroPaymentToggleSchema),
+  async (req, res, next) => {
+    try {
+      const profile = await getAgentProfile(req.user!.id);
+      const hero = await prisma.heroProfile.findUnique({ where: { id: req.params.id } });
+      if (!hero || hero.verifiedByAgentId !== profile.id) {
+        return res.status(404).json({ error: "Hero not found" });
+      }
+      const { paid } = req.body as z.infer<typeof heroPaymentToggleSchema>;
+      const updated = paid
+        ? await markHeroOnboardingPaid(hero.id, { markedBy: "AGENT" })
+        : await markHeroOnboardingUnpaid(hero.id);
+
+      // Notify the hero in real-time so their dashboard refetches /me.
+      emitToUser(hero.userId, "hero:onboarding_paid", {
+        ok: paid,
+        markedByAgent: true,
+      });
+
+      res.json({
+        id: updated.id,
+        hasPaidOnboardingFee: updated.hasPaidOnboardingFee,
+        onboardingPaidAt: updated.onboardingPaidAt,
+        onboardingExpiresAt: updated.onboardingExpiresAt,
+        onboardingFeePaid: updated.onboardingFeePaid,
+        onboardingValidityMonths: updated.onboardingValidityMonths,
+      });
+    } catch (e) { next(e); }
+  }
+);
 
 // ─── Verified Delivery Boys list ─────────────────────────────────────────────
 router.get("/verified-delivery-boys", async (req, res, next) => {

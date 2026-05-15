@@ -5,6 +5,7 @@ import AgentHomeScreen from "../screens/agent/AgentHomeScreen";
 import AgentProfileScreen from "../screens/agent/AgentProfileScreen";
 import AgentAreasScreen from "../screens/agent/AgentAreasScreen";
 import AgentRequestsScreen from "../screens/agent/AgentRequestsScreen";
+import AgentHeroesScreen from "../screens/agent/AgentHeroesScreen";
 import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
 import AgentInventoryScreen from "../screens/agent/AgentInventoryScreen";
 import AgentItemsScreen from "../screens/agent/AgentItemsScreen";
@@ -49,6 +50,11 @@ export default function AgentNavigator() {
         name="AgentRequests"
         component={AgentRequestsScreen}
         options={{ title: "Requests", tabBarLabel: "Requests", tabBarIcon: tabIcon("shield-checkmark", "shield-checkmark-outline") }}
+      />
+      <Tab.Screen
+        name="AgentHeroes"
+        component={AgentHeroesScreen}
+        options={{ title: "Verified Heroes", tabBarLabel: "Heroes", tabBarIcon: tabIcon("people", "people-outline") }}
       />
       <Tab.Screen
         name="AgentPriceControl"
