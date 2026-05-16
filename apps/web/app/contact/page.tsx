@@ -1,19 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Mail, MapPin, Clock, Wrench, MessageSquare, Star, CheckCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Wrench, MessageSquare, Star, CheckCircle, Loader2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { PublicPageHeader } from "@/components/shared/PublicPageHeader";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export default function ContactPage() {
   const { lang } = useLanguage();
   const isHi = lang === "hi";
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, source: "web" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to submit");
+      }
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -154,10 +175,15 @@ export default function ContactPage() {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30 resize-none"
               />
+              {error && (
+                <p className="text-sm text-red-500 font-medium">{error}</p>
+              )}
               <button
                 type="submit"
-                className="h-12 px-8 rounded-xl bg-brand-primary text-white text-sm font-semibold hover:bg-brand-secondary transition-colors"
+                disabled={loading}
+                className="h-12 px-8 rounded-xl bg-brand-primary text-white text-sm font-semibold hover:bg-brand-secondary transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
+                {loading && <Loader2 size={16} className="animate-spin" />}
                 {isHi ? "सबमिट करें" : "Submit"}
               </button>
             </form>

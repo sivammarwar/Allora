@@ -351,6 +351,46 @@ router.delete("/products/:id", async (req, res, next) => {
   }
 });
 
+// ─── Contact Submissions ──────────────────────────────────────────────────
+router.get("/contact-submissions", async (req, res, next) => {
+  try {
+    const onlyUnread = req.query.unread === "true";
+    const rows = await prisma.contactSubmission.findMany({
+      where: onlyUnread ? { isRead: false } : undefined,
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch("/contact-submissions/:id/read", async (req, res, next) => {
+  try {
+    const updated = await prisma.contactSubmission.update({
+      where: { id: req.params.id },
+      data: { isRead: true },
+    });
+    res.json(updated);
+  } catch (e: any) {
+    if (e?.code === "P2025") return res.status(404).json({ error: "Submission not found" });
+    next(e);
+  }
+});
+
+router.get("/contact-submissions/stats", async (_req, res, next) => {
+  try {
+    const [total, unread] = await Promise.all([
+      prisma.contactSubmission.count(),
+      prisma.contactSubmission.count({ where: { isRead: false } }),
+    ]);
+    res.json({ total, unread });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Stats for PM dashboard
 router.get("/stats", async (_req, res, next) => {
   try {

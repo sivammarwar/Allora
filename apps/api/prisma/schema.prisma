@@ -924,6 +924,24 @@ model SecretOrderItem {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONTACT FORM SUBMISSIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String
+  address   String?
+  message   String
+  isRead    Boolean  @default(false)
+  source    String   @default("web") // "web" or "mobile"
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SETTINGS (singleton table — global config)
 // ─────────────────────────────────────────────────────────────────────────────
 

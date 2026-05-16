@@ -1,13 +1,14 @@
 "use client";
 
-import { LayoutDashboard, FolderTree, Tag, Package } from "lucide-react";
+import { LayoutDashboard, FolderTree, Tag, Package, MessageSquare } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 
 const links = [
-  { href: "/pm/dashboard",     label: "Home",    icon: LayoutDashboard },
-  { href: "/pm/categories",   label: "Categ.",  icon: FolderTree },
-  { href: "/pm/subcategories",label: "Subcat.", icon: Tag },
-  { href: "/pm/products",     label: "Products",icon: Package },
+  { href: "/pm/dashboard",              label: "Home",     icon: LayoutDashboard },
+  { href: "/pm/categories",             label: "Categ.",   icon: FolderTree },
+  { href: "/pm/subcategories",          label: "Subcat.",  icon: Tag },
+  { href: "/pm/products",               label: "Products", icon: Package },
+  { href: "/pm/contact-submissions",    label: "Messages", icon: MessageSquare },
 ];
 
 export default function PMLayout({ children }: { children: React.ReactNode }) {

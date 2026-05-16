@@ -12,6 +12,7 @@ import payRouter from "./pay";
 import secretShopRouter from "./secret-shop";
 import itemCatalogRouter from "./item-catalog";
 import mainInventoryRouter from "./main-inventory";
+import contactRouter from "./contact";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get("/health", (_req, res) => {
 });
 
 router.use("/auth", authRouter);
+router.use("/contact", contactRouter);
 router.use("/admin", adminRouter);
 router.use("/pm", pmRouter);
 router.use("/upload", uploadRouter);
