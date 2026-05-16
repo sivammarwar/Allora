@@ -262,13 +262,22 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>{t(getGreetingKey())} 👋</Text>
             <View style={styles.headerActions}>
               {!user && (
-                <TouchableOpacity
-                  style={styles.heroLoginBtn}
-                  onPress={() => navigation.navigate("GuestLogin", { role: "HERO" })}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.heroLoginText}>Hero Login</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={styles.heroLoginBtn}
+                    onPress={() => navigation.navigate("GuestLogin", { role: "HERO" })}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.heroLoginText}>Hero Login</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.agentLoginBtn}
+                    onPress={() => navigation.navigate("GuestLogin", { role: "AGENT" })}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.agentLoginText}>Regional Officer</Text>
+                  </TouchableOpacity>
+                </>
               )}
               <TouchableOpacity
                 style={styles.langToggle}
@@ -721,4 +730,6 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   heroLoginBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: BRAND_PRIMARY, borderRadius: 20 },
   heroLoginText: { fontSize: 12, fontWeight: "700", color: "#fff" },
+  agentLoginBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#f3f4f6", borderRadius: 20, marginLeft: 8 },
+  agentLoginText: { fontSize: 12, fontWeight: "700", color: "#374151" },
 });

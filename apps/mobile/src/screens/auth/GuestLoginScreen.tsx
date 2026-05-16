@@ -20,6 +20,7 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(false);
 
   const isHero = role === "HERO";
+  const isAgent = role === "AGENT";
 
   const handleEmailNext = async () => {
     const e = email.trim().toLowerCase();
@@ -67,20 +68,28 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
 
         <View style={styles.logoRow}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoPin}>{isHero ? "🦸" : "📍"}</Text>
+            <Text style={styles.logoPin}>{isHero ? "🦸" : isAgent ? "�" : "�📍"}</Text>
           </View>
           <Text style={styles.logoText}>Allora</Text>
         </View>
 
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>{isHero ? "Hero Login" : "User Login"}</Text>
+          <Text style={styles.roleBadgeText}>
+            {isHero ? "Hero Login" : isAgent ? "Regional Officer Login" : "User Login"}
+          </Text>
         </View>
 
         {step === "email" ? (
           <>
-            <Text style={styles.h1}>{isHero ? "Welcome, Hero!" : "Welcome back!"}</Text>
+            <Text style={styles.h1}>
+              {isHero ? "Welcome, Hero!" : isAgent ? "Welcome, Regional Officer!" : "Welcome back!"}
+            </Text>
             <Text style={styles.sub}>
-              {isHero ? "Sign in to manage your services, slots & earnings." : "Sign in to book services near you."}
+              {isHero
+                ? "Sign in to manage your services, slots & earnings."
+                : isAgent
+                ? "Sign in to verify heroes, manage areas & track requests."
+                : "Sign in to book services near you."}
             </Text>
             <TextInput
               style={styles.input}
@@ -137,6 +146,15 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
         <Text style={styles.legal}>
           By continuing you agree to our Terms of Service and Privacy Policy.
         </Text>
+
+        {!isHero && (
+          <TouchableOpacity
+            onPress={() => navigation.replace("GuestLogin", { role: "AGENT" })}
+            style={styles.agentLoginBtn}
+          >
+            <Text style={styles.agentLoginText}>Regional Officer Login</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -172,4 +190,6 @@ const styles = StyleSheet.create({
   forgotBtn: { alignSelf: "center", marginTop: 14 },
   forgotText: { fontSize: 13, color: BRAND_PRIMARY, textDecorationLine: "underline" },
   legal: { fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 20, lineHeight: 16 },
+  agentLoginBtn: { alignSelf: "center", marginTop: 16 },
+  agentLoginText: { fontSize: 13, color: "#6b7280", fontWeight: "600" },
 });

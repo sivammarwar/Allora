@@ -19,8 +19,8 @@ export type UserStackParams = {
   Rate: { bookingId: string; heroName?: string; serviceName?: string };
   Notifications: undefined;
   Payment: { orderId: string; amount: number; description: string; type: "secret-shop" | "booking" };
-  GuestLogin: { role: "USER" | "HERO" };
-  GuestOTP: { email: string; role: "USER" | "HERO" };
+  GuestLogin: { role: "USER" | "HERO" | "AGENT" };
+  GuestOTP: { email: string; role: "USER" | "HERO" | "AGENT" };
   GuestSetPassword: { popsAfterDone?: number } | undefined;
   MyReviews: undefined;
   SavedAddresses: undefined;
