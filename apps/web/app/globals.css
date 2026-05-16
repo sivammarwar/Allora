@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Allora — global theme tokens
+   Bharat Services — global theme tokens
    Hex equivalents (for reference):
      --background        #FFF0F3
      --foreground        #2E1A1A
@@ -147,7 +147,7 @@
   100% { background-position:  200% 0; }
 }
 
-@keyframes allora-pulse {
+@keyframes bharat-pulse {
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(192, 98, 106, 0.55), 0 1px 6px rgba(46, 26, 26, 0.4);

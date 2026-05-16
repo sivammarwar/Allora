@@ -67,7 +67,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { "Accept-Language": "en", "User-Agent": "AlloraApp/1.0" } }
+      { headers: { "Accept-Language": "en", "User-Agent": "BharatServicesApp/1.0" } }
     );
     const j = await res.json();
     const a = j?.address;
@@ -148,7 +148,7 @@ export default function HomeScreen() {
       if (RNPlatform.OS === "android") {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          { title: "Location Permission", message: "Allora needs your location to show nearby services.", buttonPositive: "Allow" }
+          { title: "Location Permission", message: "Bharat Services needs your location to show nearby services.", buttonPositive: "Allow" }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           Alert.alert("Location needed", "Please allow location to see services near you.");
@@ -292,7 +292,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.logoRow}>
             <View style={styles.logoBox}><Text style={styles.logoPin}>📍</Text></View>
-            <Text style={styles.logoText}>Allora</Text>
+            <Text style={styles.logoText}>Bharat Services</Text>
           </View>
           <Text style={styles.tagline}>{t("home.tagline")}</Text>
           <TouchableOpacity style={styles.searchBar} onPress={() => setSearchOpen(true)} activeOpacity={0.85}>
@@ -310,7 +310,7 @@ export default function HomeScreen() {
                "Error: " + ((viralErr as any)?.message ?? (viralErr as any)?.error ?? JSON.stringify(viralErr)) + "\n\n" +
                "Android emulator? Change API_URL to http://10.0.2.2:4000\n" +
                "Physical device? Use your Mac's local IP (e.g. http://192.168.x.x:4000)\n" +
-               "Or point to production: https://api.allora.app"}
+               "Or point to production: https://api.bharat333.com"}
             </Text>
           </View>
         )}

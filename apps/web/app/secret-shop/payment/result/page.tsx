@@ -15,10 +15,10 @@ interface StatusResponse {
 }
 
 function readPendingTxn(): string | null {
-  try { return sessionStorage.getItem("allora_pending_txn"); } catch { return null; }
+  try { return sessionStorage.getItem("bharat_pending_txn"); } catch { return null; }
 }
 function clearPendingTxn() {
-  try { sessionStorage.removeItem("allora_pending_txn"); } catch {}
+  try { sessionStorage.removeItem("bharat_pending_txn"); } catch {}
 }
 
 export default function PaymentResultPage() {

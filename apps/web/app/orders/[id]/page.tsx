@@ -254,7 +254,7 @@ export default function UserOrderDetailPage({
                 "Delivery partner"
               }
               amount={Number(data.totalAmount)}
-              note={`Allora #${data.id.slice(-8)}`}
+              note={`Bharat333 #${data.id.slice(-8)}`}
             />
           );
         })()}

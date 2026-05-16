@@ -9,7 +9,7 @@ const CONTENT = {
   en: {
     badge: "Local services · on demand",
     h1: "Your neighborhood,\non demand.",
-    intro: "Allora connects you to verified local heroes — your barber, tailor, chemist, kirana shop, electrician, and more — with a single tap. Real shops. Real people. Real fast.",
+    intro: "Bharat Services connects you to verified local heroes — your barber, tailor, chemist, kirana shop, electrician, and more — with a single tap. Real shops. Real people. Real fast.",
     browse: "Browse Services",
     becomeHero: "Become a Hero",
     valuesTag: "What we stand for",
@@ -22,19 +22,19 @@ const CONTENT = {
     pillarsTag: "Our promise",
     pillarsH2: "Verified, not just listed",
     pillars: [
-      { title: "Verified, not just listed",  desc: "Every hero is physically visited and verified by an Allora agent before going live." },
+      { title: "Verified, not just listed",  desc: "Every hero is physically visited and verified by a Bharat Services agent before going live." },
       { title: "Hyperlocal, by design",      desc: "Listings are filtered by your live location — only heroes who genuinely cover your area appear." },
       { title: "Honest payouts",             desc: "90% goes to the hero. Daily reconciliation by a dedicated Payment Manager." },
     ],
     contactH2: "Get in touch",
     contactDesc: "Questions, partnerships or press inquiries — reach us at:",
     backLink: "Back to services",
-    footer: "© 2026 Allora. Local, on demand. · Made for India 🇮🇳",
+    footer: "© 2026 Bharat Services. Local, on demand. · Made for India 🇮🇳",
   },
   hi: {
     badge: "स्थानीय सेवाएं · मांग पर",
     h1: "आपका पड़ोस,\nमांग पर।",
-    intro: "Allora आपको सत्यापित स्थानीय हीरोज़ से जोड़ता है — आपका नाई, दर्जी, केमिस्ट, किराना दुकान, इलेक्ट्रीशियन और भी बहुत कुछ — एक टैप में। असली दुकानें। असली लोग। बेहद तेज़।",
+    intro: "Bharat Services आपको सत्यापित स्थानीय हीरोज़ से जोड़ता है — आपका नाई, दर्जी, केमिस्ट, किराना दुकान, इलेक्ट्रीशियन और भी बहुत कुछ — एक टैप में। असली दुकानें। असली लोग। बेहद तेज़।",
     browse: "सेवाएं देखें",
     becomeHero: "हीरो बनें",
     valuesTag: "हम किसके लिए खड़े हैं",
@@ -47,14 +47,14 @@ const CONTENT = {
     pillarsTag: "हमारा वादा",
     pillarsH2: "सत्यापित, सिर्फ सूचीबद्ध नहीं",
     pillars: [
-      { title: "सत्यापित, सिर्फ सूचीबद्ध नहीं",  desc: "हर हीरो को लाइव होने से पहले एक Allora एजेंट द्वारा व्यक्तिगत रूप से सत्यापित किया जाता है।" },
+      { title: "सत्यापित, सिर्फ सूचीबद्ध नहीं",  desc: "हर हीरो को लाइव होने से पहले एक Bharat Services एजेंट द्वारा व्यक्तिगत रूप से सत्यापित किया जाता है।" },
       { title: "डिज़ाइन से हाइपरलोकल",           desc: "लिस्टिंग आपके लाइव स्थान से फ़िल्टर की जाती है — केवल वही हीरो दिखते हैं जो वास्तव में आपके क्षेत्र में सेवा देते हैं।" },
       { title: "ईमानदार भुगतान",                  desc: "90% हीरो को जाता है। एक समर्पित पेमेंट मैनेजर द्वारा दैनिक समाधान।" },
     ],
     contactH2: "संपर्क करें",
     contactDesc: "प्रश्न, साझेदारी या प्रेस पूछताछ — हमें यहाँ लिखें:",
     backLink: "सेवाओं पर वापस जाएं",
-    footer: "© 2026 Allora. स्थानीय, मांग पर। · Made for India 🇮🇳",
+    footer: "© 2026 Bharat Services. स्थानीय, मांग पर। · Made for India 🇮🇳",
   },
 };
 
@@ -137,8 +137,8 @@ export default function AboutPage() {
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900">{c.contactH2}</h2>
           <p className="text-sm text-gray-500">{c.contactDesc}</p>
-          <a href="mailto:hello@allora.app" className="text-brand-primary font-semibold text-base hover:underline">
-            hello@allora.app
+          <a href="mailto:support@bharat333.com" className="text-brand-primary font-semibold text-base hover:underline">
+            support@bharat333.com
           </a>
           <div className="flex justify-center gap-3 pt-2">
             <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-primary transition-colors">

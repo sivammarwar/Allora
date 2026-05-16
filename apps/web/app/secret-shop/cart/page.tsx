@@ -32,7 +32,7 @@ export default function SecretShopCartPage() {
           "/api/secret-shop/payment/initiate",
           { orderId: order.id }
         );
-        try { sessionStorage.setItem("allora_pending_txn", merchantTransactionId); } catch {}
+        try { sessionStorage.setItem("bharat_pending_txn", merchantTransactionId); } catch {}
         return { redirectUrl, orderId: order.id };
       }
 

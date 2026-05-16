@@ -18,7 +18,7 @@ export function PublicPageHeader({ backHref = "/dashboard", backLabel }: Props) 
         className="flex items-center gap-1 text-xs text-brand-primary hover:underline font-medium"
       >
         <ChevronLeft size={13} />
-        {backLabel ?? (lang === "hi" ? "वापस जाएं" : "Back to Allora")}
+        {backLabel ?? (lang === "hi" ? "वापस जाएं" : "Back to Bharat Services")}
       </Link>
       <button
         onClick={() => setLang(lang === "en" ? "hi" : "en")}

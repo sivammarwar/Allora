@@ -29,7 +29,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    const stored = localStorage.getItem("allora_lang") as Lang | null;
+    const stored = localStorage.getItem("bharat_lang") as Lang | null;
     if (stored === "hi" || stored === "en") {
       setLangState(stored);
       document.documentElement.lang = stored === "hi" ? "hi" : "en";
@@ -38,7 +38,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    localStorage.setItem("allora_lang", l);
+    localStorage.setItem("bharat_lang", l);
     document.documentElement.lang = l === "hi" ? "hi" : "en";
   }, []);
 

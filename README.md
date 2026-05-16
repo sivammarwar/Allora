@@ -1,4 +1,4 @@
-# Allora
+# Bharat Services
 
 Multi-role local service & delivery platform for India. Connects **Users**, **Heroes** (service providers), **Delivery Boys**, **Agents**, **Admins**, a **Product Manager**, and a **Payment Manager**.
 
@@ -119,11 +119,11 @@ Run `npm run prisma:migrate` after editing the schema. All money fields are `Dec
 7. ✅ **Payment Manager dashboard** — overview tiles (today + pending), daily records table with date / hero / status / payment-method filters and totals, single-record settle + multi-select bulk-settle, per-hero and per-delivery-boy earnings breakdowns over a configurable range.
 8. ✅ **Public landing page** — marketing home at `/` with hero, how-it-works, role CTAs (User / Hero / Delivery / Operator), trust strip and email-OTP CTA.
 9. ✅ **Reviews & live tracking** — `POST /api/user/reviews`, `GET /api/user/reviews/me/:orderItemId`, and `GET /api/user/subcategories/:id/reviews` (avg + count + last 30); inline `ReviewWidget` per delivered order item with star input + edit; Mapbox `LiveTrackingMap` on user `/orders/[id]` showing pickup, drop-off and a pulsing live-position marker driven by the `/tracking` socket's `delivery:location_update` events.
-10. ✅ **COD UPI QR** — `DeliveryBoyProfile.upiVpa` + `upiName` schema fields, `PUT /api/delivery/profile/upi` (regex-validated VPA), `UpiSettingsForm` on the delivery dashboard, and a `UpiQrCard` rendered on the user's `/orders/[id]` for COD orders that are at least `ASSIGNED_DELIVERY` — auto-generates a `upi://pay?...` deeplink + scannable QR (via `qrcode`) pre-filled with the partner's VPA, name, exact total and a `Allora #xxxxxxxx` note. Tap-to-pay opens the user's UPI app directly.
+10. ✅ **COD UPI QR** — `DeliveryBoyProfile.upiVpa` + `upiName` schema fields, `PUT /api/delivery/profile/upi` (regex-validated VPA), `UpiSettingsForm` on the delivery dashboard, and a `UpiQrCard` rendered on the user's `/orders/[id]` for COD orders that are at least `ASSIGNED_DELIVERY` — auto-generates a `upi://pay?...` deeplink + scannable QR (via `qrcode`) pre-filled with the partner's VPA, name, exact total and a `Bharat333 #xxxxxxxx` note. Tap-to-pay opens the user's UPI app directly.
 11. ⏳ **Remaining polish (optional)** — mobile QA at &lt;400px, stricter CSP for production, SMTP/Razorpay live-key setup checklist.
 
 ---
 
 ## License
 
-Proprietary — Allora. All rights reserved.
+Proprietary — Bharat Services. All rights reserved.

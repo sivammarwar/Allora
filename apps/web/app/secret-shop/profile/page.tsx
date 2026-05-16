@@ -103,7 +103,7 @@ export default function SecretShopProfilePage() {
         </a>
         <a href="/about" className="flex items-center gap-3 px-4 py-3.5">
           <Info size={16} className="text-gray-400 flex-shrink-0" />
-          <span className="text-sm font-medium text-gray-800">About Allora</span>
+          <span className="text-sm font-medium text-gray-800">About Bharat Services</span>
         </a>
       </div>
 

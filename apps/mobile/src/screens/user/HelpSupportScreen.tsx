@@ -36,7 +36,7 @@ export default function HelpSupportScreen() {
 
       <TouchableOpacity
         style={styles.contactCard}
-        onPress={() => Linking.openURL("mailto:support@allora.app")}
+        onPress={() => Linking.openURL("mailto:support@bharat333.com")}
         activeOpacity={0.85}
       >
         <Text style={styles.contactIcon}>✉️</Text>

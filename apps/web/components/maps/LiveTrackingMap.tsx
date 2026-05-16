@@ -152,7 +152,7 @@ function makeMarker(color: string, label: string, pulse = false) {
   el.style.boxShadow = "0 1px 6px rgba(46,26,26,0.4)";
   el.textContent = label;
   if (pulse) {
-    el.style.animation = "allora-pulse 1.6s ease-in-out infinite";
+    el.style.animation = "bharat-pulse 1.6s ease-in-out infinite";
   }
   return el;
 }

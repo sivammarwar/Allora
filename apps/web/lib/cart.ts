@@ -82,6 +82,6 @@ export const useCart = create<CartState>()(
         return { subtotal, delivery, total: subtotal + delivery };
       },
     }),
-    { name: "allora-cart" }
+    { name: "bharat-cart" }
   )
 );

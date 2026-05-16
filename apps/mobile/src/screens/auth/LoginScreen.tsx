@@ -43,7 +43,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.logoBox}>
             <Text style={styles.logoPin}>📍</Text>
           </View>
-          <Text style={styles.logoText}>Allora</Text>
+          <Text style={styles.logoText}>Bharat Services</Text>
         </View>
 
         <Text style={styles.h1}>Welcome back</Text>

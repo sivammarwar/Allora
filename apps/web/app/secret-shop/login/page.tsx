@@ -1,6 +1,6 @@
 import { RoleLogin } from "@/components/shared/RoleLogin";
 
-export const metadata = { title: "Secret Shop sign in — Allora" };
+export const metadata = { title: "Secret Shop sign in — Bharat Services" };
 
 export default function SecretShopLoginPage() {
   return (

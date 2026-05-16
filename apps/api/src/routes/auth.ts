@@ -107,9 +107,9 @@ router.post(
       
       const result = await sendMail({
         to: email,
-        subject: "Your Allora verification code",
+        subject: "Your Bharat Services verification code",
         html: otpEmailHtml(otp),
-        text: `Your Allora verification code is: ${otp} (valid for 10 minutes).`,
+        text: `Your Bharat Services verification code is: ${otp} (valid for 10 minutes).`,
       });
 
       // Dev convenience: log OTP if SMTP isn't configured

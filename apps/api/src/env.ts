@@ -24,7 +24,7 @@ const schema = z.object({
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default("Allora <no-reply@allora.app>"),
+  SMTP_FROM: z.string().default("Bharat Services <no-reply@bharat333.com>"),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
@@ -48,9 +48,9 @@ const schema = z.object({
   FCM_PRIVATE_KEY: z.string().optional(),
   FCM_CLIENT_EMAIL: z.string().optional(),
 
-  ADMIN_EMAIL: z.string().email().default("admin@allora.app"),
-  PRODUCT_MANAGER_EMAIL: z.string().email().default("pm@allora.app"),
-  PAYMENT_MANAGER_EMAIL: z.string().email().default("payments@allora.app"),
+  ADMIN_EMAIL: z.string().email().default("admin@bharat333.com"),
+  PRODUCT_MANAGER_EMAIL: z.string().email().default("pm@bharat333.com"),
+  PAYMENT_MANAGER_EMAIL: z.string().email().default("payments@bharat333.com"),
 });
 
 const parsed = schema.safeParse(process.env);

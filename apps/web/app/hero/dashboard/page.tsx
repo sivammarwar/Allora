@@ -696,7 +696,7 @@ function HeroOnboardingPayment({
   const initiate = useMutation<{ redirectUrl: string; merchantTransactionId: string; amount: number }>({
     mutationFn: () => api.post("/api/hero/onboarding-payment/initiate"),
     onSuccess: (data) => {
-      try { sessionStorage.setItem("allora_hero_pending_txn", data.merchantTransactionId); } catch {}
+      try { sessionStorage.setItem("bharat_hero_pending_txn", data.merchantTransactionId); } catch {}
       window.location.href = data.redirectUrl;
     },
     onError: (e) => {

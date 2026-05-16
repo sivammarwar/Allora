@@ -1,6 +1,6 @@
 "use client";
 
-const KEY = "allora-loc";
+const KEY = "bharat-loc";
 
 export interface UserLocation {
   lat: number;

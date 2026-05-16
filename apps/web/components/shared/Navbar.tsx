@@ -16,7 +16,7 @@ export function Navbar({ title }: { title?: string }) {
     <header className="sticky top-0 z-30 bg-brand-surface/80 backdrop-blur border-b border-brand-border">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="font-heading text-xl text-brand-text">Allora</span>
+          <span className="font-heading text-xl text-brand-text">Bharat Services</span>
           {title && (
             <span className="hidden sm:inline text-brand-textMuted">·</span>
           )}

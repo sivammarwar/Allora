@@ -68,8 +68,8 @@ export function otpEmailHtml(otp: string) {
              style="background:#FFF8F9;border:1px solid #E8C9CC;border-radius:12px;
                     box-shadow:0 2px 16px rgba(139,74,74,0.08);overflow:hidden;">
         <tr><td style="padding:32px;">
-          <p style="margin:0 0 8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#C0626A;font-family:'JetBrains Mono',monospace;">allora</p>
-          <h1 style="margin:0 0 16px;font-family:'Playfair Display',serif;font-size:28px;color:#2E1A1A;">Your verification code</h1>
+          <p style="margin:0 0 8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#C0626A;font-family:'JetBrains Mono',monospace;">bharat333</p>
+          <h1 style="margin:0 0 16px;font-family:'Playfair Display',serif;font-size:28px;color:#2E1A1A;">Your Bharat Services verification code</h1>
           <p style="margin:0 0 24px;color:#7A5050;line-height:1.6;">
             Use the code below to sign in. It expires in 10 minutes.
           </p>

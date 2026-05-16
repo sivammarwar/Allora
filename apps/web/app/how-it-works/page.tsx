@@ -8,7 +8,7 @@ import { PublicPageHeader } from "@/components/shared/PublicPageHeader";
 const C = {
   en: {
     badge: "Three taps. Done.",
-    h1: "How Allora works",
+    h1: "How Bharat Services works",
     intro: "From opening the app to a completed service — here is every step, explained.",
     steps: [
       { num: "01", title: "Share your location", desc: "We show you only verified heroes who actually serve your neighborhood — checked and confirmed by our agents. No random listings. Every result is physically nearby." },
@@ -23,20 +23,20 @@ const C = {
     ],
     faqH2: "Frequently asked questions",
     faqs: [
-      { q: "Who are 'Heroes'?",                  a: "Heroes are local service providers — barbers, tailors, electricians, chemists, and more. Each one is physically visited and verified by an Allora Regional Officer before going live." },
-      { q: "How does location matching work?",   a: "When you open Allora we use your GPS location to show only the verified heroes who actually cover your area. Every hero's service zone is confirmed by our agents — so you only ever see providers who can genuinely reach you." },
+      { q: "Who are 'Heroes'?",                  a: "Heroes are local service providers — barbers, tailors, electricians, chemists, and more. Each one is physically visited and verified by a Bharat Services Regional Officer before going live." },
+      { q: "How does location matching work?",   a: "When you open Bharat Services we use your GPS location to show only the verified heroes who actually cover your area. Every hero's service zone is confirmed by our agents — so you only ever see providers who can genuinely reach you." },
       { q: "What payment methods are accepted?", a: "You can pay via UPI or cash on delivery / service completion. Razorpay handles all online transactions securely." },
-      { q: "Can I cancel a booking?",            a: "Yes — cancellations are free before the hero is dispatched. Once underway, contact support at hello@allora.app for assistance." },
-      { q: "How do heroes get paid?",            a: "Heroes receive 90% of every service charge. Reconciliation is handled daily by a dedicated Allora Payment Manager." },
+      { q: "Can I cancel a booking?",            a: "Yes — cancellations are free before the hero is dispatched. Once underway, contact support at support@bharat333.com for assistance." },
+      { q: "How do heroes get paid?",            a: "Heroes receive 90% of every service charge. Reconciliation is handled daily by a dedicated Bharat Services Payment Manager." },
     ],
     ctaH2: "Ready to get started?",
     ctaDesc: "Your verified heroes are waiting.",
     ctaBtn: "Browse Services",
-    footer: "© 2026 Allora. Local, on demand. · Made for India 🇮🇳",
+    footer: "© 2026 Bharat Services. Local, on demand. · Made for India 🇮🇳",
   },
   hi: {
     badge: "तीन टैप. हो गया।",
-    h1: "Allora कैसे काम करता है",
+    h1: "Bharat Services कैसे काम करता है",
     intro: "ऐप खोलने से सेवा पूरी होने तक — यहाँ हर कदम समझाया गया है।",
     steps: [
       { num: "01", title: "अपना स्थान शेयर करें", desc: "हम आपको केवल वही सत्यापित हीरो दिखाते हैं जो वास्तव में आपके मोहल्ले में सेवा करते हैं — हमारे एजेंटों द्वारा जाँचे और पुष्टि किए गए। कोई रैंडम लिस्टिंग नहीं। हर नतीजा सिर्फ आसपास का है।" },
@@ -51,16 +51,16 @@ const C = {
     ],
     faqH2: "अक्सर पूछे जाने वाले सवाल",
     faqs: [
-      { q: "'हीरो' कौन हैं?",                   a: "हीरो स्थानीय सेवा प्रदाता हैं — नाई, दर्जी, इलेक्ट्रीशियन, केमिस्ट और बहुत कुछ। हर एक को लाइव होने से पहले एक Allora रीजनल ऑफिसर द्वारा व्यक्तिगत रूप से सत्यापित किया जाता है।" },
-      { q: "लोकेशन मैचिंग कैसे काम करती है?",    a: "जब आप Allora खोलते हैं तो हम आपकी GPS लोकेशन का उपयोग करके केवल वही सत्यापित हीरो दिखाते हैं जो आपके क्षेत्र को कवर करते हैं। हर हीरो का सेवा क्षेत्र हमारे एजेंटों द्वारा पुष्टि किया जाता है।" },
+      { q: "'हीरो' कौन हैं?",                   a: "हीरो स्थानीय सेवा प्रदाता हैं — नाई, दर्जी, इलेक्ट्रीशियन, केमिस्ट और बहुत कुछ। हर एक को लाइव होने से पहले एक Bharat Services रीजनल ऑफिसर द्वारा व्यक्तिगत रूप से सत्यापित किया जाता है।" },
+      { q: "लोकेशन मैचिंग कैसे काम करती है?",    a: "जब आप Bharat Services खोलते हैं तो हम आपकी GPS लोकेशन का उपयोग करके केवल वही सत्यापित हीरो दिखाते हैं जो आपके क्षेत्र को कवर करते हैं। हर हीरो का सेवा क्षेत्र हमारे एजेंटों द्वारा पुष्टि किया जाता है।" },
       { q: "कौन से भुगतान तरीके स्वीकार हैं?",   a: "आप UPI या नकद भुगतान कर सकते हैं। Razorpay सभी ऑनलाइन लेनदेन सुरक्षित रूप से संभालता है।" },
-      { q: "क्या मैं बुकिंग रद्द कर सकता हूँ?", a: "हाँ — हीरो के रवाना होने से पहले रद्दीकरण मुफ़्त है। एक बार शुरू होने के बाद, hello@allora.app पर सहायता के लिए संपर्क करें।" },
-      { q: "हीरो को भुगतान कैसे होता है?",      a: "हीरो को हर सेवा शुल्क का 90% मिलता है। एक समर्पित Allora पेमेंट मैनेजर द्वारा दैनिक समाधान किया जाता है।" },
+      { q: "क्या मैं बुकिंग रद्द कर सकता हूँ?", a: "हाँ — हीरो के रवाना होने से पहले रद्दीकरण मुफ़्त है। एक बार शुरू होने के बाद, support@bharat333.com पर सहायता के लिए संपर्क करें।" },
+      { q: "हीरो को भुगतान कैसे होता है?",      a: "हीरो को हर सेवा शुल्क का 90% मिलता है। एक समर्पित Bharat Services पेमेंट मैनेजर द्वारा दैनिक समाधान किया जाता है।" },
     ],
     ctaH2: "शुरू करने के लिए तैयार हैं?",
     ctaDesc: "आपके सत्यापित हीरो प्रतीक्षा कर रहे हैं।",
     ctaBtn: "सेवाएं देखें",
-    footer: "© 2026 Allora. स्थानीय, मांग पर। · Made for India 🇮🇳",
+    footer: "© 2026 Bharat Services. स्थानीय, मांग पर। · Made for India 🇮🇳",
   },
 };
 

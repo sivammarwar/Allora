@@ -87,7 +87,7 @@ initSocket(server);
 
 const port = env.PORT;
 server.listen(port, () => {
-  logger.info(`Allora API ready → http://localhost:${port} (${env.NODE_ENV})`);
+  logger.info(`Bharat Services API ready → http://localhost:${port} (${env.NODE_ENV})`);
 });
 
 // ── Graceful shutdown ─────────────────────────────────────

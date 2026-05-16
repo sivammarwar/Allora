@@ -13,7 +13,7 @@ export const en = {
     earnings: "Earnings",
   },
   shell: {
-    userTitle: "Allora",
+    userTitle: "Bharat Services",
     userSubtitle: "Shop & book services near you",
     heroTitle: "Hero Dashboard",
     heroSubtitle: "Manage your services & bookings",

@@ -59,6 +59,6 @@ export const useSecretCart = create<SecretCartState>()(
       total: () =>
         get().items.reduce((sum, x) => sum + x.unitPrice * x.quantity, 0),
     }),
-    { name: "allora-secret-cart-v2" }
+    { name: "bharat-secret-cart-v2" }
   )
 );

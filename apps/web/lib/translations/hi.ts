@@ -13,7 +13,7 @@ export const hi = {
     earnings: "कमाई",
   },
   shell: {
-    userTitle: "Allora",
+    userTitle: "Bharat Services",
     userSubtitle: "अपने पास सेवाएं बुक करें",
     heroTitle: "हीरो डैशबोर्ड",
     heroSubtitle: "अपनी सेवाएं और बुकिंग प्रबंधित करें",

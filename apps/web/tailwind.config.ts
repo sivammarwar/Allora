@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Allora design system — Tailwind v3 config.
+ * Bharat Services design system — Tailwind v3 config.
  * Palette, typography and spacing match the platform spec exactly.
  * Colors are exposed as CSS variables (in globals.css) so shadcn/ui
  * components can theme via `hsl(var(--...))` if desired, but raw hex

@@ -1,6 +1,6 @@
 import { RoleLogin } from "@/components/shared/RoleLogin";
 
-export const metadata = { title: "Hero sign in — Allora" };
+export const metadata = { title: "Hero sign in — Bharat Services" };
 
 export default function HeroLoginPage() {
   return (

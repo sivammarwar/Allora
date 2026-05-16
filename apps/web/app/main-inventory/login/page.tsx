@@ -104,7 +104,7 @@ export default function MainInventoryLoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         <div className="flex items-center gap-2 mb-1">
           <BarChart2 size={18} className="text-blue-600" />
-          <p className="font-mono text-[11px] uppercase tracking-widest text-blue-600">Allora · Inventory Viewer</p>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-blue-600">Bharat Services · Inventory Viewer</p>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Sign in</h1>
         <p className="text-sm text-gray-400 mb-8">Access the main inventory dashboard.</p>

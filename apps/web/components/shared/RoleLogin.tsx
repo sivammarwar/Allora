@@ -145,7 +145,7 @@ function RoleLoginForm({ role, title, subtitle }: Props) {
     <div className="min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md card-surface p-8 sm:p-10 page-enter">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-brand-primary mb-2">
-          allora · {role.replace(/_/g, " ").toLowerCase()}
+          bharat services · {role.replace(/_/g, " ").toLowerCase()}
         </p>
         <h1 className="font-heading text-3xl text-brand-text mb-1.5">{title}</h1>
         {subtitle && <p className="text-brand-textMuted text-sm mb-8">{subtitle}</p>}

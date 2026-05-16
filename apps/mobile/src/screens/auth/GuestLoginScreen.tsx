@@ -70,7 +70,7 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
           <View style={styles.logoBox}>
             <Text style={styles.logoPin}>{isHero ? "🦸" : isAgent ? "�" : "�📍"}</Text>
           </View>
-          <Text style={styles.logoText}>Allora</Text>
+          <Text style={styles.logoText}>Bharat Services</Text>
         </View>
 
         <View style={styles.roleBadge}>

@@ -84,7 +84,7 @@ export default function CartPage() {
           key: resp.razorpay.keyId,
           amount: resp.razorpay.amount,
           currency: "INR",
-          name: "Allora",
+          name: "Bharat Services",
           description: `Order #${resp.orderId.slice(-8)}`,
           order_id: resp.razorpay.orderId,
           prefill: {

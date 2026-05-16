@@ -29,7 +29,7 @@ export async function uploadBuffer(
   return new Promise((resolve, reject) => {
     const stream = c.uploader.upload_stream(
       { 
-        folder: `allora/${folder}`, 
+        folder: `bharat333/${folder}`, 
         resource_type: resourceType,
         timeout: 60000, // 60 second timeout
       },

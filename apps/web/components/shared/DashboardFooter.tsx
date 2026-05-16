@@ -21,17 +21,17 @@ const C = {
       { label: "Most Rated",      href: "/dashboard#most-rated" },
     ],
     company: [
-      { label: "About Allora",  href: "/about",           external: false },
+      { label: "About Bharat Services",  href: "/about",           external: false },
       { label: "How It Works",  href: "/how-it-works",    external: false },
-      { label: "Become a Hero", href: "https://allora-web.vercel.app/hero/login", external: true },
+      { label: "Become a Hero", href: "/hero/login", external: false },
     ],
     legal: [
       { label: "Privacy Policy",   href: "/legal/privacy" },
       { label: "Terms of Service", href: "/legal/terms" },
       { label: "Refund Policy",    href: "/legal/refund" },
-      { label: "Contact Us",       href: "/about#contact" },
+      { label: "Contact Us",       href: "/contact" },
     ],
-    copy: "© 2026 Allora. Local, on demand.",
+    copy: "© 2026 Bharat Services. Local, on demand.",
     madeFor: "Made for India",
   },
   hi: {
@@ -48,17 +48,17 @@ const C = {
       { label: "सर्वाधिक रेटेड",   href: "/dashboard#most-rated" },
     ],
     company: [
-      { label: "Allora के बारे में", href: "/about",        external: false },
+      { label: "Bharat Services के बारे में", href: "/about",        external: false },
       { label: "यह कैसे काम करता है", href: "/how-it-works", external: false },
-      { label: "हीरो बनें",          href: "https://allora-web.vercel.app/hero/login", external: true },
+      { label: "हीरो बनें",          href: "/hero/login", external: false },
     ],
     legal: [
       { label: "गोपनीयता नीति",  href: "/legal/privacy" },
       { label: "सेवा की शर्तें", href: "/legal/terms" },
       { label: "रिफंड नीति",     href: "/legal/refund" },
-      { label: "संपर्क करें",    href: "/about#contact" },
+      { label: "संपर्क करें",    href: "/contact" },
     ],
-    copy: "© 2026 Allora. स्थानीय, मांग पर।",
+    copy: "© 2026 Bharat Services. स्थानीय, मांग पर।",
     madeFor: "Made for India",
   },
 };
@@ -99,7 +99,7 @@ export function DashboardFooter() {
               <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center">
                 <MapPin size={15} className="text-white" />
               </div>
-              <span className="font-bold text-gray-900 text-xl tracking-tight">Allora</span>
+              <span className="font-bold text-gray-900 text-xl tracking-tight">Bharat Services</span>
             </div>
             <p className="text-sm text-gray-500 leading-relaxed max-w-[200px]">{c.tagline}</p>
             <p className="text-xs text-brand-primary font-semibold tracking-widest uppercase">{c.badge}</p>

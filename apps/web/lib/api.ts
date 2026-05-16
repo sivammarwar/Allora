@@ -21,7 +21,7 @@ export class ApiError extends Error {
 
 // Token store — persisted in sessionStorage so page refreshes within the same
 // tab don't force a re-login. Cleared when the tab is closed.
-const TOKEN_KEY = "allora_access_token";
+const TOKEN_KEY = "bharat_access_token";
 
 function readStoredToken(): string | null {
   try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }

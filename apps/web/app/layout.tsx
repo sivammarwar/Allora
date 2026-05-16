@@ -40,10 +40,10 @@ const devanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  title: "Allora — Local Services & Delivery",
+  title: "Bharat Services — Local Services & Delivery",
   description:
     "Connecting local heroes, delivery partners and customers across India.",
-  applicationName: "Allora",
+  applicationName: "Bharat Services",
 };
 
 export const viewport: Viewport = {

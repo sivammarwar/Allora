@@ -17,22 +17,22 @@ const prisma = new PrismaClient();
 
 const seedUsers: Array<{ email: string; role: Role; name: string }> = [
   {
-    email: (process.env.ADMIN_EMAIL ?? "admin@allora.app").toLowerCase(),
+    email: (process.env.ADMIN_EMAIL ?? "admin@bharat333.com").toLowerCase(),
     role: "ADMIN",
     name: "Admin",
   },
   {
-    email: (process.env.PRODUCT_MANAGER_EMAIL ?? "pm@allora.app").toLowerCase(),
+    email: (process.env.PRODUCT_MANAGER_EMAIL ?? "pm@bharat333.com").toLowerCase(),
     role: "PRODUCT_MANAGER",
     name: "Product Manager",
   },
   {
-    email: (process.env.PAYMENT_MANAGER_EMAIL ?? "payments@allora.app").toLowerCase(),
+    email: (process.env.PAYMENT_MANAGER_EMAIL ?? "payments@bharat333.com").toLowerCase(),
     role: "PAYMENT_MANAGER",
     name: "Payment Manager",
   },
   {
-    email: (process.env.ITEM_CATALOG_EMAIL ?? "catalog@allora.app").toLowerCase(),
+    email: (process.env.ITEM_CATALOG_EMAIL ?? "catalog@bharat333.com").toLowerCase(),
     role: "ITEM_CATALOG",
     name: "Item Catalog Manager",
   },

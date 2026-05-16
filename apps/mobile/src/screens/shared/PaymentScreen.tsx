@@ -70,7 +70,7 @@ export default function PaymentScreen() {
         currency: "INR",
         key: orderData.keyId,                // returned by backend
         amount: orderData.amount,            // in paise from backend
-        name: "Allora",
+        name: "Bharat Services",
         order_id: orderData.razorpayOrderId,
         prefill: {
           email: user.email ?? "",

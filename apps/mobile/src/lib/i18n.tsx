@@ -28,14 +28,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    storage.get("allora_lang").then((stored) => {
+    storage.get("bharat_lang").then((stored) => {
       if (stored === "hi" || stored === "en") setLangState(stored as Lang);
     });
   }, []);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    storage.set("allora_lang", l);
+    storage.set("bharat_lang", l);
   }, []);
 
   const t = useCallback(
