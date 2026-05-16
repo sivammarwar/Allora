@@ -67,7 +67,7 @@ app.use((req, res, next) => {
 
 // ── Logging ───────────────────────────────────────────────
 app.use((req, _res, next) => {
-  if (req.path !== "/api/health") {
+  if (req.path !== "/api/health" && req.path !== "/") {
     logger.info(`${req.method} ${req.path}`);
   }
   next();
@@ -75,6 +75,9 @@ app.use((req, _res, next) => {
 
 // ── Rate limiting (general) ───────────────────────────────
 app.use(generalLimiter);
+
+// ── Health check (root) for ALB default health checks ────
+app.get("/", (_req, res) => res.status(200).json({ ok: true }));
 
 // ── Routes ────────────────────────────────────────────────
 app.use("/api", apiRouter);
