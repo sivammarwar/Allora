@@ -93,6 +93,13 @@ router.post(
         return res.status(403).json({ error: "Account is disabled." });
       }
 
+      // Reject if role was specified and user has a different non-USER role
+      if (role && user.role !== role && user.role !== "USER") {
+        return res.status(403).json({
+          error: `This email is registered as ${user.role.replace(/_/g, " ")}. Use the correct login page.`,
+        });
+      }
+
       // If user already has a password and this isn't a forced reset, skip OTP
       // and let the client show the password login step instead.
       if (user.passwordHash && !req.body.forceOtp) {
