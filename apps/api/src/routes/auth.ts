@@ -25,6 +25,7 @@ const cookieOpts = {
   secure: isProd,
   sameSite: (isProd ? "none" : "lax") as "none" | "lax",
   path: "/",
+  ...(isProd && { domain: ".bharat333.com" }),
 };
 
 function setAuthCookies(
