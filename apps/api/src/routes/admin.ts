@@ -181,7 +181,7 @@ router.post(
       const result = await prisma.$transaction(async (tx) => {
         // Upsert user with role=AGENT (refuse if existing user has different role)
         const existing = await tx.user.findUnique({ where: { email } });
-        if (existing && existing.role !== "AGENT") {
+        if (existing && existing.role !== "AGENT" && existing.role !== "USER") {
           throw Object.assign(
             new Error(
               `Email already registered as ${existing.role}. Use a different email.`
@@ -189,11 +189,14 @@ router.post(
             { status: 409 }
           );
         }
-        const user =
-          existing ??
-          (await tx.user.create({
-            data: { email, name: name ?? null, role: "AGENT", isActive: true },
-          }));
+        const user = existing
+          ? await tx.user.update({
+              where: { id: existing.id },
+              data: { role: "AGENT", name: name ?? existing.name, isActive: true },
+            })
+          : await tx.user.create({
+              data: { email, name: name ?? null, role: "AGENT", isActive: true },
+            });
 
         const profile = await tx.agentProfile.upsert({
           where: { userId: user.id },
