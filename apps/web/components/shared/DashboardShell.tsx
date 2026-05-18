@@ -108,7 +108,6 @@ function TopHeader({
 
 function BottomNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
   const { data: user } = useCurrentUser();
   const tabs = links.slice(0, 5);
 
@@ -123,10 +122,12 @@ function BottomNav({ links }: { links: NavLink[] }) {
           const active = tab.href === activeHref;
           const Icon = tab.icon;
           const blocked = tab.requiresAuth && !user;
+          const href = blocked ? `/login?redirect=${encodeURIComponent(tab.href)}` : tab.href;
           return (
-            <button
+            <Link
               key={tab.href}
-              onClick={() => blocked ? router.push(`/login?redirect=${encodeURIComponent(tab.href)}`) : router.push(tab.href)}
+              href={href}
+              prefetch
               className="flex flex-col items-center gap-0.5 relative transition-colors px-3 py-2 flex-1"
             >
               {active && (
@@ -150,7 +151,7 @@ function BottomNav({ links }: { links: NavLink[] }) {
               >
                 {tab.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
