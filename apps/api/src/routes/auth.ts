@@ -67,8 +67,6 @@ router.post(
     try {
       const { email, role } = req.body as z.infer<typeof sendOtpSchema>;
 
-      await assertOtpRateLimit(email);
-
       // Find existing user
       let user = await prisma.user.findUnique({ where: { email } });
 
@@ -100,6 +98,9 @@ router.post(
       if (user.passwordHash && !req.body.forceOtp) {
         return res.json({ ok: true, hasPassword: true });
       }
+
+      // Rate limit only when actually sending an OTP
+      await assertOtpRateLimit(email);
 
       const otp = await issueOtp(email);
       
