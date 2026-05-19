@@ -33,20 +33,20 @@ interface SubcategoryCategory {
   id: string; name: string; type: string; imageUrl: string | null;
 }
 interface ViralItem {
-  id: string; name: string; imageUrl: string | null; viralImageUrl?: string | null;
+  id: string; name: string; nameHi?: string | null; imageUrl: string | null; viralImageUrl?: string | null;
   viralPosition: number | null; category: SubcategoryCategory; pricing: Pricing | null;
 }
 interface NewlyAddedItem {
-  id: string; name: string; imageUrl: string | null; viralImageUrl?: string | null;
+  id: string; name: string; nameHi?: string | null; imageUrl: string | null; viralImageUrl?: string | null;
   newlyAddedPosition: number | null; category: SubcategoryCategory; pricing: Pricing | null;
 }
 interface MostRatedItem {
-  id: string; name: string; imageUrl: string | null;
+  id: string; name: string; nameHi?: string | null; imageUrl: string | null;
   categoryName: string; categoryType: string;
   avgRating: number; ratingCount: number;
 }
 interface BrowseCategory {
-  id: string; name: string; type: string;
+  id: string; name: string; nameHi?: string | null; type: string;
   imageUrl: string | null; subcategories: { id: string }[];
 }
 interface BrowseResponse { services: BrowseCategory[]; products: BrowseCategory[] }
@@ -368,7 +368,7 @@ export default function HomeScreen() {
                 )}
                 <View style={styles.hCardBody}>
                   <Text style={styles.hCardCat} numberOfLines={1}>{item.category.name}</Text>
-                  <Text style={styles.hCardName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={styles.hCardName} numberOfLines={2}>{lang === "hi" && item.nameHi ? item.nameHi : item.name}</Text>
                   {item.pricing && <PricingPill pricing={item.pricing} />}
                 </View>
               </TouchableOpacity>
@@ -417,8 +417,8 @@ export default function HomeScreen() {
                     </View>
                   )}
                   <View style={styles.catOverlay}>
-                    <Text style={styles.catName}>{cat.name}</Text>
-                    <Text style={styles.catCount}>{cat.subcategories.length} services</Text>
+                    <Text style={styles.catName}>{lang === "hi" && cat.nameHi ? cat.nameHi : cat.name}</Text>
+                    <Text style={styles.catCount}>{cat.subcategories.length} {t("home.servicesAvailable")}</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -431,8 +431,8 @@ export default function HomeScreen() {
           <>
             <View style={styles.divider} />
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionBadge}>✨  FRESH</Text>
-              <Text style={styles.sectionTitle}>Newly Added</Text>
+              <Text style={styles.sectionBadge}>✨  {t("home.newlyAdded").toUpperCase()}</Text>
+              <Text style={styles.sectionTitle}>{t("home.newlyAdded")}</Text>
             </View>
             {newlyLoading ? (
               <ActivityIndicator color={BRAND_PRIMARY} style={{ marginVertical: 20 }} />
@@ -456,7 +456,7 @@ export default function HomeScreen() {
                     )}
                     <View style={styles.hCardBody}>
                       <Text style={styles.hCardCat} numberOfLines={1}>{item.category.name}</Text>
-                      <Text style={styles.hCardName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.hCardName} numberOfLines={2}>{lang === "hi" && item.nameHi ? item.nameHi : item.name}</Text>
                       {item.pricing && <PricingPill pricing={item.pricing} />}
                     </View>
                   </TouchableOpacity>
@@ -471,8 +471,8 @@ export default function HomeScreen() {
           <>
             <View style={styles.divider} />
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionBadge}>⭐  TOP RATED</Text>
-              <Text style={styles.sectionTitle}>Most Rated</Text>
+              <Text style={styles.sectionBadge}>⭐  {t("home.topRated").toUpperCase()}</Text>
+              <Text style={styles.sectionTitle}>{t("home.topRated")}</Text>
             </View>
             {ratedLoading ? (
               <ActivityIndicator color={BRAND_PRIMARY} style={{ marginVertical: 20 }} />
@@ -494,7 +494,7 @@ export default function HomeScreen() {
                     )}
                     <View style={styles.ratedInfo}>
                       <Text style={styles.hCardCat} numberOfLines={1}>{item.categoryName}</Text>
-                      <Text style={styles.hCardName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.hCardName} numberOfLines={2}>{lang === "hi" && item.nameHi ? item.nameHi : item.name}</Text>
                       <View style={styles.starRow}>
                         <Text style={styles.starText}>⭐ {item.avgRating.toFixed(1)}</Text>
                         <Text style={styles.ratingCount}>({item.ratingCount})</Text>

@@ -21,7 +21,13 @@ import SavedAddressesScreen from "../screens/user/SavedAddressesScreen";
 import PaymentMethodsScreen from "../screens/user/PaymentMethodsScreen";
 import HelpSupportScreen from "../screens/user/HelpSupportScreen";
 import PrivacyPolicyScreen from "../screens/user/PrivacyPolicyScreen";
+import AboutScreen from "../screens/user/AboutScreen";
+import HowItWorksScreen from "../screens/user/HowItWorksScreen";
+import TermsScreen from "../screens/user/TermsScreen";
+import RefundPolicyScreen from "../screens/user/RefundPolicyScreen";
+import ContactScreen from "../screens/user/ContactScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
+import { useLanguage } from "../lib/i18n";
 import type { UserTabParams, UserStackParams } from "./types";
 
 const Tab = createBottomTabNavigator<UserTabParams>();
@@ -37,6 +43,7 @@ function tabIcon(active: IoniconName, inactive: IoniconName) {
 
 function UserTabs() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const tabBarHeight = 56 + insets.bottom;
   return (
     <Tab.Navigator
@@ -59,7 +66,7 @@ function UserTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: "Home",
+          tabBarLabel: t("nav.home"),
           tabBarIcon: tabIcon("home", "home-outline"),
         }}
       />
@@ -67,7 +74,7 @@ function UserTabs() {
         name="Bookings"
         component={BookingsScreen}
         options={{
-          tabBarLabel: "Bookings",
+          tabBarLabel: t("nav.bookings"),
           tabBarIcon: tabIcon("calendar", "calendar-outline"),
         }}
       />
@@ -75,7 +82,7 @@ function UserTabs() {
         name="Categories"
         component={CategoriesScreen}
         options={{
-          tabBarLabel: "Categories",
+          tabBarLabel: t("nav.categories"),
           tabBarIcon: tabIcon("grid", "grid-outline"),
         }}
       />
@@ -83,8 +90,8 @@ function UserTabs() {
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          title: "Notifications",
-          tabBarLabel: "Alerts",
+          title: t("nav.alerts"),
+          tabBarLabel: t("nav.alerts"),
           tabBarIcon: tabIcon("notifications", "notifications-outline"),
         }}
       />
@@ -92,7 +99,7 @@ function UserTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: "Profile",
+          tabBarLabel: t("nav.profile"),
           tabBarIcon: tabIcon("person", "person-outline"),
         }}
       />
@@ -173,6 +180,31 @@ export default function UserNavigator() {
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
         options={{ title: "Privacy Policy", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ title: "About", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="HowItWorks"
+        component={HowItWorksScreen}
+        options={{ title: "How It Works", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="Terms"
+        component={TermsScreen}
+        options={{ title: "Terms of Service", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="RefundPolicy"
+        component={RefundPolicyScreen}
+        options={{ title: "Refund Policy", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="Contact"
+        component={ContactScreen}
+        options={{ title: "Contact Us", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>
   );

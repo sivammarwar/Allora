@@ -14,6 +14,7 @@ import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
 import AgentPaymentHistoryScreen from "../screens/agent/AgentPaymentHistoryScreen";
 import AgentBookingHistoryScreen from "../screens/agent/AgentBookingHistoryScreen";
 import AgentRequestDetailScreen from "../screens/agent/AgentRequestDetailScreen";
+import AgentSlotConfigScreen from "../screens/agent/AgentSlotConfigScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { AgentTabParams, AgentStackParams } from "./types";
 
@@ -145,6 +146,11 @@ export default function AgentNavigator() {
         name="AgentPaymentHistory"
         component={AgentPaymentHistoryScreen}
         options={{ title: "Payment History", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentSlotConfig"
+        component={AgentSlotConfigScreen}
+        options={{ title: "Slot Hours", headerTintColor: BRAND_PRIMARY }}
       />
       <Stack.Screen
         name="AgentRequestDetail"

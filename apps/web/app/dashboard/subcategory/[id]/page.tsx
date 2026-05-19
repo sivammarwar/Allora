@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Phone,
   User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin, Check, Tag,
-  CheckSquare2, Navigation
+  CheckSquare2, Navigation, LocateFixed, Map as MapIcon
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { getStoredLocation, type UserLocation } from "@/lib/location";
 import { getSocket } from "@/lib/socket";
 import { CategoryIcon } from "@/components/shared/CategoryIcon";
+import { LocationPickerModal } from "@/components/shared/LocationPickerModal";
 import { useCurrentUser } from "@/lib/auth";
 import { useT, useLanguage } from "@/lib/i18n";
 
@@ -124,6 +125,48 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [showForm, setShowForm] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", gender: "MALE", address: "" });
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const handleGpsAutoFill = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not available"); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${token}&types=address,poi,neighborhood,locality,place&limit=1`
+          );
+          const data = await res.json();
+          const addr = data.features?.[0]?.place_name ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          setForm((f) => ({ ...f, address: addr }));
+        } catch {
+          setForm((f) => ({ ...f, address: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` }));
+        } finally {
+          setGpsLoading(false);
+        }
+      },
+      () => { toast.error("Could not get location"); setGpsLoading(false); },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  };
+
+  const handleMapPickerConfirm = async (pickedLoc: UserLocation) => {
+    setShowMapPicker(false);
+    try {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${pickedLoc.lng},${pickedLoc.lat}.json?access_token=${token}&types=address,poi,neighborhood,locality,place&limit=1`
+      );
+      const data = await res.json();
+      const addr = data.features?.[0]?.place_name ?? `${pickedLoc.lat.toFixed(5)}, ${pickedLoc.lng.toFixed(5)}`;
+      setForm((f) => ({ ...f, address: addr }));
+    } catch {
+      setForm((f) => ({ ...f, address: `${pickedLoc.lat.toFixed(5)}, ${pickedLoc.lng.toFixed(5)}` }));
+    }
+  };
 
   // Pre-fill booking form from profile
   const { data: profile } = useQuery<{ name: string | null; phone: string | null; gender: string | null }>({
@@ -472,7 +515,28 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                     ))}
                   </div>
                 )}
-                <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder={t("booking.addressPlaceholder")} />
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder={t("booking.addressPlaceholder")} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGpsAutoFill}
+                    disabled={gpsLoading}
+                    title="Use current location"
+                    className="shrink-0 w-10 h-10 rounded-lg border border-brand-border bg-brand-surface hover:bg-brand-primary/10 hover:border-brand-primary/50 flex items-center justify-center text-brand-textMuted hover:text-brand-primary transition-colors disabled:opacity-50"
+                  >
+                    {gpsLoading ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(true)}
+                    title="Pick on map"
+                    className="shrink-0 w-10 h-10 rounded-lg border border-brand-border bg-brand-surface hover:bg-brand-primary/10 hover:border-brand-primary/50 flex items-center justify-center text-brand-textMuted hover:text-brand-primary transition-colors"
+                  >
+                    <MapIcon size={16} />
+                  </button>
+                </div>
               </div>
             </div>
             <Button
@@ -754,6 +818,15 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           </div>
         );
       })()}
+
+      {/* ── Map picker modal ── */}
+      {showMapPicker && (
+        <LocationPickerModal
+          initialLoc={loc}
+          onConfirm={handleMapPickerConfirm}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
-  View, Text, ScrollView, StyleSheet, FlatList,
+  View, Text, ScrollView, StyleSheet, FlatList, Dimensions,
   TouchableOpacity, Image, ActivityIndicator, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Modal, TextInput, KeyboardAvoidingView, Platform, PermissionsAndroid,
 } from "react-native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Geolocation from "@react-native-community/geolocation";
+import { WebView } from "react-native-webview";
 import { api } from "../../lib/api";
 import { storage } from "../../lib/storage";
-import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
+import { BRAND_PRIMARY, BRAND_MUTED, MAPBOX_TOKEN } from "../../lib/config";
+import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../auth/AuthContext";
 import type { UserStackParams } from "../../navigation/types";
 
@@ -47,10 +50,57 @@ function formatHour(h: number, dur = 1): string {
   return `${fmt(h)} – ${fmt(h + dur)}`;
 }
 
+const SCREEN_W = Dimensions.get("window").width;
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address,poi,neighborhood,locality,place&limit=1&access_token=${MAPBOX_TOKEN}`,
+    );
+    const j = await res.json();
+    const name = j?.features?.[0]?.place_name;
+    if (name) return name;
+  } catch {}
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { "Accept-Language": "en", "User-Agent": "BharatServicesApp/1.0" } },
+    );
+    const j = await res.json();
+    return j?.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  } catch {}
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+function buildMapHtml(lat: number, lng: number) {
+  return `<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet"/>
+<style>*{margin:0;padding:0}body,#map{width:100%;height:100%}
+.pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:10;pointer-events:none;font-size:36px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+#btn{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:10;background:${BRAND_PRIMARY};color:#fff;border:none;padding:14px 32px;border-radius:14px;font-size:15px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.2);cursor:pointer}
+</style></head><body>
+<div id="map"></div>
+<div class="pin">📍</div>
+<button id="btn" onclick="confirm()">Confirm Location</button>
+<script>
+mapboxgl.accessToken='${MAPBOX_TOKEN}';
+var map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/streets-v12',center:[${lng},${lat}],zoom:15});
+map.addControl(new mapboxgl.NavigationControl(),'top-right');
+function confirm(){
+  var c=map.getCenter();
+  window.ReactNativeWebView.postMessage(JSON.stringify({lat:c.lat,lng:c.lng}));
+}
+</script></body></html>`;
+}
+
 export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const { id, agentId } = route.params;
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { lang, t } = useLanguage();
 
   const [loc, setLoc] = useState<StoredLocation | null>(null);
   const [locLoaded, setLocLoaded] = useState(false);
@@ -60,6 +110,45 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const [bookingModal, setBookingModal] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", gender: "" });
   const [formPrefilled, setFormPrefilled] = useState(false);
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const handleUseCurrentLocation = useCallback(async () => {
+    setGpsLoading(true);
+    try {
+      if (Platform.OS === "android") {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert("Permission denied", "Location permission is required.");
+          setGpsLoading(false);
+          return;
+        }
+      }
+      Geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const addr = await reverseGeocode(latitude, longitude);
+          setForm((f) => ({ ...f, address: addr }));
+          setGpsLoading(false);
+        },
+        (err) => {
+          Alert.alert("Location error", err.message || "Could not get location.");
+          setGpsLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+      );
+    } catch {
+      setGpsLoading(false);
+    }
+  }, []);
+
+  const handleMapConfirm = useCallback(async (data: { lat: number; lng: number }) => {
+    setMapPickerVisible(false);
+    const addr = await reverseGeocode(data.lat, data.lng);
+    setForm((f) => ({ ...f, address: addr }));
+  }, []);
 
   useEffect(() => {
     storage.getJSON<StoredLocation>("user_location").then((l) => {
@@ -211,7 +300,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
         <View style={styles.body}>
           {/* ── Breadcrumb + title ──────────────────────────────── */}
           <Text style={styles.breadcrumb}>{sub.category?.name}</Text>
-          <Text style={styles.title}>{sub.name}</Text>
+          <Text style={styles.title}>{lang === "hi" && sub.nameHi ? sub.nameHi : sub.name}</Text>
 
           {/* ── Pricing card ────────────────────────────────────── */}
           {baseCharge != null && (
@@ -316,7 +405,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
           {/* ── Other services ──────────────────────────────────── */}
           {otherServices.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Other services in {sub.category?.name}</Text>
+              <Text style={styles.sectionTitle}>{t("common.otherServices")} {sub.category?.name}</Text>
               <FlatList
                 data={otherServices}
                 horizontal
@@ -333,7 +422,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
                       ? <Image source={{ uri: item.imageUrl }} style={styles.otherImg} />
                       : <View style={[styles.otherImg, styles.otherImgPlaceholder]} />
                     }
-                    <Text style={styles.otherName} numberOfLines={2}>{item.name}</Text>
+                    <Text style={styles.otherName} numberOfLines={2}>{lang === "hi" && (item as any).nameHi ? (item as any).nameHi : item.name}</Text>
                   </TouchableOpacity>
                 )}
               />
@@ -389,9 +478,30 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
               onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} />
 
             <Text style={styles.fieldLabel}>Service address *</Text>
-            <TextInput style={[styles.input, styles.inputMulti]} placeholder="Full address"
-              multiline numberOfLines={2} value={form.address}
-              onChangeText={(v) => setForm((f) => ({ ...f, address: v }))} />
+            <View style={styles.addressRow}>
+              <TextInput style={[styles.input, styles.inputMulti, { flex: 1 }]} placeholder="Full address"
+                multiline numberOfLines={2} value={form.address}
+                onChangeText={(v) => setForm((f) => ({ ...f, address: v }))} />
+              <View style={styles.addressIcons}>
+                <TouchableOpacity
+                  style={styles.addrIconBtn}
+                  onPress={handleUseCurrentLocation}
+                  disabled={gpsLoading}
+                  activeOpacity={0.7}
+                >
+                  {gpsLoading
+                    ? <ActivityIndicator size="small" color={BRAND_PRIMARY} />
+                    : <Text style={styles.addrIcon}>📍</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.addrIconBtn}
+                  onPress={() => setMapPickerVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addrIcon}>🗺️</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <Text style={styles.fieldLabel}>Gender (optional)</Text>
             <TextInput style={styles.input} placeholder="e.g. Female"
@@ -409,6 +519,31 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Map picker modal ──────────────────────────────────────── */}
+      <Modal visible={mapPickerVisible} animationType="slide" onRequestClose={() => setMapPickerVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: "#fff" }}>
+          <View style={styles.mapHeader}>
+            <TouchableOpacity onPress={() => setMapPickerVisible(false)}>
+              <Text style={{ fontSize: 16, color: BRAND_PRIMARY, fontWeight: "600" }}>✕ Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.mapHeaderTitle}>Pick location on map</Text>
+            <View style={{ width: 60 }} />
+          </View>
+          <WebView
+            originWhitelist={["*"]}
+            source={{ html: buildMapHtml(loc?.lat ?? 20.5937, loc?.lng ?? 78.9629) }}
+            style={{ flex: 1 }}
+            javaScriptEnabled
+            onMessage={(event) => {
+              try {
+                const data = JSON.parse(event.nativeEvent.data);
+                if (data.lat && data.lng) handleMapConfirm(data);
+              } catch {}
+            }}
+          />
+        </View>
       </Modal>
     </>
   );
@@ -488,6 +623,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: "#111",
   },
   inputMulti: { height: 72, textAlignVertical: "top" },
+  addressRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  addressIcons: { gap: 6, paddingTop: 2 },
+  addrIconBtn: {
+    width: 42, height: 42, borderRadius: 12, backgroundColor: "#f3f4f6",
+    alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#e5e7eb",
+  },
+  addrIcon: { fontSize: 18 },
+  mapHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12,
+    backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f0f0f0",
+  },
+  mapHeaderTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
   cancelBtn: { alignItems: "center", paddingVertical: 14 },
   cancelText: { fontSize: 15, color: BRAND_MUTED, fontWeight: "600" },
 });

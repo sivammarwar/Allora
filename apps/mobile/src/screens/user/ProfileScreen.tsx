@@ -46,7 +46,18 @@ export default function ProfileScreen() {
     { icon: "💳", label: t("profile.paymentMethods"), onPress: () => navigation.navigate("PaymentMethods") },
     { icon: "🔔", label: t("profile.notifications"),  onPress: () => navigation.navigate("Notifications") },
     { icon: "❓", label: t("profile.helpSupport"),    onPress: () => navigation.navigate("HelpSupport") },
+  ];
+
+  const companyItems = [
+    { icon: "🏢", label: t("profile.aboutUs"),       onPress: () => navigation.navigate("About") },
+    { icon: "⚙️", label: t("profile.howItWorks"),     onPress: () => navigation.navigate("HowItWorks") },
+    { icon: "📞", label: t("profile.contactUs"),      onPress: () => navigation.navigate("Contact") },
+  ];
+
+  const legalItems = [
     { icon: "📄", label: t("profile.privacyPolicy"),  onPress: () => navigation.navigate("PrivacyPolicy") },
+    { icon: "📋", label: t("profile.termsOfService"), onPress: () => navigation.navigate("Terms") },
+    { icon: "💰", label: t("profile.refundPolicy"),   onPress: () => navigation.navigate("RefundPolicy") },
   ];
 
   return (
@@ -73,6 +84,30 @@ export default function ProfileScreen() {
       {/* Menu items */}
       <View style={styles.menu}>
         {menuItems.map(({ icon, label, onPress }) => (
+          <TouchableOpacity key={label} style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
+            <Text style={styles.menuIcon}>{icon}</Text>
+            <Text style={styles.menuLabel}>{label}</Text>
+            <Text style={styles.menuChevron}>›</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Company */}
+      <Text style={styles.sectionLabel}>{t("profile.companySection")}</Text>
+      <View style={styles.menu}>
+        {companyItems.map(({ icon, label, onPress }) => (
+          <TouchableOpacity key={label} style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
+            <Text style={styles.menuIcon}>{icon}</Text>
+            <Text style={styles.menuLabel}>{label}</Text>
+            <Text style={styles.menuChevron}>›</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Legal */}
+      <Text style={styles.sectionLabel}>{t("profile.legalSection")}</Text>
+      <View style={styles.menu}>
+        {legalItems.map(({ icon, label, onPress }) => (
           <TouchableOpacity key={label} style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
             <Text style={styles.menuIcon}>{icon}</Text>
             <Text style={styles.menuLabel}>{label}</Text>
@@ -108,6 +143,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#fecdd3",
   },
   roleText: { fontSize: 11, color: BRAND_PRIMARY, fontWeight: "700" },
+  sectionLabel: { fontSize: 11, fontWeight: "800", color: BRAND_MUTED, textTransform: "uppercase", letterSpacing: 1, marginTop: 20, marginBottom: 4, marginHorizontal: 20 },
   menu: { marginTop: 16, backgroundColor: "#fff", borderRadius: 16, marginHorizontal: 16 },
   menuRow: {
     flexDirection: "row", alignItems: "center",

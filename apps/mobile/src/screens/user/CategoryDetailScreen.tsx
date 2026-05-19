@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../lib/api";
 import { storage } from "../../lib/storage";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
+import { useLanguage } from "../../lib/i18n";
 import type { UserStackParams } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<UserStackParams, "CategoryDetail">;
@@ -20,11 +21,12 @@ interface Subcategory {
   category: { id: string; name: string; type: string };
   agentPricing?: { baseServiceCharge: string; discountPercent: string; transportChargePerKm?: string } | null;
 }
-interface Category { id: string; name: string; type: string; imageUrl: string | null }
+interface Category { id: string; name: string; nameHi?: string | null; type: string; imageUrl: string | null }
 
 export default function CategoryDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const insets = useSafeAreaInsets();
+  const { lang, t } = useLanguage();
   const [loc, setLoc] = useState<StoredLocation | null>(null);
   const [locLoaded, setLocLoaded] = useState(false);
 
@@ -53,9 +55,9 @@ export default function CategoryDetailScreen({ route, navigation }: Props) {
         <Image source={{ uri: cat.imageUrl }} style={styles.catBanner} />
       )}
       <View style={styles.headerInfo}>
-        <Text style={styles.heading}>{cat?.name ?? "Services"}</Text>
+        <Text style={styles.heading}>{lang === "hi" && cat?.nameHi ? cat.nameHi : (cat?.name ?? (lang === "hi" ? "सेवाएं" : "Services"))}</Text>
         <Text style={styles.subheading}>
-          {isLoading ? "Loading…" : `${subcategories.length} service${subcategories.length !== 1 ? "s" : ""} available`}
+          {isLoading ? t("common.loading") : `${subcategories.length} ${t("home.servicesAvailable")}`}
         </Text>
       </View>
     </View>
@@ -124,8 +126,8 @@ export default function CategoryDetailScreen({ route, navigation }: Props) {
               </View>
             )}
             <View style={styles.info}>
-              <Text style={styles.name}>{item.name}</Text>
-              {item.nameHi && <Text style={styles.nameHi}>{item.nameHi}</Text>}
+              <Text style={styles.name}>{lang === "hi" && item.nameHi ? item.nameHi : item.name}</Text>
+              {lang === "en" && item.nameHi && <Text style={styles.nameHi}>{item.nameHi}</Text>}
               {final != null ? (
                 <View style={styles.priceRow}>
                   {disc > 0 && (

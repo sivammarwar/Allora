@@ -27,6 +27,11 @@ export type UserStackParams = {
   PaymentMethods: undefined;
   HelpSupport: undefined;
   PrivacyPolicy: undefined;
+  About: undefined;
+  HowItWorks: undefined;
+  Terms: undefined;
+  RefundPolicy: undefined;
+  Contact: undefined;
 };
 
 export type DeliveryTabParams = {
@@ -58,6 +63,7 @@ export type AgentStackParams = {
   AgentHeroes: undefined;
   AgentPriceControl: undefined;
   AgentPaymentHistory: undefined;
+  AgentSlotConfig: undefined;
   AgentBookingHistory: undefined;
   AgentRequestDetail: { id: string };
 };
