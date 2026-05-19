@@ -22,7 +22,13 @@ export function LocationPicker({ value, onChange, onAddressChange, className }: 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const onChangeRef = useRef(onChange);
+  const onAddressChangeRef = useRef(onAddressChange);
   const [locating, setLocating] = useState(false);
+
+  // Keep refs up-to-date so map click handler always uses latest callbacks
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => { onAddressChangeRef.current = onAddressChange; }, [onAddressChange]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -36,8 +42,24 @@ export function LocationPicker({ value, onChange, onAddressChange, className }: 
     });
     mapRef.current = map;
 
-    map.on("click", (e) => {
-      onChange({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    map.on("click", async (e) => {
+      const lat = e.lngLat.lat;
+      const lng = e.lngLat.lng;
+      onChangeRef.current({ lat, lng });
+      // Reverse geocode to auto-fill address
+      if (onAddressChangeRef.current && mapboxgl.accessToken) {
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&limit=1`
+          );
+          const data = await res.json();
+          if (data.features?.[0]) {
+            onAddressChangeRef.current(data.features[0].place_name);
+          }
+        } catch {
+          // Silently fail
+        }
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
