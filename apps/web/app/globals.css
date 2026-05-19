@@ -165,4 +165,7 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(192, 98, 106, 0.4) transparent;
   }
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

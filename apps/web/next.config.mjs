@@ -8,6 +8,9 @@ const nextConfig = {
       { protocol: "https", hostname: "api.mapbox.com" },
     ],
   },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
 };
 
 export default nextConfig;

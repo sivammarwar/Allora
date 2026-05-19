@@ -61,7 +61,7 @@ export function detectLocation(): Promise<UserLocation> {
         resolve(v);
       },
       (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
   });
 }

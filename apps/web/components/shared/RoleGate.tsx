@@ -30,7 +30,7 @@ export function RoleGate({
   const pathname = usePathname() ?? "";
   const isPublicAuthRoute = pathname.endsWith("/login");
 
-  const { data: user, isLoading } = useCurrentUser();
+  const { data: user, isLoading, isFetching } = useCurrentUser();
 
   useEffect(() => {
     if (isPublicAuthRoute) return;
@@ -54,7 +54,7 @@ export function RoleGate({
 
   if (isPublicAuthRoute) return <>{children}</>;
 
-  if (isLoading) {
+  if (isLoading && user === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="h-8 w-8 rounded-full border-2 border-brand-primary border-t-transparent animate-spin" />

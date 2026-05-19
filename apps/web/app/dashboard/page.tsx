@@ -196,6 +196,15 @@ export default function UserDashboardPage() {
     router.push(url);
   };
 
+  // Prefetch subcategory pages for visible items
+  useEffect(() => {
+    if (viralRaw.length > 0) {
+      viralRaw.slice(0, 4).forEach((s) => {
+        router.prefetch(`/dashboard/subcategory/${s.id}`);
+      });
+    }
+  }, [viralRaw, router]);
+
   return (
     <div className="page-enter space-y-0">
 

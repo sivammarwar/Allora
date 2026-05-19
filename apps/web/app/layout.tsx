@@ -50,6 +50,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
   themeColor: "#FFF0F3",
 };
 
@@ -63,6 +64,12 @@ export default function RootLayout({
       lang="en"
       className={`${dmSans.variable} ${playfair.variable} ${jetbrains.variable} ${cormorant.variable} ${devanagari.variable}`}
     >
+      <head>
+        <link rel="dns-prefetch" href="https://api.bharat333.com" />
+        <link rel="preconnect" href="https://api.bharat333.com" crossOrigin="use-credentials" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+      </head>
       <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>
