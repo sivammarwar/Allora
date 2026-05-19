@@ -458,26 +458,47 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                   return { id: s.id, name: s.name, base: sBase, disc: sDisc, final: sBase * (1 - sDisc / 100), hasPricing: !!sp };
                 }),
               ].filter((s) => s.hasPricing);
+              const totalAfterInd = allPriceable.reduce((a, s) => a + s.final, 0);
+              // Bulk discount
+              const selCount = allPriceable.length;
+              let bulkDiscPct = 0;
+              if (catConfig) {
+                if (selCount >= 4) bulkDiscPct = Number(catConfig.bulkDiscount4Plus);
+                else if (selCount === 3) bulkDiscPct = Number(catConfig.bulkDiscount3);
+                else if (selCount === 2) bulkDiscPct = Number(catConfig.bulkDiscount2);
+              }
+              const bulkSaving = totalAfterInd * (bulkDiscPct / 100);
+              const totalFinal = totalAfterInd - bulkSaving;
               const totalO = allPriceable.reduce((a, s) => a + s.base, 0);
-              const totalF = allPriceable.reduce((a, s) => a + s.final, 0);
-              const saved  = totalO - totalF;
+              const saved  = totalO - totalFinal;
               return (
                 <div className="rounded-lg bg-brand-primary/5 border border-brand-primary/20 px-3 py-2.5 space-y-1.5">
                   {allPriceable.map((s, i) => (
                     <div key={s.id} className="flex items-center justify-between text-sm">
-                      <span className={`text-brand-text ${i === 0 ? "font-medium" : ""}`}>{s.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-brand-text ${i === 0 ? "font-medium" : ""}`}>{s.name}</span>
+                        {s.disc > 0 && (
+                          <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{s.disc}% off</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         {s.disc > 0 && <span className="text-[10px] line-through text-brand-textMuted">₹{s.base}</span>}
                         <span className="font-semibold text-brand-primary">₹{s.final.toFixed(0)}</span>
                       </div>
                     </div>
                   ))}
-                  {allPriceable.length > 1 && (
+                  {bulkDiscPct > 0 && (
+                    <div className="flex items-center justify-between pt-1 border-t border-brand-primary/20 text-sm">
+                      <span className="text-green-600 font-medium">Bulk discount ({bulkDiscPct}% off)</span>
+                      <span className="font-semibold text-green-600">−₹{bulkSaving.toFixed(0)}</span>
+                    </div>
+                  )}
+                  {allPriceable.length > 0 && (
                     <div className="flex items-center justify-between pt-1 border-t border-brand-primary/20 text-sm font-semibold">
                       <span className="text-brand-text">{t("booking.total")}</span>
                       <div className="flex items-center gap-2">
                         {saved > 0.5 && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Save ₹{saved.toFixed(0)}</span>}
-                        <span className="text-brand-primary">₹{totalF.toFixed(0)}</span>
+                        <span className="text-brand-primary">₹{totalFinal.toFixed(0)}</span>
                       </div>
                     </div>
                   )}

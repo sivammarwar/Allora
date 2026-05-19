@@ -464,9 +464,35 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Confirm Booking</Text>
             <Text style={styles.modalSub}>
-              {sub.name} · {formatDateTab(selectedDate).day} {formatDateTab(selectedDate).num}{" "}
+              {formatDateTab(selectedDate).day} {formatDateTab(selectedDate).num}{" "}
               {formatDateTab(selectedDate).mon} · {selectedHour !== null ? formatHour(selectedHour, slotDur) : ""}
             </Text>
+
+            {/* Pricing summary */}
+            <View style={styles.priceSummary}>
+              <View style={styles.priceSummaryRow}>
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 6 }}>
+                  <Text style={styles.priceSummaryName}>{lang === "hi" && sub.nameHi ? sub.nameHi : sub.name}</Text>
+                  {discountPercent > 0 && (
+                    <View style={styles.discBadgeSm}>
+                      <Text style={styles.discTextSm}>{discountPercent}% off</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {discountPercent > 0 && baseCharge != null && (
+                    <Text style={styles.priceStrike}>₹{baseCharge.toFixed(0)}</Text>
+                  )}
+                  <Text style={styles.priceSummaryPrice}>₹{finalCharge?.toFixed(0) ?? "—"}</Text>
+                </View>
+              </View>
+              {transportPerKm > 0 && (
+                <View style={styles.priceSummaryRow}>
+                  <Text style={styles.priceSummaryLabel}>Transport</Text>
+                  <Text style={styles.priceSummaryLabel}>₹{transportPerKm}/km</Text>
+                </View>
+              )}
+            </View>
 
             <Text style={styles.fieldLabel}>Your name *</Text>
             <TextInput style={styles.input} placeholder="Full name"
@@ -638,4 +664,18 @@ const styles = StyleSheet.create({
   mapHeaderTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
   cancelBtn: { alignItems: "center", paddingVertical: 14 },
   cancelText: { fontSize: 15, color: BRAND_MUTED, fontWeight: "600" },
+  priceSummary: {
+    backgroundColor: "#f0f4ff", borderRadius: 12, padding: 12,
+    marginBottom: 4, borderWidth: 1, borderColor: "#e0e7ff",
+  },
+  priceSummaryRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  priceSummaryName: { fontSize: 14, fontWeight: "600", color: "#111" },
+  priceSummaryPrice: { fontSize: 15, fontWeight: "700", color: BRAND_PRIMARY },
+  priceSummaryLabel: { fontSize: 12, color: BRAND_MUTED },
+  priceStrike: { fontSize: 12, color: BRAND_MUTED, textDecorationLine: "line-through" },
+  discBadgeSm: { backgroundColor: "#dcfce7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  discTextSm: { fontSize: 10, fontWeight: "700", color: "#16a34a" },
 });

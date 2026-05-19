@@ -160,7 +160,7 @@ export default function BookingsScreen() {
   return (
     <View style={styles.screen}>
       {/* Tabs */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           style={[styles.tab, tab === "active" && styles.tabActive]}
           onPress={() => setTab("active")}

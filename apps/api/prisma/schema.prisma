@@ -783,6 +783,7 @@ model ServiceRequest {
   transportCharge      Decimal              @db.Decimal(10, 2) @default(0)
   distanceKm           Float?               // distance between hero and user at acceptance time
   transportTotal       Decimal              @db.Decimal(10, 2) @default(0) // transportCharge * distanceKm (actual amount user pays)
+  groupId         String?              // links bulk-booked requests together (same group = same booking session)
   userName        String
   userPhone       String
   userGender      String?
@@ -801,6 +802,7 @@ model ServiceRequest {
   @@index([heroId, status])
   @@index([agentId, scheduledDate])
   @@index([subcategoryId, scheduledDate, scheduledHour])
+  @@index([groupId])
 }
 
 model AgentSubcategoryPricing {

@@ -56,7 +56,10 @@ interface RequestGroup {
 function groupRequests(list: ServiceRequest[]): RequestGroup[] {
   const map = new Map<string, RequestGroup>();
   for (const r of list) {
-    const key = `${r.subcategory.category.id}__${r.scheduledDate}__${r.scheduledHour}__${r.userPhone}`;
+    // Use groupId when available (bulk bookings), fall back to composite key
+    const key = (r as any).groupId
+      ? (r as any).groupId
+      : `${r.subcategory.category.id}__${r.scheduledDate}__${r.scheduledHour}__${r.userPhone}`;
     if (!map.has(key)) {
       map.set(key, {
         key,
@@ -161,12 +164,38 @@ export default function HeroRequestsPage() {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : String(e)),
   });
 
+  const declineAll = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        try { await api.post(`/api/hero/service-requests/${id}/decline`, {}); } catch {}
+      }
+    },
+    onSuccess: () => {
+      toast.success("Declined all requests in this booking");
+      setSelected(null);
+      qc.invalidateQueries({ queryKey: ["hero", "service-requests"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : String(e)),
+  });
+
   const completeAll = useMutation({
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map((id) => api.post(`/api/hero/service-requests/${id}/complete`, {})));
     },
     onSuccess: () => {
       toast.success("Session marked as completed");
+      setSelected(null);
+      qc.invalidateQueries({ queryKey: ["hero", "service-requests"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
+  });
+
+  const cancelAll = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => api.post(`/api/hero/service-requests/${id}/cancel`, {})));
+    },
+    onSuccess: () => {
+      toast.success("All bookings cancelled");
       setSelected(null);
       qc.invalidateQueries({ queryKey: ["hero", "service-requests"] });
     },
@@ -346,25 +375,44 @@ export default function HeroRequestsPage() {
 
               {/* Actions */}
               {tab === "incoming" && (
-                <Button
-                  className="w-full"
-                  onClick={() => acceptAll.mutate(selected.requests.map((r) => r.id))}
-                  loading={acceptAll.isPending}
-                >
-                  <CheckCircle size={14} />
-                  {t("requests.acceptAll", { n: selected.requests.length })}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => acceptAll.mutate(selected.requests.map((r) => r.id))}
+                    loading={acceptAll.isPending}
+                  >
+                    <CheckCircle size={14} />
+                    {t("requests.acceptAll", { n: selected.requests.length })}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-400 text-red-500 hover:bg-red-50"
+                    onClick={() => declineAll.mutate(selected.requests.map((r) => r.id))}
+                    loading={declineAll.isPending}
+                  >
+                    Decline All
+                  </Button>
+                </div>
               )}
               {tab === "accepted" && (
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => completeAll.mutate(selected.requests.map((r) => r.id))}
-                  loading={completeAll.isPending}
-                >
-                  <CheckSquare2 size={14} />
-                  {t("requests.markCompleted", { n: selected.requests.length })}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => completeAll.mutate(selected.requests.map((r) => r.id))}
+                    loading={completeAll.isPending}
+                  >
+                    <CheckSquare2 size={14} />
+                    {t("requests.markCompleted", { n: selected.requests.length })}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-400 text-red-500 hover:bg-red-50"
+                    onClick={() => cancelAll.mutate(selected.requests.map((r) => r.id))}
+                    loading={cancelAll.isPending}
+                  >
+                    Cancel All
+                  </Button>
+                </div>
               )}
             </div>
           );

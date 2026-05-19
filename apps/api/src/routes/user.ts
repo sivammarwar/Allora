@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import crypto from "crypto";
 import { logger } from "../lib/logger";
 import * as turf from "@turf/turf";
 import { prisma } from "../lib/prisma";
@@ -1549,6 +1550,7 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
   try {
     const body = req.body as z.infer<typeof bulkServiceRequestSchema>;
     const created = [];
+    const groupId = crypto.randomUUID(); // link all requests in this bulk booking
 
     // Resolve subcategories and their pricings first so we can apply bulk discounts per category
     type SubInfo = { subcategoryId: string; categoryId: string; pricing: any; };
@@ -1577,6 +1579,9 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
     });
     const catCfgMap = new Map<string, any>(catConfigs.map((c: any) => [c.categoryId, c]));
 
+    // Track which categories already have transport assigned (transport charged once per category group)
+    const transportAssigned = new Set<string>();
+
     for (const { subcategoryId, categoryId, pricing } of subInfos) {
       const catCfg = catCfgMap.get(categoryId);
       const count = countPerCategory.get(categoryId) ?? 1;
@@ -1591,7 +1596,12 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
 
       const indDisc = Number(pricing.discountPercent);
 
-      const transportCharge = catCfg ? catCfg.transportChargePerKm : 0;
+      // Transport charge only on the first request per category group
+      let transportCharge = 0;
+      if (catCfg && !transportAssigned.has(categoryId)) {
+        transportCharge = catCfg.transportChargePerKm;
+        transportAssigned.add(categoryId);
+      }
 
       const request = await prisma.serviceRequest.create({
         data: {
@@ -1604,6 +1614,7 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
           discountPercent: indDisc,
           bulkDiscountPercent: bulkDisc,
           transportCharge,
+          groupId,
           userName: body.userName,
           userPhone: body.userPhone,
           userGender: body.userGender,
@@ -1616,33 +1627,33 @@ router.post("/service-requests/bulk", requireAuth, requireRole("USER"), validate
         },
       });
 
-      // Broadcast to eligible heroes for this subcategory
-      const heroes = await prisma.heroProfile.findMany({
-        where: {
-          verifiedByAgentId: body.agentId,
-          isVerifiedByAgent: true,
-          isAvailable: true,
-          subcategoryIds: { has: subcategoryId },
-        },
-        select: { userId: true },
-      });
-      console.log("[Bulk Request] Broadcasting to", heroes.length, "heroes for subcategory:", subcategoryId);
-      for (const h of heroes) {
-        console.log("[Bulk Request] Emitting to room:", `user:${h.userId}`);
-        emitService(`user:${h.userId}`, "service_request:new", request);
-        // Send push notification
-        sendPushNotification(
-          h.userId,
-          "New Service Request",
-          `${body.userName} needs ${request.subcategory.name} service. Tap to view.`
-        ).catch((e) => console.error("Push notification failed:", e));
-      }
-
       created.push(request);
     }
 
     if (created.length === 0)
       return res.status(400).json({ error: "No valid subcategories could be booked (check pricing)" });
+
+    // Broadcast to eligible heroes — send once per hero with the full group
+    const allSubIds = created.map((r) => r.subcategoryId);
+    const heroes = await prisma.heroProfile.findMany({
+      where: {
+        verifiedByAgentId: body.agentId,
+        isVerifiedByAgent: true,
+        isAvailable: true,
+        subcategoryIds: { hasSome: allSubIds },
+      },
+      select: { userId: true },
+    });
+    const serviceNames = created.map((r) => r.subcategory.name).join(", ");
+    console.log("[Bulk Request] Broadcasting group", groupId, "to", heroes.length, "heroes");
+    for (const h of heroes) {
+      emitService(`user:${h.userId}`, "service_request:new", created[0]);
+      sendPushNotification(
+        h.userId,
+        "New Service Request",
+        `${body.userName} needs ${created.length} service${created.length > 1 ? "s" : ""}: ${serviceNames}. Tap to view.`
+      ).catch((e) => console.error("Push notification failed:", e));
+    }
 
     res.status(201).json(created);
   } catch (e) { next(e); }
