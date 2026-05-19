@@ -34,7 +34,10 @@ function RoleLogoutButton({ redirectTo }: { redirectTo: string }) {
   const logout = useLogout();
   return (
     <button
-      onClick={() => logout.mutate(undefined, { onSuccess: () => router.replace(redirectTo) })}
+      onClick={() => {
+        router.replace(redirectTo);
+        logout.mutate();
+      }}
       disabled={logout.isPending}
       title="Sign out"
       className="flex items-center justify-center h-7 w-7 rounded-full border border-brand-border bg-white hover:bg-red-50 hover:border-red-300 active:scale-95 transition-all text-brand-textMuted hover:text-red-500"
