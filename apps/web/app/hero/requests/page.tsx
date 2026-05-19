@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Bell, CheckCircle, MapPin, Phone, Clock, Loader2, User, ChevronRight, CheckSquare2,
+  Bell, CheckCircle, MapPin, Phone, Clock, Loader2, User, ChevronRight, CheckSquare2, Navigation,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,8 @@ interface ServiceRequest {
   discountPercent: string;
   bulkDiscountPercent: string;
   transportCharge: string;
+  distanceKm?: number;
+  transportTotal?: string;
   userName: string;
   userPhone: string;
   userGender?: string;
@@ -45,8 +47,10 @@ interface RequestGroup {
   userPhone: string;
   userGender?: string;
   userAddress: string;
+  distanceKm: number;
   requests: ServiceRequest[];
   totalFinal: number;
+  totalTransport: number;
 }
 
 function groupRequests(list: ServiceRequest[]): RequestGroup[] {
@@ -63,8 +67,10 @@ function groupRequests(list: ServiceRequest[]): RequestGroup[] {
         userPhone: r.userPhone,
         userGender: r.userGender,
         userAddress: r.userAddress,
+        distanceKm: (r as any).distanceKm ?? r.distanceKm ?? 0,
         requests: [],
         totalFinal: 0,
+        totalTransport: 0,
       });
     }
     const g = map.get(key)!;
@@ -72,6 +78,8 @@ function groupRequests(list: ServiceRequest[]): RequestGroup[] {
     const final = afterInd * (1 - Number(r.bulkDiscountPercent) / 100);
     g.requests.push(r);
     g.totalFinal += final;
+    g.totalTransport += Number(r.transportTotal ?? 0);
+    if ((r as any).distanceKm) g.distanceKm = (r as any).distanceKm;
   }
   return Array.from(map.values()).sort(
     (a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
@@ -182,9 +190,15 @@ export default function HeroRequestsPage() {
               <p className="text-xs text-brand-textMuted flex items-center gap-1 mt-0.5">
                 <User size={11} /> {g.userName} · {g.userPhone}
               </p>
+              {g.distanceKm > 0 && (
+                <p className="text-xs flex items-center gap-1 mt-0.5 text-blue-600">
+                  <Navigation size={11} /> {g.distanceKm} km away
+                </p>
+              )}
             </div>
             <div className="text-right shrink-0">
-              <p className="font-heading text-lg text-brand-text">₹{g.totalFinal.toFixed(0)}</p>
+              <p className="font-heading text-lg text-brand-text">₹{(g.totalFinal + g.totalTransport).toFixed(0)}</p>
+              {g.totalTransport > 0 && <p className="text-[10px] text-brand-textMuted">incl. ₹{g.totalTransport.toFixed(0)} travel</p>}
             </div>
             <ChevronRight size={16} className="text-brand-textMuted shrink-0" />
           </div>
@@ -297,9 +311,22 @@ export default function HeroRequestsPage() {
                   </div>
                 </div>
               )}
+              {/* Distance & transport */}
+              {selected.distanceKm > 0 && (
+                <div className="flex items-center justify-between text-sm pt-1 border-t border-brand-border">
+                  <span className="flex items-center gap-1.5 text-blue-600"><Navigation size={12} /> Distance to user</span>
+                  <span className="font-medium text-blue-600">{selected.distanceKm} km</span>
+                </div>
+              )}
+              {selected.totalTransport > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-brand-textMuted">Travel charge</span>
+                  <span className="font-medium text-brand-text">₹{selected.totalTransport.toFixed(0)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between pt-1 border-t border-brand-border">
                 <p className="text-sm font-semibold text-brand-text">{t("requests.totalEarnings")}</p>
-                <p className="font-heading text-xl text-brand-text">₹{selected.totalFinal.toFixed(0)}</p>
+                <p className="font-heading text-xl text-brand-text">₹{(selected.totalFinal + selected.totalTransport).toFixed(0)}</p>
               </div>
 
               {/* Customer info */}

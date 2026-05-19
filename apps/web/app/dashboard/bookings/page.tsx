@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarClock, XCircle, Clock, Phone, User,
-  Loader2, ArrowLeft, CheckSquare2, ChevronRight,
+  Loader2, ArrowLeft, CheckSquare2, ChevronRight, Navigation,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -37,6 +37,8 @@ interface Booking {
   discountPercent: string;
   bulkDiscountPercent: string;
   transportCharge: string;
+  distanceKm?: number | null;
+  transportTotal?: string;
   createdAt: string;
   subcategory: { id: string; name: string; category: { id: string; name: string } };
   hero?: {
@@ -57,6 +59,8 @@ interface BookingGroup {
   hero: Booking["hero"];
   bookings: Booking[];
   totalFinal: number;
+  totalTransport: number;
+  distanceKm: number;
   groupStatus: string;
 }
 
@@ -73,6 +77,8 @@ function groupBookings(list: Booking[]): BookingGroup[] {
         hero: b.hero,
         bookings: [],
         totalFinal: 0,
+        totalTransport: 0,
+        distanceKm: 0,
         groupStatus: b.status,
       });
     }
@@ -81,6 +87,8 @@ function groupBookings(list: Booking[]): BookingGroup[] {
     const final = afterInd * (1 - Number(b.bulkDiscountPercent) / 100);
     g.bookings.push(b);
     g.totalFinal += final;
+    g.totalTransport += Number(b.transportTotal ?? 0);
+    if (b.distanceKm) g.distanceKm = b.distanceKm;
     if (["PENDING", "ACCEPTED"].includes(b.status)) g.groupStatus = b.status;
   }
   return Array.from(map.values()).sort(
@@ -156,7 +164,9 @@ export default function UserBookingsPage() {
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className="font-heading text-lg text-brand-text">₹{g.totalFinal.toFixed(0)}</p>
+              <p className="font-heading text-lg text-brand-text">₹{(g.totalFinal + g.totalTransport).toFixed(0)}</p>
+              {g.totalTransport > 0 && <p className="text-[10px] text-brand-textMuted">incl. ₹{g.totalTransport.toFixed(0)} travel</p>}
+              {g.totalTransport === 0 && g.distanceKm > 0 && <p className="text-[10px] text-green-600">Free travel</p>}
             </div>
             <ChevronRight size={16} className="text-brand-textMuted shrink-0" />
           </div>
@@ -279,10 +289,29 @@ export default function UserBookingsPage() {
                     </div>
                   )}
 
+                  {/* Distance & transport */}
+                  {selected.distanceKm > 0 && (
+                    <div className="flex items-center justify-between text-sm pt-1 border-t border-brand-border">
+                      <span className="flex items-center gap-1.5 text-blue-600"><Navigation size={12} /> Provider distance</span>
+                      <span className="font-medium text-blue-600">{selected.distanceKm} km</span>
+                    </div>
+                  )}
+                  {selected.totalTransport > 0 ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-brand-textMuted">Travel charge</span>
+                      <span className="font-medium text-brand-text">₹{selected.totalTransport.toFixed(0)}</span>
+                    </div>
+                  ) : selected.distanceKm > 0 ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-brand-textMuted">Travel charge</span>
+                      <span className="font-medium text-green-600">Free</span>
+                    </div>
+                  ) : null}
+
                   {/* Total */}
                   <div className="flex items-center justify-between pt-1 border-t border-brand-border">
                     <p className="text-sm font-semibold text-brand-text">Total</p>
-                    <p className="font-heading text-xl text-brand-text">₹{selected.totalFinal.toFixed(0)}</p>
+                    <p className="font-heading text-xl text-brand-text">₹{(selected.totalFinal + selected.totalTransport).toFixed(0)}</p>
                   </div>
                 </>
               );

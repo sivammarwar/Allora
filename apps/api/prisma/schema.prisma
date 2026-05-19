@@ -781,6 +781,8 @@ model ServiceRequest {
   discountPercent      Decimal              @db.Decimal(5, 2)  @default(0) // individual service discount
   bulkDiscountPercent  Decimal              @db.Decimal(5, 2)  @default(0) // extra discount for booking multiple services
   transportCharge      Decimal              @db.Decimal(10, 2) @default(0)
+  distanceKm           Float?               // distance between hero and user at acceptance time
+  transportTotal       Decimal              @db.Decimal(10, 2) @default(0) // transportCharge * distanceKm (actual amount user pays)
   userName        String
   userPhone       String
   userGender      String?

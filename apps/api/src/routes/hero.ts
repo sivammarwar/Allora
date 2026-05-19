@@ -972,7 +972,20 @@ router.get("/service-requests/incoming", async (req, res, next) => {
       },
       orderBy: { createdAt: "desc" },
     });
-    res.json(incoming);
+
+    // Compute distance from hero to each user
+    const withDistance = incoming.map((r) => {
+      let distanceKm = 0;
+      if (r.userLat && r.userLng && profile.locationLat && profile.locationLng) {
+        distanceKm = +turf.distance(
+          turf.point([profile.locationLng, profile.locationLat]),
+          turf.point([r.userLng, r.userLat]),
+          { units: "kilometers" }
+        ).toFixed(2);
+      }
+      return { ...r, distanceKm };
+    });
+    res.json(withDistance);
   } catch (e) { next(e); }
 });
 
@@ -990,6 +1003,25 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
       return res.status(403).json({ error: "Not in your area" });
     if (!profile.subcategoryIds.includes(request.subcategoryId))
       return res.status(403).json({ error: "Not your subcategory" });
+
+    // Compute distance between hero and user
+    let distanceKm = 0;
+    if (request.userLat && request.userLng && profile.locationLat && profile.locationLng) {
+      distanceKm = +turf.distance(
+        turf.point([profile.locationLng, profile.locationLat]),
+        turf.point([request.userLng, request.userLat]),
+        { units: "kilometers" }
+      ).toFixed(2);
+    }
+    const transportPerKm = Number(request.transportCharge) || 0;
+    const transportTotal = +(transportPerKm * distanceKm).toFixed(2);
+
+    const acceptData = {
+      heroId: profile.id,
+      status: "ACCEPTED" as const,
+      distanceKm,
+      transportTotal,
+    };
 
     // Atomically: lock slot + accept request in a transaction
     const updated = await prisma.$transaction(async (tx) => {
@@ -1011,9 +1043,9 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
         // Same session — accept without creating a new slot entry
         return tx.serviceRequest.update({
           where: { id: request.id },
-          data: { heroId: profile.id, status: "ACCEPTED" },
+          data: acceptData,
           include: {
-            hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, user: { select: { name: true } } } },
+            hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, locationLat: true, locationLng: true, user: { select: { name: true } } } },
             subcategory: { select: { id: true, name: true } },
           },
         });
@@ -1025,9 +1057,9 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
       });
       return tx.serviceRequest.update({
         where: { id: request.id },
-        data: { heroId: profile.id, slotId: slot.id, status: "ACCEPTED" },
+        data: { ...acceptData, slotId: slot.id },
         include: {
-          hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, user: { select: { name: true } } } },
+          hero: { select: { id: true, serviceName: true, shopName: true, phone: true, gender: true, locationLat: true, locationLng: true, user: { select: { name: true } } } },
           subcategory: { select: { id: true, name: true } },
         },
       });

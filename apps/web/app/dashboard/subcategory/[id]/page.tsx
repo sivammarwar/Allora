@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Phone,
   User, CheckCircle2, Loader2, CalendarCheck, History, X, MapPin, Check, Tag,
-  CheckSquare2
+  CheckSquare2, Navigation
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +44,12 @@ interface SlotState {
 interface ServiceRequestResult {
   id: string;
   status: string;
-  hero?: { id: string; serviceName: string | null; shopName: string | null; phone: string; gender: string | null; user: { name: string | null } } | null;
+  charge?: string;
+  discountPercent?: string;
+  distanceKm?: number | null;
+  transportCharge?: string;
+  transportTotal?: string;
+  hero?: { id: string; serviceName: string | null; shopName: string | null; phone: string; gender: string | null; locationLat?: number; locationLng?: number; user: { name: string | null } } | null;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -288,7 +293,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wide text-brand-textMuted mb-0.5">{t("booking.transport")}</p>
-              <span className="text-sm font-medium text-brand-text">₹{transport}/km</span>
+              {transport && transport > 0
+                ? <span className="text-sm font-medium text-brand-text">₹{transport}/km</span>
+                : <span className="text-sm font-medium text-green-600">Free</span>
+              }
             </div>
           </div>
         ) : (
@@ -480,24 +488,51 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
       )}
 
       {/* ── Acceptance notification ── */}
-      {acceptedRequest && (
-        <Card className="border-brand-success/40 bg-brand-success/5">
-          <CardContent className="py-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={20} className="text-brand-success" />
-              <h3 className="font-medium text-brand-text">{t("booking.bookingAccepted")}</h3>
-            </div>
-            {acceptedRequest.hero && (
-              <div className="space-y-1 text-sm">
-                <p className="flex items-center gap-1.5"><User size={13} className="text-brand-textMuted" /> {acceptedRequest.hero.user.name ?? acceptedRequest.hero.serviceName}</p>
-                <p className="flex items-center gap-1.5"><Phone size={13} className="text-brand-textMuted" /> {acceptedRequest.hero.phone}</p>
-                {acceptedRequest.hero.gender && <p className="text-xs text-brand-textMuted">{acceptedRequest.hero.gender}</p>}
+      {acceptedRequest && (() => {
+        const ar = acceptedRequest;
+        const arDistance = ar.distanceKm ?? 0;
+        const arTransport = Number(ar.transportTotal ?? 0);
+        const arServiceCharge = ar.charge ? Number(ar.charge) * (1 - Number(ar.discountPercent ?? 0) / 100) : null;
+        const arTotal = (arServiceCharge ?? 0) + arTransport;
+        return (
+          <Card className="border-brand-success/40 bg-brand-success/5">
+            <CardContent className="py-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={20} className="text-brand-success" />
+                <h3 className="font-medium text-brand-text">{t("booking.bookingAccepted")}</h3>
               </div>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => setAcceptedRequest(null)}>Dismiss</Button>
-          </CardContent>
-        </Card>
-      )}
+              {ar.hero && (
+                <div className="space-y-1 text-sm">
+                  <p className="flex items-center gap-1.5"><User size={13} className="text-brand-textMuted" /> {ar.hero.user.name ?? ar.hero.serviceName}</p>
+                  <p className="flex items-center gap-1.5"><Phone size={13} className="text-brand-textMuted" /> {ar.hero.phone}</p>
+                  {ar.hero.gender && <p className="text-xs text-brand-textMuted">{ar.hero.gender}</p>}
+                </div>
+              )}
+              {arDistance > 0 && (
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-brand-success/20">
+                  <span className="flex items-center gap-1.5 text-blue-600"><Navigation size={12} /> Provider distance</span>
+                  <span className="font-medium text-blue-600">{arDistance} km</span>
+                </div>
+              )}
+              {arDistance > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-brand-textMuted">Travel charge</span>
+                  <span className={`font-medium ${arTransport > 0 ? "text-brand-text" : "text-green-600"}`}>
+                    {arTransport > 0 ? `₹${arTransport.toFixed(0)}` : "Free"}
+                  </span>
+                </div>
+              )}
+              {arServiceCharge !== null && (
+                <div className="flex items-center justify-between text-sm font-semibold pt-1 border-t border-brand-success/20">
+                  <span className="text-brand-text">Total</span>
+                  <span className="text-brand-text">₹{arTotal.toFixed(0)}</span>
+                </div>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setAcceptedRequest(null)}>Dismiss</Button>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ── Other subcategories (suggestions) ── */}
       {otherSubs.length > 0 && (
