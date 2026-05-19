@@ -9,7 +9,7 @@ import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
 
-const MAPBOX_TOKEN = "pk.eyJ1Ijoic2l2YW1tYXJ3YXIiLCJhIjoiY200MXdyeWdiMGRqNjJqczV6dHVzNHJjZCJ9.sMvMBnpMgSIafMfStmfkRQ";
+const MAPBOX_TOKEN = "pk.eyJ1Ijoic2l2YW1hcndhciIsImEiOiJjbW9wZXdhcDkxc3lwMnhzYWdhYWo1N254In0.vPlun8EaCXjsLFRzAQ4XYA";
 
 interface AgentArea {
   id: string; name: string; code: string;

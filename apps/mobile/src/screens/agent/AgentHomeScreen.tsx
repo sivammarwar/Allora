@@ -3,14 +3,20 @@ import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, FlatList,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
+import type { AgentStackParams } from "../../navigation/types";
+
+type Nav = NativeStackNavigationProp<AgentStackParams>;
 
 export default function AgentHomeScreen() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigation = useNavigation<Nav>();
 
   const { data: stats } = useQuery<any>({
     queryKey: ["agent-stats"],
@@ -106,14 +112,13 @@ export default function AgentHomeScreen() {
         <Text style={styles.sectionTitle}>Manage</Text>
         <View style={styles.quickLinks}>
           {[
-            { icon: "🗺️", label: "Service Areas" },
-            { icon: "🦸", label: "My Heroes" },
-            { icon: "📋", label: "All Bookings" },
-            { icon: "💳", label: "Payments" },
-            { icon: "⚙️", label: "Category Config" },
-            { icon: "🗓️", label: "Slot Config" },
-          ].map(({ icon, label }) => (
-            <TouchableOpacity key={label} style={styles.quickCard}>
+            { icon: "🗺️", label: "Service Areas", screen: "AgentAreas" as const },
+            { icon: "🦸", label: "My Heroes", screen: "AgentHeroes" as const },
+            { icon: "📋", label: "All Bookings", screen: "AgentBookingHistory" as const },
+            { icon: "💳", label: "Payments", screen: "AgentPaymentHistory" as const },
+            { icon: "�", label: "Price Control", screen: "AgentPriceControl" as const },
+          ].map(({ icon, label, screen }) => (
+            <TouchableOpacity key={label} style={styles.quickCard} onPress={() => navigation.navigate(screen)}>
               <Text style={styles.quickIcon}>{icon}</Text>
               <Text style={styles.quickLabel}>{label}</Text>
             </TouchableOpacity>
