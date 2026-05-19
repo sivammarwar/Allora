@@ -59,6 +59,7 @@ export type AgentStackParams = {
   AgentPriceControl: undefined;
   AgentPaymentHistory: undefined;
   AgentBookingHistory: undefined;
+  AgentRequestDetail: { id: string };
 };
 
 export type PaymentParams = {

@@ -13,6 +13,7 @@ import AgentHeroesScreen from "../screens/agent/AgentHeroesScreen";
 import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
 import AgentPaymentHistoryScreen from "../screens/agent/AgentPaymentHistoryScreen";
 import AgentBookingHistoryScreen from "../screens/agent/AgentBookingHistoryScreen";
+import AgentRequestDetailScreen from "../screens/agent/AgentRequestDetailScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { AgentTabParams, AgentStackParams } from "./types";
 
@@ -144,6 +145,11 @@ export default function AgentNavigator() {
         name="AgentPaymentHistory"
         component={AgentPaymentHistoryScreen}
         options={{ title: "Payment History", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentRequestDetail"
+        component={AgentRequestDetailScreen}
+        options={{ title: "Request Detail", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>
   );

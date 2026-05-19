@@ -1,12 +1,17 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
+import type { AgentStackParams } from "../../navigation/types";
+
+type Nav = NativeStackNavigationProp<AgentStackParams>;
 
 type FilterStatus = "PENDING" | "IN_PROGRESS" | "VERIFIED" | "REJECTED" | "ALL";
 
@@ -30,7 +35,7 @@ const FILTERS: FilterStatus[] = ["ALL", "PENDING", "IN_PROGRESS", "VERIFIED", "R
 
 export default function AgentRequestsScreen() {
   const { user } = useAuth();
-  const qc = useQueryClient();
+  const navigation = useNavigation<Nav>();
   const [filter, setFilter] = useState<FilterStatus>("PENDING");
 
   const { data: rows = [], isLoading, refetch } = useQuery<VerificationRequest[]>({
@@ -39,20 +44,6 @@ export default function AgentRequestsScreen() {
       api.get(filter === "ALL" ? "/api/agent/requests" : `/api/agent/requests?status=${filter}`) as any,
     enabled: !!user,
   });
-
-  const actionMut = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: string }) =>
-      api.patch(`/api/agent/requests/${id}/${action}`) as any,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agent-requests"] }),
-    onError: (e: any) => Alert.alert("Error", e?.message ?? "Action failed."),
-  });
-
-  const handleAction = (id: string, action: string, label: string) => {
-    Alert.alert(`${label}?`, undefined, [
-      { text: "Cancel", style: "cancel" },
-      { text: label, onPress: () => actionMut.mutate({ id, action }) },
-    ]);
-  };
 
   return (
     <View style={styles.screen}>
@@ -99,7 +90,11 @@ export default function AgentRequestsScreen() {
               : item.details?.purpose ?? "Delivery partner";
 
             return (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("AgentRequestDetail", { id: item.id })}
+              >
                 <View style={styles.cardTop}>
                   <View style={[styles.typeIcon, { backgroundColor: item.requestType === "HERO" ? `${BRAND_PRIMARY}18` : "#eff6ff" }]}>
                     <Text style={styles.typeEmoji}>{item.requestType === "HERO" ? "🦸" : "🚴"}</Text>
@@ -108,6 +103,7 @@ export default function AgentRequestsScreen() {
                     <Text style={styles.reqName}>{name}</Text>
                     <Text style={styles.reqDetail}>{detail} · {item.requester.email}</Text>
                   </View>
+                  <Text style={{ fontSize: 18, color: BRAND_MUTED }}>›</Text>
                 </View>
 
                 <View style={styles.cardMeta}>
@@ -125,35 +121,7 @@ export default function AgentRequestsScreen() {
                     {new Date(item.createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
                   </Text>
                 </View>
-
-                {/* Action buttons */}
-                <View style={styles.actions}>
-                  {item.status === "PENDING" && (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.startBtn]}
-                      onPress={() => handleAction(item.id, "start", "Start Review")}
-                    >
-                      <Text style={styles.startText}>Start Review →</Text>
-                    </TouchableOpacity>
-                  )}
-                  {item.status === "IN_PROGRESS" && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.verifyBtn]}
-                        onPress={() => handleAction(item.id, "verify", "Verify")}
-                      >
-                        <Text style={styles.verifyText}>Verify ✓</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.rejectBtn]}
-                        onPress={() => handleAction(item.id, "reject", "Reject")}
-                      >
-                        <Text style={styles.rejectText}>Reject ✗</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -192,12 +160,4 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 9, fontWeight: "700", textTransform: "uppercase" },
   date: { fontSize: 11, color: BRAND_MUTED, marginLeft: "auto" },
-  actions: { flexDirection: "row", gap: 10 },
-  actionBtn: { flex: 1, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  startBtn: { backgroundColor: `${BRAND_PRIMARY}18` },
-  startText: { color: BRAND_PRIMARY, fontSize: 13, fontWeight: "700" },
-  verifyBtn: { backgroundColor: "#dcfce7" },
-  verifyText: { color: "#15803d", fontSize: 13, fontWeight: "700" },
-  rejectBtn: { borderWidth: 1.5, borderColor: "#ef4444" },
-  rejectText: { color: "#ef4444", fontSize: 13, fontWeight: "700" },
 });
