@@ -188,7 +188,24 @@ export default function HeroRequestsScreen() {
                   <Text style={styles.meta}>📍 {item.userAddress}</Text>
                 )}
 
-                <Text style={styles.charge}>₹{final.toFixed(0)}</Text>
+                {(item.distanceKm ?? 0) > 0 && (
+                  <Text style={styles.distanceText}>📍 {item.distanceKm} km away</Text>
+                )}
+
+                {(() => {
+                  const transportTotal = Number(item.transportTotal ?? 0);
+                  const total = final + transportTotal;
+                  return (
+                    <View>
+                      <Text style={styles.charge}>₹{total.toFixed(0)}</Text>
+                      {transportTotal > 0 ? (
+                        <Text style={styles.transportText}>incl. ₹{transportTotal.toFixed(0)} travel charge</Text>
+                      ) : (item.distanceKm ?? 0) > 0 ? (
+                        <Text style={styles.freeTransportText}>Free travel</Text>
+                      ) : null}
+                    </View>
+                  );
+                })()}
 
                 {/* Action buttons */}
                 <View style={styles.actions}>
@@ -263,7 +280,10 @@ const styles = StyleSheet.create({
   badgeText: { color: "#fff", fontSize: 9, fontWeight: "700", textTransform: "uppercase" },
   customer: { fontSize: 12, color: BRAND_MUTED, marginBottom: 4 },
   meta: { fontSize: 12, color: BRAND_MUTED, marginBottom: 4 },
-  charge: { fontSize: 17, fontWeight: "800", color: BRAND_PRIMARY, marginTop: 6, marginBottom: 12 },
+  charge: { fontSize: 17, fontWeight: "800", color: BRAND_PRIMARY, marginTop: 6, marginBottom: 2 },
+  distanceText: { fontSize: 12, color: "#3b82f6", fontWeight: "600", marginBottom: 4 },
+  transportText: { fontSize: 10, color: BRAND_MUTED, marginBottom: 10 },
+  freeTransportText: { fontSize: 10, color: "#10b981", fontWeight: "600", marginBottom: 10 },
   actions: { flexDirection: "row", gap: 10 },
   actionBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center" },
   acceptBtn: { backgroundColor: BRAND_PRIMARY },
