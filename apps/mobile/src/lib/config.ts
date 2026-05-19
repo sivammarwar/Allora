@@ -1,4 +1,4 @@
-export const API_URL = "http://192.168.0.197:4000";
+export const API_URL = "https://api.bharat333.com";
 // Other options (uncomment as needed):
 // Production:          "https://api.bharat333.com"
 // Android emulator:    "http://10.0.2.2:4000"

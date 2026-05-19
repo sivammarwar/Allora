@@ -49,7 +49,7 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
   const handleForgotPassword = async () => {
     setLoading(true);
     try {
-      await signInWithOTP(email.trim().toLowerCase(), role);
+      await signInWithOTP(email.trim().toLowerCase(), role, true);
       navigation.replace("GuestOTP", { email: email.trim().toLowerCase(), role });
     } catch (err: any) {
       Alert.alert("Error", err?.message ?? "Failed to send OTP.");

@@ -20,7 +20,7 @@ export interface CurrentUser {
 interface AuthState {
   user: CurrentUser | null;
   loading: boolean;
-  signInWithOTP: (email: string, role?: string) => Promise<{ hasPassword: boolean }>;
+  signInWithOTP: (email: string, role?: string, forceOtp?: boolean) => Promise<{ hasPassword: boolean }>;
   verifyOTP: (email: string, otp: string) => Promise<CurrentUser>;
   loginWithPassword: (email: string, password: string) => Promise<CurrentUser>;
   logout: () => Promise<void>;
@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const signInWithOTP = async (email: string, role?: string): Promise<{ hasPassword: boolean }> => {
-    const res = await api.post("/api/auth/send-otp", { email, ...(role ? { role } : {}) }) as any;
+  const signInWithOTP = async (email: string, role?: string, forceOtp?: boolean): Promise<{ hasPassword: boolean }> => {
+    const res = await api.post("/api/auth/send-otp", { email, ...(role ? { role } : {}), ...(forceOtp ? { forceOtp: true } : {}) }) as any;
     return { hasPassword: !!(res?.hasPassword) };
   };
 

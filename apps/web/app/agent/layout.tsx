@@ -7,7 +7,6 @@ const links = [
   { href: "/agent/dashboard",       label: "Home",      icon: LayoutDashboard },
   { href: "/agent/requests",        label: "Verify",    icon: ShieldCheck },
   { href: "/agent/areas",           label: "Areas",     icon: Map },
-  { href: "/agent/inventory",       label: "Inventory", icon: Warehouse },
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
   { href: "/agent/category-config", label: "Transport",  icon: Truck },
 ];
@@ -16,9 +15,6 @@ const allLinks = [
   { href: "/agent/dashboard",       label: "Home",      icon: LayoutDashboard },
   { href: "/agent/requests",        label: "Verify",    icon: ShieldCheck },
   { href: "/agent/areas",           label: "Areas",     icon: Map },
-  { href: "/agent/inventory",       label: "Inventory", icon: Warehouse },
-  { href: "/agent/secret-shops",    label: "Shops",     icon: Store },
-  { href: "/agent/secret-orders",   label: "Orders",    icon: ClipboardList },
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
   { href: "/agent/category-config", label: "Transport",  icon: Truck },
   { href: "/agent/slot-config",     label: "Slots",     icon: Clock },

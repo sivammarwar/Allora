@@ -9,6 +9,8 @@ import HeroSlotsScreen from "../screens/hero/HeroSlotsScreen";
 import HeroProfileScreen from "../screens/hero/HeroProfileScreen";
 import HeroEarningsScreen from "../screens/hero/HeroEarningsScreen";
 import HeroOnboardingPaymentScreen from "../screens/hero/HeroOnboardingPaymentScreen";
+import HeroRegisterScreen from "../screens/hero/HeroRegisterScreen";
+import HeroPendingScreen from "../screens/hero/HeroPendingScreen";
 import { api } from "../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { HeroTabParams } from "./types";
@@ -31,6 +33,8 @@ export default function HeroNavigator() {
     staleTime: 30_000,
   });
 
+  const refresh = () => qc.invalidateQueries({ queryKey: ["hero-me"] });
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
@@ -39,6 +43,17 @@ export default function HeroNavigator() {
     );
   }
 
+  // State: needs_request → show registration form
+  if (me?.state === "needs_request") {
+    return <HeroRegisterScreen onSubmitted={refresh} />;
+  }
+
+  // State: pending → show waiting screen
+  if (me?.state === "pending") {
+    return <HeroPendingScreen onRefresh={refresh} />;
+  }
+
+  // State: payment_required → show payment screen
   if (me?.state === "payment_required") {
     return (
       <HeroOnboardingPaymentScreen
@@ -46,11 +61,12 @@ export default function HeroNavigator() {
         validityMonths={me.validityMonths ?? 12}
         expired={me.expired ?? false}
         previousExpiresAt={me.profile?.onboardingExpiresAt ?? null}
-        onPaid={() => qc.invalidateQueries({ queryKey: ["hero-me"] })}
+        onPaid={refresh}
       />
     );
   }
 
+  // State: verified → full dashboard
   return (
     <Tab.Navigator
       screenOptions={{
