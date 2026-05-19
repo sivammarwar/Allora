@@ -35,6 +35,8 @@ interface CategoryConfig {
   bulkDiscount2: string;
   bulkDiscount3: string;
   bulkDiscount4Plus: string;
+  slotStartHour: number;
+  slotEndHour: number;
   category: { id: string; name: string; type: string };
 }
 
@@ -48,6 +50,8 @@ function CatEditRow({ cfg, onDone }: { cfg: CategoryConfig; onDone: () => void }
   const [d2, setD2] = useState(Number(cfg.bulkDiscount2));
   const [d3, setD3] = useState(Number(cfg.bulkDiscount3));
   const [d4, setD4] = useState(Number(cfg.bulkDiscount4Plus));
+  const [startHr, setStartHr] = useState(cfg.slotStartHour ?? 6);
+  const [endHr, setEndHr] = useState(cfg.slotEndHour ?? 20);
 
   const save = useMutation({
     mutationFn: () =>
@@ -57,6 +61,8 @@ function CatEditRow({ cfg, onDone }: { cfg: CategoryConfig; onDone: () => void }
         bulkDiscount2: d2,
         bulkDiscount3: d3,
         bulkDiscount4Plus: d4,
+        slotStartHour: startHr,
+        slotEndHour: endHr,
       }),
     onSuccess: () => {
       toast.success("Category config saved");
@@ -89,6 +95,21 @@ function CatEditRow({ cfg, onDone }: { cfg: CategoryConfig; onDone: () => void }
           type="number" min={0} max={100} step={0.01} value={d4}
           onChange={(e) => setD4(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
         />
+      </div>
+      <p className="text-xs font-medium text-brand-text">Slot Hours</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-brand-text">Start hour</label>
+          <select value={startHr} onChange={(e) => setStartHr(Number(e.target.value))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary">
+            {Array.from({ length: 24 }, (_, i) => (<option key={i} value={i}>{i.toString().padStart(2, "0")}:00</option>))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-brand-text">End hour</label>
+          <select value={endHr} onChange={(e) => setEndHr(Number(e.target.value))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary">
+            {Array.from({ length: 24 }, (_, i) => (<option key={i + 1} value={i + 1}>{(i + 1).toString().padStart(2, "0")}:00</option>))}
+          </select>
+        </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={() => save.mutate()} loading={save.isPending}>
@@ -196,6 +217,8 @@ export default function PriceControlPage() {
   const [catD2, setCatD2] = useState(0);
   const [catD3, setCatD3] = useState(0);
   const [catD4, setCatD4] = useState(0);
+  const [catStartHr, setCatStartHr] = useState(6);
+  const [catEndHr, setCatEndHr] = useState(20);
 
   // ── subcategory pricing state ──
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -234,12 +257,15 @@ export default function PriceControlPage() {
         bulkDiscount2: catD2,
         bulkDiscount3: catD3,
         bulkDiscount4Plus: catD4,
+        slotStartHour: catStartHr,
+        slotEndHour: catEndHr,
       }),
     onSuccess: () => {
       toast.success(`Category config added for ${selectedCat!.name}`);
       qc.invalidateQueries({ queryKey: ["agent", "category-config"] });
       setAddCatOpen(false); setSelectedCat(null);
       setCatTransport(0); setCatD2(0); setCatD3(0); setCatD4(0); setCatSearch("");
+      setCatStartHr(6); setCatEndHr(20);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Failed"),
   });
@@ -397,6 +423,21 @@ export default function PriceControlPage() {
                     <Input label="Bulk: 4+ services (%)" type="number" min={0} max={100} step={0.01} value={catD4}
                       onChange={(e) => setCatD4(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} />
                   </div>
+                  <p className="text-xs font-medium text-brand-text">Slot Hours</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-brand-text">Start hour</label>
+                      <select value={catStartHr} onChange={(e) => setCatStartHr(Number(e.target.value))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary">
+                        {Array.from({ length: 24 }, (_, i) => (<option key={i} value={i}>{i.toString().padStart(2, "0")}:00</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-brand-text">End hour</label>
+                      <select value={catEndHr} onChange={(e) => setCatEndHr(Number(e.target.value))} className="w-full p-2.5 rounded-sm border border-brand-border bg-brand-surface text-sm text-brand-text focus:outline-none focus:border-brand-primary">
+                        {Array.from({ length: 24 }, (_, i) => (<option key={i + 1} value={i + 1}>{(i + 1).toString().padStart(2, "0")}:00</option>))}
+                      </select>
+                    </div>
+                  </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" onClick={() => { setAddCatOpen(false); setSelectedCat(null); setCatSearch(""); }}>Cancel</Button>
                     <Button onClick={() => addCat.mutate()} loading={addCat.isPending} disabled={!selectedCat}>Add</Button>
@@ -440,6 +481,9 @@ export default function PriceControlPage() {
                           <span className="inline-flex items-center gap-1 bg-brand-bg border border-brand-border px-2.5 py-1 rounded-full text-brand-text">
                             <Truck size={11} className="text-brand-textMuted" />
                             {formatINR(Number(cfg.transportChargePerKm))}/km
+                          </span>
+                          <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded-full">
+                            🕐 {(cfg.slotStartHour ?? 6).toString().padStart(2, "0")}:00–{(cfg.slotEndHour ?? 20).toString().padStart(2, "0")}:00
                           </span>
                           {Number(cfg.bulkDiscount2) > 0 && (
                             <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-full">

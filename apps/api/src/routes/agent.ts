@@ -1073,6 +1073,8 @@ const categoryConfigSchema = z.object({
   bulkDiscount2: z.number().min(0).max(100).default(0),
   bulkDiscount3: z.number().min(0).max(100).default(0),
   bulkDiscount4Plus: z.number().min(0).max(100).default(0),
+  slotStartHour: z.number().int().min(0).max(23).default(6),
+  slotEndHour: z.number().int().min(1).max(24).default(20),
 });
 
 router.get("/category-config", async (req, res, next) => {
@@ -1090,15 +1092,17 @@ router.get("/category-config", async (req, res, next) => {
 router.post("/category-config", validateBody(categoryConfigSchema), async (req, res, next) => {
   try {
     const profile = await getAgentProfile(req.user!.id);
-    const { categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus } =
+    const { categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus, slotStartHour, slotEndHour } =
       req.body as z.infer<typeof categoryConfigSchema>;
     const cat = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!cat || !cat.isActive) return res.status(404).json({ error: "Category not found" });
     if (cat.type !== "SERVICE") return res.status(400).json({ error: "Only SERVICE categories" });
+    if (slotStartHour >= slotEndHour)
+      return res.status(400).json({ error: "Start hour must be before end hour" });
     const cfg = await (prisma as any).agentCategoryConfig.upsert({
       where: { agentId_categoryId: { agentId: profile.id, categoryId } },
-      update: { transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus },
-      create: { agentId: profile.id, categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus },
+      update: { transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus, slotStartHour, slotEndHour },
+      create: { agentId: profile.id, categoryId, transportChargePerKm, bulkDiscount2, bulkDiscount3, bulkDiscount4Plus, slotStartHour, slotEndHour },
       include: { category: { select: { id: true, name: true, type: true } } },
     });
     res.json(cfg);
@@ -1235,6 +1239,52 @@ router.put("/slot-config", validateBody(slotConfigSchema), async (req, res, next
     });
     res.json(cfg);
   } catch (e) { next(e); }
+});
+
+// ─── Booking History (service bookings from agent's verified heroes) ─────────
+router.get("/booking-history", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    const { status } = req.query; // "COMPLETED" or "CANCELLED"
+
+    const heroIds = (
+      await prisma.heroProfile.findMany({
+        where: { verifiedByAgentId: profile.id },
+        select: { id: true },
+      })
+    ).map((h) => h.id);
+
+    if (heroIds.length === 0) return res.json([]);
+
+    const where: any = { heroId: { in: heroIds } };
+    if (status === "COMPLETED") where.status = "COMPLETED";
+    else if (status === "CANCELLED") where.status = "CANCELLED";
+
+    const bookings = await prisma.serviceBooking.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        hero: {
+          select: {
+            id: true, shopName: true, serviceName: true, phone: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+        subcategory: { select: { id: true, name: true } },
+        order: {
+          select: {
+            id: true, totalAmount: true, paymentStatus: true,
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    res.json(bookings);
+  } catch (e) {
+    next(e);
+  }
 });
 
 export default router;

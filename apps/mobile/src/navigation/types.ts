@@ -46,17 +46,19 @@ export type HeroTabParams = {
 
 export type AgentTabParams = {
   AgentHome: undefined;
-  AgentAreas: undefined;
   AgentRequests: undefined;
+  AgentBookings: undefined;
+  AgentPrices: undefined;
+  AgentProfile: undefined;
+};
+
+export type AgentStackParams = {
+  AgentTabs: undefined;
+  AgentAreas: undefined;
   AgentHeroes: undefined;
   AgentPriceControl: undefined;
-  AgentInventory: undefined;
-  AgentItems: undefined;
-  AgentSlotConfig: undefined;
   AgentPaymentHistory: undefined;
-  AgentSecretOrders: undefined;
-  AgentSecretShops: undefined;
-  AgentProfile: undefined;
+  AgentBookingHistory: undefined;
 };
 
 export type PaymentParams = {

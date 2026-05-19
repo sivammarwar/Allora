@@ -16,6 +16,8 @@ interface AgentArea {
   polygon?: { type: string; coordinates: number[][][] };
 }
 
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
 function buildMapHtml(polygon: { type: string; coordinates: number[][][] }, name: string): string {
   const coords = polygon.coordinates[0];
   const lats = coords.map(c => c[1]);
@@ -29,25 +31,31 @@ function buildMapHtml(polygon: { type: string; coordinates: number[][][] }, name
     geometry: polygon,
   });
 
+  const coordsStr = JSON.stringify(coords);
+
   return `<!DOCTYPE html>
 <html><head>
-<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
-<style>body{margin:0;padding:0}#map{width:100%;height:100vh}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden}#map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}</style>
 </head><body>
 <div id="map"></div>
 <script>
-mapboxgl.accessToken='${MAPBOX_TOKEN}';
-var map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/streets-v12',center:[${centerLng},${centerLat}],zoom:12});
-map.on('load',function(){
-  map.addSource('area',{type:'geojson',data:${geoJson}});
-  map.addLayer({id:'area-fill',type:'fill',source:'area',paint:{'fill-color':'#c0626a','fill-opacity':0.3}});
-  map.addLayer({id:'area-border',type:'line',source:'area',paint:{'line-color':'#c0626a','line-width':2.5}});
-  var bounds=new mapboxgl.LngLatBounds();
-  ${JSON.stringify(coords)}.forEach(function(c){bounds.extend(c)});
-  map.fitBounds(bounds,{padding:50});
-});
+try{
+  mapboxgl.accessToken='${MAPBOX_TOKEN}';
+  var map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/streets-v12',center:[${centerLng},${centerLat}],zoom:12,attributionControl:false});
+  map.on('load',function(){
+    map.addSource('area',{type:'geojson',data:${geoJson}});
+    map.addLayer({id:'area-fill',type:'fill',source:'area',paint:{'fill-color':'#c0626a','fill-opacity':0.3}});
+    map.addLayer({id:'area-border',type:'line',source:'area',paint:{'line-color':'#c0626a','line-width':2.5}});
+    var bounds=new mapboxgl.LngLatBounds();
+    ${coordsStr}.forEach(function(c){bounds.extend(c)});
+    map.fitBounds(bounds,{padding:40});
+  });
+  map.on('error',function(e){document.body.innerHTML='<p style="padding:20px;color:red">'+e.error+'</p>'});
+}catch(e){document.body.innerHTML='<p style="padding:20px;color:red">'+e.message+'</p>'}
 </script>
 </body></html>`;
 }
@@ -123,11 +131,22 @@ export default function AgentAreasScreen() {
         </View>
         {mapArea?.polygon && (
           <WebView
+            key={mapArea.id}
             originWhitelist={["*"]}
             source={{ html: buildMapHtml(mapArea.polygon, mapArea.name) }}
-            style={styles.webview}
-            javaScriptEnabled
-            domStorageEnabled
+            style={{ flex: 1, width: SCREEN_W, backgroundColor: "#f9fafb" }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mixedContentMode="always"
+            allowsInlineMediaPlayback={true}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "#f9fafb" }}>
+                <ActivityIndicator color={BRAND_PRIMARY} size="large" />
+                <Text style={{ color: BRAND_MUTED, marginTop: 8, fontSize: 12 }}>Loading map…</Text>
+              </View>
+            )}
+            onError={(e) => console.warn("WebView error:", e.nativeEvent)}
           />
         )}
       </Modal>

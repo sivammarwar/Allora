@@ -17,6 +17,7 @@ interface PriceEntry {
 interface CategoryConfig {
   id: string; categoryId: string;
   transportChargePerKm: string; bulkDiscount2: string; bulkDiscount3: string; bulkDiscount4Plus: string;
+  slotStartHour: number; slotEndHour: number;
   category: { id: string; name: string; type: string };
 }
 
@@ -60,11 +61,15 @@ function PriceRow({ entry, onSave, saving }: { entry: PriceEntry; onSave: (d: an
   );
 }
 
+const HOURS = Array.from({ length: 25 }, (_, i) => i);
+
 function CatConfigRow({ cfg, onSave, saving }: { cfg: CategoryConfig; onSave: (d: any) => void; saving: boolean }) {
   const [transport, setTransport] = useState(cfg.transportChargePerKm);
   const [d2, setD2] = useState(cfg.bulkDiscount2);
   const [d3, setD3] = useState(cfg.bulkDiscount3);
   const [d4, setD4] = useState(cfg.bulkDiscount4Plus);
+  const [startHr, setStartHr] = useState(String(cfg.slotStartHour ?? 6));
+  const [endHr, setEndHr] = useState(String(cfg.slotEndHour ?? 20));
 
   return (
     <View style={styles.catCard}>
@@ -87,9 +92,28 @@ function CatConfigRow({ cfg, onSave, saving }: { cfg: CategoryConfig; onSave: (d
           <TextInput style={styles.priceInput} value={d4} onChangeText={setD4} keyboardType="numeric" />
         </View>
       </View>
+      <Text style={[styles.sectionTitle, { fontSize: 13, marginTop: 10, marginBottom: 6 }]}>Slot Hours</Text>
+      <View style={styles.priceFields}>
+        <View style={styles.priceField}>
+          <Text style={styles.priceLabel}>Start hour</Text>
+          <TextInput style={styles.priceInput} value={startHr} onChangeText={setStartHr} keyboardType="numeric" placeholder="6" />
+        </View>
+        <View style={styles.priceField}>
+          <Text style={styles.priceLabel}>End hour</Text>
+          <TextInput style={styles.priceInput} value={endHr} onChangeText={setEndHr} keyboardType="numeric" placeholder="20" />
+        </View>
+      </View>
+      <Text style={{ fontSize: 11, color: BRAND_MUTED, marginBottom: 10 }}>
+        Slots: {startHr.padStart(2, "0")}:00 – {endHr.padStart(2, "0")}:00
+      </Text>
       <TouchableOpacity
         style={[styles.saveBtn, saving && styles.btnDisabled]}
-        onPress={() => onSave({ categoryId: cfg.categoryId, transportChargePerKm: Number(transport), bulkDiscount2: Number(d2), bulkDiscount3: Number(d3), bulkDiscount4Plus: Number(d4) })}
+        onPress={() => onSave({
+          categoryId: cfg.categoryId,
+          transportChargePerKm: Number(transport),
+          bulkDiscount2: Number(d2), bulkDiscount3: Number(d3), bulkDiscount4Plus: Number(d4),
+          slotStartHour: Number(startHr), slotEndHour: Number(endHr),
+        })}
         disabled={saving}
       >
         <Text style={styles.saveBtnText}>💾 Save Category Config</Text>

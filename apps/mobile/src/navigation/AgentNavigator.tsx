@@ -1,91 +1,150 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import React from "react";
+import { TouchableOpacity, Alert } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useAuth } from "../auth/AuthContext";
 import AgentHomeScreen from "../screens/agent/AgentHomeScreen";
 import AgentProfileScreen from "../screens/agent/AgentProfileScreen";
 import AgentAreasScreen from "../screens/agent/AgentAreasScreen";
 import AgentRequestsScreen from "../screens/agent/AgentRequestsScreen";
 import AgentHeroesScreen from "../screens/agent/AgentHeroesScreen";
 import AgentPriceControlScreen from "../screens/agent/AgentPriceControlScreen";
-import AgentInventoryScreen from "../screens/agent/AgentInventoryScreen";
-import AgentItemsScreen from "../screens/agent/AgentItemsScreen";
-import AgentSlotConfigScreen from "../screens/agent/AgentSlotConfigScreen";
 import AgentPaymentHistoryScreen from "../screens/agent/AgentPaymentHistoryScreen";
-import AgentSecretOrdersScreen from "../screens/agent/AgentSecretOrdersScreen";
-import AgentSecretShopsScreen from "../screens/agent/AgentSecretShopsScreen";
+import AgentBookingHistoryScreen from "../screens/agent/AgentBookingHistoryScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
+import type { AgentTabParams, AgentStackParams } from "./types";
 
-interface MenuItem { id: string; label: string; icon: string; screen: React.ComponentType; }
+const Tab = createBottomTabNavigator<AgentTabParams>();
+const Stack = createNativeStackNavigator<AgentStackParams>();
 
-const MENU_ITEMS: MenuItem[] = [
-  { id: "home", label: "Dashboard", icon: "bar-chart-outline", screen: AgentHomeScreen },
-  { id: "areas", label: "My Areas", icon: "map-outline", screen: AgentAreasScreen },
-  { id: "requests", label: "Requests", icon: "shield-checkmark-outline", screen: AgentRequestsScreen },
-  { id: "heroes", label: "Verified Heroes", icon: "people-outline", screen: AgentHeroesScreen },
-  { id: "pricing", label: "Price Control", icon: "pricetag-outline", screen: AgentPriceControlScreen },
-  // { id: "inventory", label: "Inventory", icon: "storefront-outline", screen: AgentInventoryScreen },
-  // { id: "items", label: "Catalog Items", icon: "folder-open-outline", screen: AgentItemsScreen },
-  { id: "slots", label: "Slot Hours", icon: "time-outline", screen: AgentSlotConfigScreen },
-  // { id: "sorders", label: "Secret Orders", icon: "bag-outline", screen: AgentSecretOrdersScreen },
-  // { id: "shops", label: "Verify Shops", icon: "business-outline", screen: AgentSecretShopsScreen },
-  { id: "payments", label: "Payments", icon: "card-outline", screen: AgentPaymentHistoryScreen },
-  { id: "profile", label: "Profile", icon: "person-outline", screen: AgentProfileScreen },
-];
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
-export default function AgentNavigator() {
-  const [selectedId, setSelectedId] = useState("home");
-  const selectedItem = MENU_ITEMS.find((item) => item.id === selectedId) ?? MENU_ITEMS[0];
-  const ScreenComponent = selectedItem.screen;
-
-  return (
-    <View style={styles.root}>
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarHeader}>
-          <Text style={styles.sidebarTitle}>Regional Officer</Text>
-        </View>
-        <ScrollView style={styles.sidebarList} showsVerticalScrollIndicator={false}>
-          {MENU_ITEMS.map((item) => {
-            const isActive = item.id === selectedId;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.sidebarItem, isActive && styles.sidebarItemActive]}
-                onPress={() => setSelectedId(item.id)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={item.icon as any} size={20} color={isActive ? BRAND_PRIMARY : BRAND_MUTED} style={styles.sidebarIcon} />
-                <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>{item.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.contentHeader}>
-          <Text style={styles.contentTitle}>{selectedItem.label}</Text>
-        </View>
-        <View style={styles.contentBody}>
-          <ScreenComponent />
-        </View>
-      </View>
-    </View>
+function tabIcon(active: IoniconName, inactive: IoniconName) {
+  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+    <Ionicons name={focused ? active : inactive} size={size} color={color} />
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, flexDirection: "row", backgroundColor: "#fff" },
-  sidebar: { flex: 35, backgroundColor: "#f5f5f5", borderRightWidth: 1, borderRightColor: "#e5e7eb", paddingTop: 8 },
-  sidebarHeader: { padding: 16, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  sidebarTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
-  sidebarList: { flex: 1 },
-  sidebarItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderLeftWidth: 3, borderLeftColor: "transparent" },
-  sidebarItemActive: { backgroundColor: "#fff", borderLeftColor: BRAND_PRIMARY },
-  sidebarIcon: { marginRight: 12 },
-  sidebarLabel: { fontSize: 14, color: "#6b7280", fontWeight: "500" },
-  sidebarLabelActive: { color: BRAND_PRIMARY, fontWeight: "700" },
-  content: { flex: 65, backgroundColor: "#fff" },
-  contentHeader: { padding: 16, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  contentTitle: { fontSize: 18, fontWeight: "700", color: "#111" },
-  contentBody: { flex: 1 },
-});
+function LogoutButton() {
+  const { logout } = useAuth();
+  return (
+    <TouchableOpacity
+      onPress={() =>
+        Alert.alert("Log out", "Are you sure?", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Log out", style: "destructive", onPress: logout },
+        ])
+      }
+      style={{ marginRight: 12 }}
+    >
+      <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+    </TouchableOpacity>
+  );
+}
+
+function AgentTabs() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: "#fff", shadowColor: "#000", shadowOpacity: 0.05, elevation: 2 },
+        headerTitleStyle: { fontSize: 17, fontWeight: "700", color: "#111" },
+        headerRight: () => <LogoutButton />,
+        tabBarActiveTintColor: BRAND_PRIMARY,
+        tabBarInactiveTintColor: BRAND_MUTED,
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopColor: "#f0f0f0",
+          borderTopWidth: 1,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom || 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+      }}
+    >
+      <Tab.Screen
+        name="AgentHome"
+        component={AgentHomeScreen}
+        options={{
+          title: "Dashboard",
+          tabBarLabel: "Home",
+          tabBarIcon: tabIcon("home", "home-outline"),
+        }}
+      />
+      <Tab.Screen
+        name="AgentRequests"
+        component={AgentRequestsScreen}
+        options={{
+          title: "Requests",
+          tabBarLabel: "Verify",
+          tabBarIcon: tabIcon("shield-checkmark", "shield-checkmark-outline"),
+        }}
+      />
+      <Tab.Screen
+        name="AgentBookings"
+        component={AgentBookingHistoryScreen}
+        options={{
+          title: "Booking History",
+          tabBarLabel: "Bookings",
+          tabBarIcon: tabIcon("calendar", "calendar-outline"),
+        }}
+      />
+      <Tab.Screen
+        name="AgentPrices"
+        component={AgentPriceControlScreen}
+        options={{
+          title: "Prices",
+          tabBarLabel: "Prices",
+          tabBarIcon: tabIcon("pricetag", "pricetag-outline"),
+        }}
+      />
+      <Tab.Screen
+        name="AgentProfile"
+        component={AgentProfileScreen}
+        options={{
+          title: "Profile",
+          tabBarLabel: "Profile",
+          tabBarIcon: tabIcon("person", "person-outline"),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+export default function AgentNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="AgentTabs" component={AgentTabs} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="AgentAreas"
+        component={AgentAreasScreen}
+        options={{ title: "Service Areas", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentHeroes"
+        component={AgentHeroesScreen}
+        options={{ title: "My Heroes", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentBookingHistory"
+        component={AgentBookingHistoryScreen}
+        options={{ title: "Booking History", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentPriceControl"
+        component={AgentPriceControlScreen}
+        options={{ title: "Price Control", headerTintColor: BRAND_PRIMARY }}
+      />
+      <Stack.Screen
+        name="AgentPaymentHistory"
+        component={AgentPaymentHistoryScreen}
+        options={{ title: "Payment History", headerTintColor: BRAND_PRIMARY }}
+      />
+    </Stack.Navigator>
+  );
+}
