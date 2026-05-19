@@ -53,7 +53,7 @@ export default function AgentBookingsPage() {
       {/* Tabs */}
       <div className="flex gap-2">
         <Button
-          variant={tab === "COMPLETED" ? "default" : "outline"}
+          variant={tab === "COMPLETED" ? "primary" : "outline"}
           size="sm"
           onClick={() => setTab("COMPLETED")}
           className="gap-1.5"
@@ -62,7 +62,7 @@ export default function AgentBookingsPage() {
           Service Successful
         </Button>
         <Button
-          variant={tab === "CANCELLED" ? "default" : "outline"}
+          variant={tab === "CANCELLED" ? "primary" : "outline"}
           size="sm"
           onClick={() => setTab("CANCELLED")}
           className="gap-1.5"
