@@ -13,6 +13,7 @@ router.use(requireAuth);
  * Returns a short-lived signed payload so the mobile client can POST the
  * image directly to Cloudinary — bypassing our ALB/WAF which blocks
  * multipart uploads from non-browser User-Agents.
+ * Deployed: 2026-05-20
  */
 router.get("/cloudinary-signature", (req, res) => {
   const c = getCloudinary();
