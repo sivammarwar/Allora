@@ -153,63 +153,26 @@ export default function AgentRequestDetailScreen() {
       if (result.didCancel || !result.assets?.[0]?.uri) return;
       const asset = result.assets[0];
       setUploading(true);
+      console.log("[Upload] Asset details:", {
+        uri: asset.uri,
+        type: asset.type,
+        fileName: asset.fileName,
+        fileSize: asset.fileSize,
+      });
+      
       const formData = new FormData();
       formData.append("file", {
         uri: asset.uri,
         type: asset.type ?? "image/jpeg",
         name: asset.fileName ?? "photo.jpg",
       } as any);
-      let token = await storage.get("access_token");
-      console.log("[Upload] Token exists:", !!token);
-      console.log("[Upload] Asset URI:", asset.uri);
       
       const res = await fetch(`${API_URL}/api/upload/image?folder=heroes`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+        credentials: "include",
         body: formData,
       });
       console.log("[Upload] Response status:", res.status);
-      
-      // If 401 or 403, try refreshing token
-      if (res.status === 401 || res.status === 403) {
-        console.log("[Upload] Auth failed, trying refresh...");
-        const refresh = await storage.get("refresh_token");
-        const refreshRes = await fetch(`${API_URL}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken: refresh }),
-          credentials: "include",
-        });
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          await storage.set("access_token", refreshData.accessToken);
-          token = refreshData.accessToken;
-          console.log("[Upload] Token refreshed, retrying...");
-          
-          // Retry upload with new token
-          const retryRes = await fetch(`${API_URL}/api/upload/image?folder=heroes`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-            body: formData,
-          });
-          console.log("[Upload] Retry status:", retryRes.status);
-          if (!retryRes.ok) {
-            const data = await retryRes.json().catch(() => null);
-            console.log("[Upload] Retry error data:", data);
-            throw new Error(data?.error ?? `Upload failed (${retryRes.status})`);
-          }
-          const json = await retryRes.json();
-          console.log("[Upload] Success after refresh, URL:", json.url);
-          setPhotoUrl(json.url);
-          return;
-        }
-      }
       
       if (!res.ok) {
         const data = await res.json().catch(() => null);
