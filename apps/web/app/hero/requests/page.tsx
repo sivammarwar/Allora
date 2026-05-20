@@ -35,6 +35,7 @@ interface ServiceRequest {
   userPhone: string;
   userGender?: string;
   userAddress: string;
+  createdAt: string;
   subcategory: { id: string; name: string; category: { id: string; name: string } };
 }
 
