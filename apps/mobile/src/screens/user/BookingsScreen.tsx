@@ -23,6 +23,8 @@ interface ServiceRequest {
   discountPercent: string;
   bulkDiscountPercent: string;
   transportCharge: string;
+  distanceKm?: number | null;
+  transportTotal?: string;
   createdAt: string;
   subcategory: { id: string; name: string; category: { id: string; name: string } };
   hero?: {
@@ -63,6 +65,8 @@ interface BookingGroup {
   hero: ServiceRequest["hero"];
   bookings: ServiceRequest[];
   totalFinal: number;
+  totalTransport: number;
+  distanceKm: number;
   groupStatus: string;
 }
 
@@ -79,11 +83,15 @@ function groupBookings(list: ServiceRequest[]): BookingGroup[] {
         hero: b.hero,
         bookings: [],
         totalFinal: 0,
+        totalTransport: 0,
+        distanceKm: b.distanceKm ?? 0,
         groupStatus: b.status,
       });
     }
     const g = map.get(key)!;
     g.totalFinal += calcFinal(b);
+    g.totalTransport += Number(b.transportTotal ?? 0);
+    if (b.distanceKm) g.distanceKm = b.distanceKm;
     g.bookings.push(b);
     if (["PENDING", "ACCEPTED"].includes(b.status)) g.groupStatus = b.status;
   }
@@ -222,7 +230,14 @@ export default function BookingsScreen() {
                   })}
                   {" · "}{fmtHour(g.scheduledHour)}
                 </Text>
-                <Text style={styles.price}>₹{g.totalFinal.toFixed(0)}</Text>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.price}>₹{(g.totalFinal + g.totalTransport).toFixed(0)}</Text>
+                  {g.totalTransport > 0 ? (
+                    <Text style={styles.travelText}>incl. ₹{g.totalTransport.toFixed(0)} travel</Text>
+                  ) : g.distanceKm > 0 ? (
+                    <Text style={styles.travelTextFree}>Free travel</Text>
+                  ) : null}
+                </View>
               </View>
               <Text style={styles.tapHint}>
                 {g.bookings.length} service{g.bookings.length > 1 ? "s" : ""} · tap for details
@@ -284,10 +299,31 @@ export default function BookingsScreen() {
                 );
               })()}
 
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalAmount}>₹{selected?.totalFinal.toFixed(0)}</Text>
-              </View>
+              {/* Distance & transport */}
+              {selected && selected.distanceKm > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.distanceLabel}>Provider distance</Text>
+                  <Text style={styles.distanceValue}>{selected.distanceKm} km</Text>
+                </View>
+              )}
+              {selected && selected.totalTransport > 0 ? (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Travel charge</Text>
+                  <Text style={styles.summaryValue}>₹{selected.totalTransport.toFixed(0)}</Text>
+                </View>
+              ) : selected && selected.distanceKm > 0 ? (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Travel charge</Text>
+                  <Text style={styles.freeValue}>Free</Text>
+                </View>
+              ) : null}
+
+              {selected && (
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total</Text>
+                  <Text style={styles.totalAmount}>₹{(selected.totalFinal + selected.totalTransport).toFixed(0)}</Text>
+                </View>
+              )}
 
               {selected?.hero && (
                 <View style={styles.heroBox}>
@@ -357,6 +393,8 @@ const styles = StyleSheet.create({
   cardBottom: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   meta: { fontSize: 12, color: BRAND_MUTED },
   price: { fontSize: 15, fontWeight: "700", color: BRAND_PRIMARY },
+  travelText: { fontSize: 10, color: BRAND_MUTED },
+  travelTextFree: { fontSize: 10, color: "#16a34a", fontWeight: "600" },
   cancelBtn: {
     borderWidth: 1.5, borderColor: "#ef4444", borderRadius: 10,
     paddingVertical: 7, alignItems: "center",
@@ -396,6 +434,11 @@ const styles = StyleSheet.create({
   },
   bulkLabel: { fontSize: 13, color: "#16a34a", fontWeight: "600" },
   bulkSaving: { fontSize: 13, fontWeight: "700", color: "#16a34a" },
+  distanceLabel: { fontSize: 13, color: "#3b82f6", fontWeight: "600" },
+  distanceValue: { fontSize: 13, fontWeight: "700", color: "#3b82f6" },
+  summaryLabel: { fontSize: 13, color: BRAND_MUTED },
+  summaryValue: { fontSize: 13, fontWeight: "700", color: "#111" },
+  freeValue: { fontSize: 13, fontWeight: "700", color: "#16a34a" },
   totalRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingVertical: 12, marginBottom: 4,

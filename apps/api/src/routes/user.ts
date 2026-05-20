@@ -1675,7 +1675,13 @@ router.get("/service-requests", requireAuth, requireRole("USER"), async (req, re
       },
       orderBy: { createdAt: "desc" },
     });
-    res.json(requests);
+    // Add distanceKm and transportTotal to each request
+    const enriched = requests.map((r) => ({
+      ...r,
+      distanceKm: r.distanceKm,
+      transportTotal: r.transportTotal,
+    }));
+    res.json(enriched);
   } catch (e) { next(e); }
 });
 
