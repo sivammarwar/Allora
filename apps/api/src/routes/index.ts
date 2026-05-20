@@ -17,7 +17,7 @@ import contactRouter from "./contact";
 const router = Router();
 
 router.get("/health", (_req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
+  res.json({ ok: true, ts: new Date().toISOString(), v: "df478df" });
 });
 
 router.use("/auth", authRouter);
