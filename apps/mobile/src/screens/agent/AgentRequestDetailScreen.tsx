@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View, Text, ScrollView, StyleSheet, TextInput, Image,
-  TouchableOpacity, ActivityIndicator, Alert, Modal, Platform,
+  TouchableOpacity, ActivityIndicator, Alert, Modal,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, apiClient } from "../../lib/api";
+import { api } from "../../lib/api";
 import { API_URL, BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { launchImageLibrary } from "react-native-image-picker";
 import { useAuth } from "../../auth/AuthContext";
@@ -146,44 +146,79 @@ export default function AgentRequestDetailScreen() {
     onError: (e: any) => Alert.alert("Error", e?.message ?? "Verification failed"),
   });
 
-  // ── Image upload ──
+  // ── Image upload (direct to Cloudinary, bypasses our ALB/WAF) ──
+  const uploadDirectToCloudinary = (
+    asset: { uri: string; type?: string; fileName?: string },
+    sig: { cloudName: string; apiKey: string; folder: string; timestamp: number; signature: string },
+  ) =>
+    new Promise<{ url: string; publicId: string }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`);
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve({ url: data.secure_url, publicId: data.public_id });
+          } catch {
+            reject(new Error("Invalid Cloudinary response"));
+          }
+        } else {
+          let msg = `Upload failed (${xhr.status})`;
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data?.error?.message) msg = data.error.message;
+          } catch {
+            const body = (xhr.responseText ?? "").slice(0, 300);
+            msg = `Upload failed (${xhr.status}) ${body}`;
+          }
+          reject(new Error(msg));
+        }
+      };
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.ontimeout = () => reject(new Error("Upload timed out"));
+      xhr.timeout = 60000;
+
+      const form = new FormData();
+      form.append("file", {
+        uri: asset.uri,
+        type: asset.type ?? "image/jpeg",
+        name: asset.fileName ?? "photo.jpg",
+      } as any);
+      form.append("api_key", sig.apiKey);
+      form.append("timestamp", String(sig.timestamp));
+      form.append("signature", sig.signature);
+      form.append("folder", sig.folder);
+      xhr.send(form as any);
+    });
+
   const pickAndUploadImage = async () => {
     try {
       const result = await launchImageLibrary({ mediaType: "photo", quality: 0.8 });
       if (result.didCancel || !result.assets?.[0]?.uri) return;
       const asset = result.assets[0];
-      setUploading(true);
-      console.log("[Upload] Asset details:", {
-        uri: asset.uri,
-        type: asset.type,
-        fileName: asset.fileName,
-        fileSize: asset.fileSize,
-      });
-      
-      const formData = new FormData();
-      formData.append("file", {
-        uri: asset.uri,
-        type: asset.type ?? "image/jpeg",
-        name: asset.fileName ?? "photo.jpg",
-      } as any);
-      
-      const res = await fetch(`${API_URL}/api/upload/image?folder=heroes`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      console.log("[Upload] Response status:", res.status);
-      
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        console.log("[Upload] Error data:", data);
-        throw new Error(data?.error ?? `Upload failed (${res.status})`);
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert("Image too large", "Please pick an image 5MB or smaller.");
+        return;
       }
-      const json = await res.json();
-      console.log("[Upload] Success, URL:", json.url);
+      setUploading(true);
+
+      // 1. Get short-lived signed payload from our API (small GET, not WAF-blocked).
+      const sig = (await api.get("/api/upload/cloudinary-signature", { folder: "heroes" })) as {
+        cloudName: string;
+        apiKey: string;
+        folder: string;
+        timestamp: number;
+        signature: string;
+      };
+
+      // 2. Upload directly to Cloudinary, bypassing our ALB/WAF entirely.
+      const json = await uploadDirectToCloudinary(
+        { uri: asset.uri!, type: asset.type, fileName: asset.fileName },
+        sig,
+      );
       setPhotoUrl(json.url);
     } catch (e: any) {
-      console.log("[Upload] Exception:", e);
       Alert.alert("Upload error", e?.message ?? "Failed to upload image");
     } finally {
       setUploading(false);
