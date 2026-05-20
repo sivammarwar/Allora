@@ -12,6 +12,8 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(async (config) => {
   const token = await storage.get("access_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  console.log("[API] Request:", config.method?.toUpperCase(), config.baseURL + config.url,
+    "hasToken:", !!token, "tokenLen:", token?.length);
   return config;
 });
 
@@ -19,6 +21,12 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (r) => r.data,
   async (error) => {
+    console.log("[API] Response error:", JSON.stringify({
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+      method: error.config?.method,
+    }));
     const original = error.config;
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;

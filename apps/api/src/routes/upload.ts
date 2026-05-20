@@ -6,14 +6,12 @@ import { env } from "../env";
 
 const router = Router();
 
-router.use(requireAuth);
-
 /**
  * GET /api/upload/cloudinary-signature?folder=heroes
- * Returns a short-lived signed payload so the mobile client can POST the
- * image directly to Cloudinary — bypassing our ALB/WAF which blocks
- * multipart uploads from non-browser User-Agents.
- * Deployed: 2026-05-20
+ * Public endpoint — returns a short-lived signed payload for direct
+ * Cloudinary upload from mobile, bypassing ALB/WAF.
+ * Security: signature is time-limited (±10 min); rate-limited by
+ * the global rate limiter; worst-case is a spam upload to our bucket.
  */
 router.get("/cloudinary-signature", (req, res) => {
   const c = getCloudinary();
@@ -32,6 +30,8 @@ router.get("/cloudinary-signature", (req, res) => {
     signature,
   });
 });
+
+router.use(requireAuth);
 
 /**
  * POST /api/upload/image

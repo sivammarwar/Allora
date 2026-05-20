@@ -26,17 +26,17 @@ export default function AgentHomeScreen() {
 
   const { data: heroRequests = [], isLoading } = useQuery<any[]>({
     queryKey: ["agent-hero-requests"],
-    queryFn: () => api.get("/api/agent/hero-requests?status=PENDING") as any,
+    queryFn: () => api.get("/api/agent/requests", { status: "PENDING" }) as any,
     enabled: !!user,
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => api.patch(`/api/agent/hero-requests/${id}/approve`) as any,
+    mutationFn: (id: string) => api.put(`/api/agent/requests/${id}/status`, { status: "IN_PROGRESS" }) as any,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agent-hero-requests"] }),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => api.patch(`/api/agent/hero-requests/${id}/reject`) as any,
+    mutationFn: (id: string) => api.put(`/api/agent/requests/${id}/status`, { status: "REJECTED" }) as any,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agent-hero-requests"] }),
   });
 
