@@ -108,7 +108,13 @@ export default function HeroRequestsPage() {
 
   const { data: history = [], isLoading: loadingHistory } = useQuery<ServiceRequest[]>({
     queryKey: ["hero", "service-requests", "history"],
-    queryFn: () => api.get("/api/hero/service-requests?status=COMPLETED"),
+    queryFn: async () => {
+      const [completed, cancelled] = await Promise.all([
+        api.get<ServiceRequest[]>("/api/hero/service-requests?status=COMPLETED"),
+        api.get<ServiceRequest[]>("/api/hero/service-requests?status=CANCELLED"),
+      ]);
+      return [...completed, ...cancelled].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    },
     enabled: tab === "history",
   });
 
@@ -228,6 +234,11 @@ export default function HeroRequestsPage() {
             <div className="text-right shrink-0">
               <p className="font-heading text-lg text-brand-text">₹{(g.totalFinal + g.totalTransport).toFixed(0)}</p>
               {g.totalTransport > 0 && <p className="text-[10px] text-brand-textMuted">incl. ₹{g.totalTransport.toFixed(0)} travel</p>}
+              {g.requests[0]?.status === "CANCELLED" && g.requests[0]?.cancelledBy && (
+                <p className="text-[10px] font-semibold mt-1 text-red-600">
+                  Cancelled by {g.requests[0].cancelledBy === "HERO" ? "you" : "user"}
+                </p>
+              )}
             </div>
             <ChevronRight size={16} className="text-brand-textMuted shrink-0" />
           </div>

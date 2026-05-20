@@ -1231,7 +1231,7 @@ router.post("/service-requests/:id/cancel", async (req, res, next) => {
 
     const updated = await prisma.serviceRequest.update({
       where: { id: request.id },
-      data: { status: "CANCELLED", heroId: null, slotId: null },
+      data: { status: "CANCELLED", cancelledBy: "HERO", heroId: null, slotId: null },
     });
 
     // Free the slot if it was locked

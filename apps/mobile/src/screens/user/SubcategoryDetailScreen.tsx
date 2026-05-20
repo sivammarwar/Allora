@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, ScrollView, StyleSheet, FlatList, Dimensions,
+  View, Text, ScrollView, StyleSheet, FlatList,
   TouchableOpacity, Image, ActivityIndicator, Alert,
   Modal, TextInput, KeyboardAvoidingView, Platform, PermissionsAndroid,
 } from "react-native";
@@ -8,12 +8,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Geolocation from "@react-native-community/geolocation";
-import { WebView } from "react-native-webview";
 import { api } from "../../lib/api";
 import { storage } from "../../lib/storage";
+import { connectService, disconnectAll } from "../../lib/socket";
 import { BRAND_PRIMARY, BRAND_MUTED, MAPBOX_TOKEN } from "../../lib/config";
+import LocationPickerModal, { PickedLocation } from "../../components/LocationPickerModal";
 import { useLanguage } from "../../lib/i18n";
 import { useAuth } from "../../auth/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import type { UserStackParams } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<UserStackParams, "SubcategoryDetail">;
@@ -50,8 +52,6 @@ function formatHour(h: number, dur = 1): string {
   return `${fmt(h)} – ${fmt(h + dur)}`;
 }
 
-const SCREEN_W = Dimensions.get("window").width;
-
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
@@ -72,35 +72,12 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
-function buildMapHtml(lat: number, lng: number) {
-  return `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet"/>
-<style>*{margin:0;padding:0}body,#map{width:100%;height:100%}
-.pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:10;pointer-events:none;font-size:36px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
-#btn{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:10;background:${BRAND_PRIMARY};color:#fff;border:none;padding:14px 32px;border-radius:14px;font-size:15px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.2);cursor:pointer}
-</style></head><body>
-<div id="map"></div>
-<div class="pin">📍</div>
-<button id="btn" onclick="confirm()">Confirm Location</button>
-<script>
-mapboxgl.accessToken='${MAPBOX_TOKEN}';
-var map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/streets-v12',center:[${lng},${lat}],zoom:15});
-map.addControl(new mapboxgl.NavigationControl(),'top-right');
-function confirm(){
-  var c=map.getCenter();
-  window.ReactNativeWebView.postMessage(JSON.stringify({lat:c.lat,lng:c.lng}));
-}
-</script></body></html>`;
-}
-
 export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const { id, agentId } = route.params;
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { lang, t } = useLanguage();
+  const qc = useQueryClient();
 
   const [loc, setLoc] = useState<StoredLocation | null>(null);
   const [locLoaded, setLocLoaded] = useState(false);
@@ -108,10 +85,21 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState(weekDates[0]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [bookingModal, setBookingModal] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
+  const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set([id]));
   const [form, setForm] = useState({ name: "", phone: "", address: "", gender: "" });
   const [formPrefilled, setFormPrefilled] = useState(false);
   const [mapPickerVisible, setMapPickerVisible] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
+
+  const toggleSub = (subId: string) => {
+    if (subId === id) return;
+    setSelectedSubIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(subId)) next.delete(subId); else next.add(subId);
+      return next;
+    });
+  };
 
   const handleUseCurrentLocation = useCallback(async () => {
     setGpsLoading(true);
@@ -119,35 +107,37 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
       if (Platform.OS === "android") {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          { title: "Location Permission", message: "Bharat Services needs your location to auto-fill service address.", buttonPositive: "Allow" },
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert("Permission denied", "Location permission is required.");
+          Alert.alert("Location needed", "Please allow location to auto-fill your address.");
           setGpsLoading(false);
           return;
         }
       }
       Geolocation.getCurrentPosition(
-        async (pos) => {
+        async (pos: { coords: { latitude: number; longitude: number } }) => {
           const { latitude, longitude } = pos.coords;
           const addr = await reverseGeocode(latitude, longitude);
           setForm((f) => ({ ...f, address: addr }));
           setGpsLoading(false);
         },
         (err) => {
-          Alert.alert("Location error", err.message || "Could not get location.");
+          console.warn("[geo] error:", err.code, err.message);
+          Alert.alert("Location error", err.message || "Could not get location. Please ensure GPS is enabled.");
           setGpsLoading(false);
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
       );
-    } catch {
+    } catch (e) {
+      console.warn("[geo]", e);
       setGpsLoading(false);
     }
   }, []);
 
-  const handleMapConfirm = useCallback(async (data: { lat: number; lng: number }) => {
+  const handleMapPickerConfirm = useCallback((picked: PickedLocation) => {
     setMapPickerVisible(false);
-    const addr = await reverseGeocode(data.lat, data.lng);
-    setForm((f) => ({ ...f, address: addr }));
+    setForm((f) => ({ ...f, address: picked.name }));
   }, []);
 
   useEffect(() => {
@@ -197,28 +187,62 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const slotDur: number = slotData?.slotDurationHours ?? 1;
   const todaySlots = slots[selectedDate] ?? [];
 
-  // ── Other services in same category ───────────────────────────────────────
-  const categoryId = sub?.categoryId;
-  const { data: otherServices = [] } = useQuery<any[]>({
-    queryKey: ["cat-subs", categoryId, loc?.lat, loc?.lng],
-    queryFn: () =>
-      api.get(`/api/user/categories/${categoryId}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}`) as any,
-    enabled: !!categoryId && !!loc,
-    select: (data: any[]) => data.filter((s) => s.id !== id),
-  });
+  // ── Real-time slot updates (socket) ───────────────────────────────────────
+  useEffect(() => {
+    if (!resolvedAgentId) return;
+    let mounted = true;
+    const setupSocket = async () => {
+      try {
+        const socket = await connectService();
+        if (!mounted) return;
+        const key = `${id}:${selectedDate}`;
+        socket.emit("slots:watch", key);
+        const onUpdate = () => {
+          if (mounted) qc.invalidateQueries({ queryKey: ["slots", id, resolvedAgentId] });
+        };
+        socket.on("slot:updated", onUpdate);
+        return () => {
+          socket.emit("slots:unwatch", key);
+          socket.off("slot:updated", onUpdate);
+        };
+      } catch (e) {
+        console.warn("[Socket] failed to connect:", e);
+      }
+    };
+    const cleanupPromise = setupSocket();
+    return () => {
+      mounted = false;
+      cleanupPromise.then(cleanup => cleanup?.()).catch(() => {});
+    };
+  }, [id, resolvedAgentId, selectedDate, qc]);
 
-  // ── Booking ────────────────────────────────────────────────────────────────
+  // ── Other services in same category (with agent pricing + catConfig) ─────
+  const categoryId = sub?.categoryId;
+  const { data: catSubsRaw = [] } = useQuery<any[]>({
+    queryKey: ["cat-subs", categoryId, loc?.lat, loc?.lng, resolvedAgentId],
+    queryFn: () =>
+      api.get(`/api/user/categories/${categoryId}/subcategories?lat=${loc!.lat}&lng=${loc!.lng}${resolvedAgentId ? `&agentId=${resolvedAgentId}` : ""}`) as any,
+    enabled: !!categoryId && !!loc,
+  });
+  const otherServices = catSubsRaw.filter((s: any) => s.id !== id);
+  const catConfig = catSubsRaw.find((s: any) => s.categoryConfig)?.categoryConfig ?? null;
+
+  // ── Booking (bulk API — same as web) ────────────────────────────────────────
   const bookMutation = useMutation({
-    mutationFn: (payload: any) => api.post("/api/user/service-requests", payload) as any,
-    onSuccess: (booking: any) => {
+    mutationFn: (payload: any) => api.post("/api/user/service-requests/bulk", payload) as any,
+    onSuccess: (bookings: any) => {
       setBookingModal(false);
-      Alert.alert("Confirmed! 🎉", "Your booking is placed.", [
-        { text: "View Order", onPress: () => navigation.navigate("OrderDetail", { id: booking.id }) },
+      setSelectedSubIds(new Set([id]));
+      const n = Array.isArray(bookings) ? bookings.length : 1;
+      Alert.alert("Confirmed! 🎉", `${n} booking request${n > 1 ? "s" : ""} sent! Waiting for a provider to accept.`, [
         { text: "OK" },
       ]);
     },
-    onError: (e: any) =>
-      Alert.alert("Booking failed", e?.message ?? "Something went wrong. Please try again."),
+    onError: (e: any) => {
+      console.warn("[Booking Error]", JSON.stringify(e));
+      const msg = e?.error ?? e?.message ?? "Something went wrong. Please try again.";
+      Alert.alert("Booking failed", msg);
+    },
   });
 
   const handleBookNow = () => {
@@ -227,6 +251,17 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
       Alert.alert("Select a slot", "Please pick a date and time slot first.");
       return;
     }
+    // Show upsell if there are other services in same category, otherwise go directly to form
+    setSelectedSubIds(new Set([id]));
+    if (otherServices.length > 0) {
+      setShowUpsell(true);
+    } else {
+      openBookingForm();
+    }
+  };
+
+  const openBookingForm = () => {
+    setShowUpsell(false);
     if (!formPrefilled && profile) {
       const defaultAddr =
         profile.savedAddresses?.find((a: any) => a.isDefault)?.address ??
@@ -248,18 +283,28 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
       Alert.alert("Required", "Name, phone and address are required.");
       return;
     }
-    bookMutation.mutate({
-      subcategoryId: id,
-      agentId: resolvedAgentId!,
+    if (!resolvedAgentId) {
+      Alert.alert("Error", "Unable to determine service provider. Please go back and try again.");
+      return;
+    }
+    if (selectedHour === null) {
+      Alert.alert("Error", "Please select a time slot first.");
+      return;
+    }
+    const payload = {
+      subcategoryIds: Array.from(selectedSubIds),
+      agentId: resolvedAgentId,
       scheduledDate: selectedDate,
-      scheduledHour: selectedHour!,
+      scheduledHour: selectedHour,
       userName: form.name.trim(),
       userPhone: form.phone.trim(),
       userAddress: form.address.trim(),
       userGender: form.gender.trim() || undefined,
       userLat: loc?.lat,
       userLng: loc?.lng,
-    });
+    };
+    console.log("[Booking] payload:", JSON.stringify(payload));
+    bookMutation.mutate(payload);
   };
 
   if (!locLoaded || isLoading) {
@@ -457,9 +502,119 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* ── Upsell modal (multi-service selection like web) ─────────── */}
+      <Modal visible={showUpsell} animationType="slide" transparent onRequestClose={() => setShowUpsell(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.upsellSheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <View>
+                <Text style={styles.modalTitle}>Book services together</Text>
+                <Text style={styles.modalSub}>
+                  {selectedHour !== null ? formatHour(selectedHour, slotDur) : ""} · {formatDateTab(selectedDate).day} {formatDateTab(selectedDate).num} {formatDateTab(selectedDate).mon}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowUpsell(false)} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 20, color: BRAND_MUTED }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
+              {/* Primary service */}
+              {(() => {
+                const allSubs = [
+                  { id, name: sub.name, nameHi: sub.nameHi, base: baseCharge ?? 0, disc: discountPercent, final: finalCharge ?? 0, hasPricing: !!pricing, isMain: true },
+                  ...otherServices.map((s: any) => {
+                    const sp = s.agentPricing;
+                    const sBase = sp ? Number(sp.baseServiceCharge) : 0;
+                    const sDisc = sp ? Number(sp.discountPercent) : 0;
+                    return { id: s.id, name: s.name, nameHi: s.nameHi, base: sBase, disc: sDisc, final: sBase * (1 - sDisc / 100), hasPricing: !!sp, isMain: false };
+                  }),
+                ];
+                return allSubs.map((s) => {
+                  const isSelected = selectedSubIds.has(s.id);
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.upsellItem, isSelected && styles.upsellItemSelected]}
+                      onPress={() => toggleSub(s.id)}
+                      activeOpacity={s.isMain ? 1 : 0.7}
+                      disabled={s.isMain}
+                    >
+                      <View style={[styles.upsellCheck, isSelected && styles.upsellCheckActive]}>
+                        {isSelected && <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>✓</Text>}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={styles.upsellName}>{lang === "hi" && s.nameHi ? s.nameHi : s.name}</Text>
+                          {s.isMain && <View style={styles.primaryBadge}><Text style={styles.primaryBadgeText}>Primary</Text></View>}
+                        </View>
+                        {s.hasPricing && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                            {s.disc > 0 && <Text style={{ fontSize: 11, color: BRAND_MUTED, textDecorationLine: "line-through" }}>₹{s.base}</Text>}
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: BRAND_PRIMARY }}>₹{s.final.toFixed(0)}</Text>
+                            {s.disc > 0 && <View style={styles.discBadgeSm}><Text style={styles.discTextSm}>{s.disc}% off</Text></View>}
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </ScrollView>
+
+            {/* Price summary */}
+            {(() => {
+              const selected = [
+                { base: baseCharge ?? 0, disc: discountPercent, final: finalCharge ?? 0, hasPricing: !!pricing },
+                ...otherServices.filter((s: any) => selectedSubIds.has(s.id)).map((s: any) => {
+                  const sp = s.agentPricing;
+                  const sBase = sp ? Number(sp.baseServiceCharge) : 0;
+                  const sDisc = sp ? Number(sp.discountPercent) : 0;
+                  return { base: sBase, disc: sDisc, final: sBase * (1 - sDisc / 100), hasPricing: !!sp };
+                }),
+              ].filter((s) => s.hasPricing);
+              const selCount = selected.length;
+              const totalAfterInd = selected.reduce((a, s) => a + s.final, 0);
+              let bulkPct = 0;
+              if (catConfig) {
+                if (selCount >= 4) bulkPct = Number(catConfig.bulkDiscount4Plus ?? 0);
+                else if (selCount === 3) bulkPct = Number(catConfig.bulkDiscount3 ?? 0);
+                else if (selCount === 2) bulkPct = Number(catConfig.bulkDiscount2 ?? 0);
+              }
+              const bulkSaving = totalAfterInd * (bulkPct / 100);
+              const totalFinal = totalAfterInd - bulkSaving;
+              const totalOrig = selected.reduce((a, s) => a + s.base, 0);
+              const savings = totalOrig - totalFinal;
+              return (
+                <View style={styles.upsellFooter}>
+                  {bulkPct > 0 && (
+                    <View style={styles.bulkBanner}>
+                      <Text style={styles.bulkBannerText}>Extra {bulkPct}% bulk discount for {selCount} services!</Text>
+                      {bulkSaving > 0.5 && <Text style={styles.bulkBannerSaving}>−₹{bulkSaving.toFixed(0)}</Text>}
+                    </View>
+                  )}
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <View>
+                      <Text style={{ fontSize: 16, fontWeight: "800", color: "#111" }}>₹{totalFinal.toFixed(0)}</Text>
+                      {savings > 0.5 && <Text style={{ fontSize: 11, color: "#16a34a", fontWeight: "600" }}>You save ₹{savings.toFixed(0)}</Text>}
+                    </View>
+                    <Text style={{ fontSize: 12, color: BRAND_MUTED }}>{selCount} service{selCount > 1 ? "s" : ""}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.bookBtn} onPress={openBookingForm} activeOpacity={0.85}>
+                    <Text style={styles.bookText}>Book {selCount} service{selCount > 1 ? "s" : ""} — ₹{totalFinal.toFixed(0)}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Booking form modal ──────────────────────────────────────── */}
       <Modal visible={bookingModal} animationType="slide" transparent onRequestClose={() => setBookingModal(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} keyboardShouldPersistTaps="handled">
           <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Confirm Booking</Text>
@@ -468,46 +623,117 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
               {formatDateTab(selectedDate).mon} · {selectedHour !== null ? formatHour(selectedHour, slotDur) : ""}
             </Text>
 
-            {/* Pricing summary */}
+            {/* Pricing summary — all selected services */}
             <View style={styles.priceSummary}>
-              <View style={styles.priceSummaryRow}>
-                <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 6 }}>
-                  <Text style={styles.priceSummaryName}>{lang === "hi" && sub.nameHi ? sub.nameHi : sub.name}</Text>
-                  {discountPercent > 0 && (
-                    <View style={styles.discBadgeSm}>
-                      <Text style={styles.discTextSm}>{discountPercent}% off</Text>
+              {(() => {
+                const allPriceable = [
+                  { id, name: sub.name, nameHi: sub.nameHi, base: baseCharge ?? 0, disc: discountPercent, final: finalCharge ?? 0, hasPricing: !!pricing },
+                  ...otherServices.filter((s: any) => selectedSubIds.has(s.id)).map((s: any) => {
+                    const sp = s.agentPricing;
+                    const sBase = sp ? Number(sp.baseServiceCharge) : 0;
+                    const sDisc = sp ? Number(sp.discountPercent) : 0;
+                    return { id: s.id, name: s.name, nameHi: s.nameHi, base: sBase, disc: sDisc, final: sBase * (1 - sDisc / 100), hasPricing: !!sp };
+                  }),
+                ].filter((s) => s.hasPricing);
+                const totalAfterInd = allPriceable.reduce((a, s) => a + s.final, 0);
+                const selCount = allPriceable.length;
+                let bulkPct = 0;
+                if (catConfig) {
+                  if (selCount >= 4) bulkPct = Number(catConfig.bulkDiscount4Plus ?? 0);
+                  else if (selCount === 3) bulkPct = Number(catConfig.bulkDiscount3 ?? 0);
+                  else if (selCount === 2) bulkPct = Number(catConfig.bulkDiscount2 ?? 0);
+                }
+                const bulkSaving = totalAfterInd * (bulkPct / 100);
+                const totalFinal = totalAfterInd - bulkSaving;
+                const totalOrig = allPriceable.reduce((a, s) => a + s.base, 0);
+                const savings = totalOrig - totalFinal;
+                return (
+                  <>
+                    {allPriceable.map((s) => (
+                      <View key={s.id} style={styles.priceSummaryRow}>
+                        <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 6 }}>
+                          <Text style={styles.priceSummaryName} numberOfLines={1}>{lang === "hi" && s.nameHi ? s.nameHi : s.name}</Text>
+                          {s.disc > 0 && <View style={styles.discBadgeSm}><Text style={styles.discTextSm}>{s.disc}% off</Text></View>}
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          {s.disc > 0 && <Text style={styles.priceStrike}>₹{s.base.toFixed(0)}</Text>}
+                          <Text style={styles.priceSummaryPrice}>₹{s.final.toFixed(0)}</Text>
+                        </View>
+                      </View>
+                    ))}
+                    {bulkPct > 0 && (
+                      <View style={[styles.priceSummaryRow, { borderTopWidth: 1, borderTopColor: "#e0e7ff", paddingTop: 8 }]}>
+                        <Text style={{ fontSize: 12, color: "#16a34a", fontWeight: "600" }}>Bulk discount ({bulkPct}%)</Text>
+                        <Text style={{ fontSize: 12, color: "#16a34a", fontWeight: "700" }}>−₹{bulkSaving.toFixed(0)}</Text>
+                      </View>
+                    )}
+                    <View style={[styles.priceSummaryRow, { borderTopWidth: 1, borderTopColor: "#e0e7ff", paddingTop: 8, marginTop: 4 }]}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: "#111" }}>Total</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        {savings > 0.5 && <Text style={{ fontSize: 10, color: "#16a34a", fontWeight: "600" }}>Save ₹{savings.toFixed(0)}</Text>}
+                        <Text style={{ fontSize: 16, fontWeight: "800", color: BRAND_PRIMARY }}>₹{totalFinal.toFixed(0)}</Text>
+                      </View>
                     </View>
-                  )}
-                </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {discountPercent > 0 && baseCharge != null && (
-                    <Text style={styles.priceStrike}>₹{baseCharge.toFixed(0)}</Text>
-                  )}
-                  <Text style={styles.priceSummaryPrice}>₹{finalCharge?.toFixed(0) ?? "—"}</Text>
-                </View>
-              </View>
-              {transportPerKm > 0 && (
-                <View style={styles.priceSummaryRow}>
-                  <Text style={styles.priceSummaryLabel}>Transport</Text>
-                  <Text style={styles.priceSummaryLabel}>₹{transportPerKm}/km</Text>
-                </View>
-              )}
+                    {transportPerKm > 0 && (
+                      <View style={styles.priceSummaryRow}>
+                        <Text style={styles.priceSummaryLabel}>Transport</Text>
+                        <Text style={styles.priceSummaryLabel}>₹{transportPerKm}/km (on acceptance)</Text>
+                      </View>
+                    )}
+                  </>
+                );
+              })()}
             </View>
 
             <Text style={styles.fieldLabel}>Your name *</Text>
-            <TextInput style={styles.input} placeholder="Full name"
-              value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
+            <TextInput
+              style={styles.input}
+              placeholder="Full name"
+              value={form.name}
+              onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              autoCorrect={false}
+            />
 
             <Text style={styles.fieldLabel}>Phone number *</Text>
-            <TextInput style={styles.input} placeholder="+91 XXXXX XXXXX"
-              keyboardType="phone-pad" value={form.phone}
-              onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} />
+            <TextInput
+              style={styles.input}
+              placeholder="+91 XXXXX XXXXX"
+              keyboardType="phone-pad"
+              value={form.phone}
+              onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))}
+              returnKeyType="next"
+              blurOnSubmit={false}
+            />
+
+            <Text style={styles.fieldLabel}>Gender (optional)</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
+              {["MALE", "FEMALE", "OTHER"].map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.genderChip, form.gender === g && styles.genderChipActive]}
+                  onPress={() => setForm((f) => ({ ...f, gender: g }))}
+                >
+                  <Text style={[styles.genderChipText, form.gender === g && styles.genderChipTextActive]}>
+                    {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Other"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={styles.fieldLabel}>Service address *</Text>
             <View style={styles.addressRow}>
-              <TextInput style={[styles.input, styles.inputMulti, { flex: 1 }]} placeholder="Full address"
-                multiline numberOfLines={2} value={form.address}
-                onChangeText={(v) => setForm((f) => ({ ...f, address: v }))} />
+              <TextInput
+                style={[styles.input, styles.inputMulti, { flex: 1 }]}
+                placeholder="Full address / landmark"
+                multiline
+                numberOfLines={2}
+                value={form.address}
+                onChangeText={(v) => setForm((f) => ({ ...f, address: v }))}
+                blurOnSubmit={true}
+                autoCorrect={false}
+              />
               <View style={styles.addressIcons}>
                 <TouchableOpacity
                   style={styles.addrIconBtn}
@@ -529,48 +755,30 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>Gender (optional)</Text>
-            <TextInput style={styles.input} placeholder="e.g. Female"
-              value={form.gender} onChangeText={(v) => setForm((f) => ({ ...f, gender: v }))} />
-
             <TouchableOpacity
               style={[styles.bookBtn, { marginTop: 16 }, bookMutation.isPending && styles.bookBtnDisabled]}
               onPress={handleSubmit}
               disabled={bookMutation.isPending}
             >
-              <Text style={styles.bookText}>{bookMutation.isPending ? "Confirming…" : "Confirm Booking"}</Text>
+              <Text style={styles.bookText}>
+                {bookMutation.isPending ? "Confirming…" : `Confirm ${selectedSubIds.size > 1 ? selectedSubIds.size + " bookings" : "Booking"}`}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setBookingModal(false)}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── Map picker modal ──────────────────────────────────────── */}
-      <Modal visible={mapPickerVisible} animationType="slide" onRequestClose={() => setMapPickerVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: "#fff" }}>
-          <View style={styles.mapHeader}>
-            <TouchableOpacity onPress={() => setMapPickerVisible(false)}>
-              <Text style={{ fontSize: 16, color: BRAND_PRIMARY, fontWeight: "600" }}>✕ Close</Text>
-            </TouchableOpacity>
-            <Text style={styles.mapHeaderTitle}>Pick location on map</Text>
-            <View style={{ width: 60 }} />
-          </View>
-          <WebView
-            originWhitelist={["*"]}
-            source={{ html: buildMapHtml(loc?.lat ?? 20.5937, loc?.lng ?? 78.9629) }}
-            style={{ flex: 1 }}
-            javaScriptEnabled
-            onMessage={(event) => {
-              try {
-                const data = JSON.parse(event.nativeEvent.data);
-                if (data.lat && data.lng) handleMapConfirm(data);
-              } catch {}
-            }}
-          />
-        </View>
-      </Modal>
+      {/* ── Map picker (reuse proven LocationPickerModal from HomeScreen) ── */}
+      <LocationPickerModal
+        visible={mapPickerVisible}
+        initialLoc={loc}
+        onConfirm={handleMapPickerConfirm}
+        onClose={() => setMapPickerVisible(false)}
+      />
     </>
   );
 }
@@ -678,4 +886,39 @@ const styles = StyleSheet.create({
   priceStrike: { fontSize: 12, color: BRAND_MUTED, textDecorationLine: "line-through" },
   discBadgeSm: { backgroundColor: "#dcfce7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
   discTextSm: { fontSize: 10, fontWeight: "700", color: "#16a34a" },
+  // Upsell modal
+  upsellSheet: {
+    backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 12, maxHeight: "90%",
+  },
+  upsellItem: {
+    flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
+    borderRadius: 14, borderWidth: 2, borderColor: "#f0f0f0", marginBottom: 8,
+    backgroundColor: "#fff",
+  },
+  upsellItemSelected: { borderColor: BRAND_PRIMARY, backgroundColor: "#f0f4ff" },
+  upsellCheck: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: "#d1d5db",
+    alignItems: "center", justifyContent: "center",
+  },
+  upsellCheckActive: { backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY },
+  upsellName: { fontSize: 14, fontWeight: "600", color: "#111" },
+  upsellFooter: { borderTopWidth: 1, borderTopColor: "#f0f0f0", paddingTop: 14, marginTop: 8 },
+  primaryBadge: { backgroundColor: "#ede9fe", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  primaryBadgeText: { fontSize: 9, fontWeight: "700", color: "#7c3aed" },
+  bulkBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: "#f0f4ff", borderWidth: 1, borderColor: "#c7d2fe",
+    borderRadius: 10, padding: 10, marginBottom: 10,
+  },
+  bulkBannerText: { fontSize: 12, fontWeight: "600", color: BRAND_PRIMARY, flex: 1 },
+  bulkBannerSaving: { fontSize: 12, fontWeight: "700", color: BRAND_PRIMARY },
+  // Gender chips
+  genderChip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#f9fafb",
+  },
+  genderChipActive: { backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY },
+  genderChipText: { fontSize: 13, fontWeight: "600", color: "#374151" },
+  genderChipTextActive: { color: "#fff" },
 });

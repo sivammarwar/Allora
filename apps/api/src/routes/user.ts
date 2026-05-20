@@ -1691,7 +1691,7 @@ router.delete("/service-requests/:id", requireAuth, requireRole("USER"), async (
 
     await prisma.serviceRequest.update({
       where: { id: request.id },
-      data: { status: "CANCELLED" },
+      data: { status: "CANCELLED", cancelledBy: "USER" },
     });
 
     const dateStr = (request.scheduledDate as Date).toISOString().split("T")[0];

@@ -317,6 +317,14 @@ export default function HeroRequestsScreen() {
                   )}
                 </View>
 
+                {g.requests[0]?.status === "CANCELLED" && g.requests[0]?.cancelledBy && (
+                  <View style={styles.cancelledTag}>
+                    <Text style={styles.cancelledTagText}>
+                      Cancelled by {g.requests[0].cancelledBy === "HERO" ? "you" : "user"}
+                    </Text>
+                  </View>
+                )}
+
                 <Text style={styles.tapHint}>Tap for details →</Text>
               </TouchableOpacity>
             );
@@ -493,6 +501,11 @@ const styles = StyleSheet.create({
   priceRow: { marginTop: 6, marginBottom: 4 },
   charge: { fontSize: 17, fontWeight: "800", color: BRAND_PRIMARY },
   transportText: { fontSize: 10, color: BRAND_MUTED },
+  cancelledTag: {
+    backgroundColor: "#fef2f2", borderWidth: 1, borderColor: "#fecaca",
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start", marginTop: 4,
+  },
+  cancelledTagText: { fontSize: 11, fontWeight: "600", color: "#dc2626" },
   tapHint: { fontSize: 11, color: BRAND_MUTED, marginTop: 6 },
   // Detail modal
   overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },

@@ -784,6 +784,7 @@ model ServiceRequest {
   distanceKm           Float?               // distance between hero and user at acceptance time
   transportTotal       Decimal              @db.Decimal(10, 2) @default(0) // transportCharge * distanceKm (actual amount user pays)
   groupId         String?              // links bulk-booked requests together (same group = same booking session)
+  cancelledBy     String?              // "HERO" or "USER" - who cancelled the request
   userName        String
   userPhone       String
   userGender      String?
