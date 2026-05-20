@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
+import { api, apiClient } from "../../lib/api";
 import { API_URL, BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { launchImageLibrary } from "react-native-image-picker";
 import { useAuth } from "../../auth/AuthContext";
@@ -159,17 +159,13 @@ export default function AgentRequestDetailScreen() {
         type: asset.type ?? "image/jpeg",
         name: asset.fileName ?? "photo.jpg",
       } as any);
-      const token = await storage.get("access_token");
-      const res = await fetch(`${API_URL}/api/upload/image?folder=heroes`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const res = await apiClient.post("/api/upload/image?folder=heroes", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      if (!res.ok) throw new Error("Upload failed");
-      const json = await res.json();
-      setPhotoUrl(json.url);
+      setPhotoUrl(res.data.url);
     } catch (e: any) {
-      Alert.alert("Upload error", e?.message ?? "Failed to upload image");
+      const errorMsg = e?.response?.data?.error ?? e?.message ?? "Failed to upload image";
+      Alert.alert("Upload error", errorMsg);
     } finally {
       setUploading(false);
     }
