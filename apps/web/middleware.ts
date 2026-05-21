@@ -11,9 +11,9 @@ const ROLE_ROUTES: { prefix: string; role: string; loginPath: string }[] = [
   { prefix: "/pay",          role: "PAYMENT_MANAGER",  loginPath: "/pay/login" },
   { prefix: "/secret-shop",  role: "SECRET_SHOP",      loginPath: "/secret-shop/login" },
   { prefix: "/item-catalog", role: "ITEM_CATALOG",     loginPath: "/item-catalog/login" },
-  { prefix: "/dashboard",    role: "USER",             loginPath: "/login" },
-  { prefix: "/orders",       role: "USER",             loginPath: "/login" },
-  { prefix: "/cart",         role: "USER",             loginPath: "/login" },
+  // NOTE: /dashboard, /orders, /cart are intentionally NOT here — they use
+  // guestOk=true so unauthenticated visitors can browse. Auth is enforced
+  // client-side only when booking/profile actions are attempted.
   { prefix: "/main-inventory", role: "_CUSTOM",        loginPath: "/main-inventory/login" },
 ];
 
