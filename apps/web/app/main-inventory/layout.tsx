@@ -15,13 +15,14 @@ export default function MainInventoryLayout({ children }: { children: React.Reac
   useEffect(() => {
     if (isLoading) return;
     if (!user && !isLogin) { router.replace("/main-inventory/login"); return; }
-    if (user && user.email !== ALLOWED_EMAIL && !isLogin) {
+    if (user && user.role !== "ADMIN" && user.email !== ALLOWED_EMAIL && !isLogin) {
       router.replace("/main-inventory/login");
     }
-    if (user && user.email === ALLOWED_EMAIL && isLogin) {
+    if (user && (user.role === "ADMIN" || user.email === ALLOWED_EMAIL) && isLogin) {
       router.replace("/main-inventory");
     }
   }, [user, isLoading, isLogin, router]);
+  const authorized = user && (user.role === "ADMIN" || user.email === ALLOWED_EMAIL);
 
   if (isLoading) {
     return (
@@ -30,6 +31,8 @@ export default function MainInventoryLayout({ children }: { children: React.Reac
       </div>
     );
   }
+
+  if (!isLogin && !authorized) return null;
 
   return <>{children}</>;
 }

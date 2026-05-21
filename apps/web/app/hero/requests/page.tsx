@@ -36,6 +36,7 @@ interface ServiceRequest {
   userGender?: string;
   userAddress: string;
   createdAt: string;
+  cancelledBy?: string | null;
   subcategory: { id: string; name: string; category: { id: string; name: string } };
 }
 
