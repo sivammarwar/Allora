@@ -10,6 +10,7 @@ import { API_URL, BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { launchImageLibrary } from "react-native-image-picker";
 import { useAuth } from "../../auth/AuthContext";
 import { storage } from "../../lib/storage";
+import { API_URL as API_URL_CONST } from "../../lib/config";
 
 interface RequestDetail {
   id: string;
@@ -193,8 +194,11 @@ export default function AgentRequestDetailScreen() {
     });
 
   const pickAndUploadImage = async () => {
+    console.log("[Upload] pickAndUploadImage called");
     try {
+      console.log("[Upload] Launching image picker...");
       const result = await launchImageLibrary({ mediaType: "photo", quality: 0.8 });
+      console.log("[Upload] Image picker result:", result);
       if (result.didCancel || !result.assets?.[0]?.uri) return;
       const asset = result.assets[0];
       if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
@@ -202,23 +206,28 @@ export default function AgentRequestDetailScreen() {
         return;
       }
       setUploading(true);
-
+      console.log("[Upload] Fetching Cloudinary signature...");
+      console.log("[Upload] API URL:", API_URL_CONST);
       // 1. Get short-lived signed payload from our API (small GET, not WAF-blocked).
-      const sig = (await api.get("/api/upload/cloudinary-signature", { folder: "heroes" })) as {
-        cloudName: string;
-        apiKey: string;
-        folder: string;
-        timestamp: number;
-        signature: string;
-      };
-
-      // 2. Upload directly to Cloudinary, bypassing our ALB/WAF entirely.
-      const json = await uploadDirectToCloudinary(
-        { uri: asset.uri!, type: asset.type, fileName: asset.fileName },
-        sig,
-      );
-      setPhotoUrl(json.url);
+      try {
+        const sigData = (await api.get("/api/upload/cloudinary-signature", { folder: "heroes" })) as any;
+        console.log("[Upload] Full response:", JSON.stringify(sigData));
+        console.log("[Upload] Signature received, uploading to Cloudinary...");
+        // 2. Upload directly to Cloudinary, bypassing our ALB/WAF entirely.
+        const json = await uploadDirectToCloudinary(
+          { uri: asset.uri!, type: asset.type, fileName: asset.fileName },
+          sigData,
+        );
+        console.log("[Upload] Upload successful:", json.url);
+        setPhotoUrl(json.url);
+      } catch (apiError: any) {
+        console.error("[Upload] API Error details:", JSON.stringify(apiError));
+        console.error("[Upload] API Error status:", apiError?.response?.status);
+        console.error("[Upload] API Error data:", JSON.stringify(apiError?.response?.data));
+        throw apiError;
+      }
     } catch (e: any) {
+      console.error("[Upload] Error:", e);
       Alert.alert("Upload error", e?.message ?? "Failed to upload image");
     } finally {
       setUploading(false);

@@ -5,8 +5,9 @@ import {
   ActivityIndicator, Alert,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../auth/AuthContext";
-import { BRAND_PRIMARY } from "../../lib/config";
+import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import type { UserStackParams } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<UserStackParams, "GuestLogin">;
@@ -18,6 +19,7 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "password">("email");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const isHero = role === "HERO";
   const isAgent = role === "AGENT";
@@ -117,18 +119,23 @@ export default function GuestLoginScreen({ route, navigation }: Props) {
           <>
             <Text style={styles.h1}>Enter your password</Text>
             <Text style={styles.sub}>{email}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              autoCapitalize="none"
-              value={password}
-              onChangeText={setPassword}
-              onSubmitEditing={handlePasswordLogin}
-              returnKeyType="done"
-              autoFocus
-            />
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={styles.inputFlex}
+                placeholder="Password"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+                onSubmitEditing={handlePasswordLogin}
+                returnKeyType="done"
+                autoFocus
+              />
+              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((s) => !s)}>
+                <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color={BRAND_MUTED} />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={[styles.btn, loading && styles.btnDisabled]}
               onPress={handlePasswordLogin}
@@ -181,6 +188,15 @@ const styles = StyleSheet.create({
     borderRadius: 14, paddingHorizontal: 16, fontSize: 15,
     color: "#111", marginBottom: 14, backgroundColor: "#fafafa",
   },
+  inputWrap: {
+    flexDirection: "row", alignItems: "center",
+    borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 14,
+    backgroundColor: "#fafafa", marginBottom: 14,
+  },
+  inputFlex: {
+    flex: 1, height: 52, paddingHorizontal: 16, fontSize: 15, color: "#111",
+  },
+  eyeBtn: { paddingHorizontal: 14 },
   btn: {
     height: 52, borderRadius: 14, backgroundColor: BRAND_PRIMARY,
     alignItems: "center", justifyContent: "center",
