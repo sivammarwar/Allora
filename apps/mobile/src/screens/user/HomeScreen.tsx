@@ -301,16 +301,12 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── API error / dev diagnostic banner ────────────────── */}
+        {/* ── Network error banner ────────────────── */}
         {apiDown && (
           <View style={styles.apiBanner}>
-            <Text style={styles.apiBannerTitle}>⚠️ Cannot reach the API server</Text>
+            <Text style={styles.apiBannerTitle}>⚠️ Connection issue</Text>
             <Text style={styles.apiBannerMsg}>
-              {"URL: " + (require("../../lib/config").API_URL) + "\n" +
-               "Error: " + ((viralErr as any)?.message ?? (viralErr as any)?.error ?? JSON.stringify(viralErr)) + "\n\n" +
-               "Android emulator? Change API_URL to http://10.0.2.2:4000\n" +
-               "Physical device? Use your Mac's local IP (e.g. http://192.168.x.x:4000)\n" +
-               "Or point to production: https://api.bharat333.com"}
+              Unable to load services. Please check your internet connection and try again.
             </Text>
           </View>
         )}
