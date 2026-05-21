@@ -5,7 +5,7 @@ import { env } from "../env";
 import { redis } from "./redis";
 
 const ACCESS_TTL_SEC = 15 * 60;          // 15 min
-const REFRESH_TTL_SEC = 7 * 24 * 60 * 60; // 7 days
+const REFRESH_TTL_SEC = 30 * 24 * 60 * 60; // 30 days
 
 export interface AccessPayload extends JwtPayload {
   sub: string;        // userId

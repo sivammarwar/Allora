@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import { api } from "../lib/api";
 import { storage } from "../lib/storage";
 import { disconnectAll } from "../lib/socket";
@@ -33,6 +34,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   // Restore session on mount
   useEffect(() => {
@@ -57,6 +59,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     })();
+  }, []);
+
+  // Silently re-validate session when app comes back to foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", async (nextState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextState === "active") {
+        const token = await storage.get("access_token");
+        if (!token) return;
+        try {
+          const me = await api.get("/api/auth/me") as any;
+          setUser(me?.user ?? me);
+        } catch (err: any) {
+          const status = err?.status ?? err?.response?.status ?? err?.statusCode;
+          if (status === 401) {
+            await storage.remove("access_token");
+            await storage.remove("refresh_token");
+            setUser(null);
+          }
+        }
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
   }, []);
 
   const signInWithOTP = async (email: string, role?: string, forceOtp?: boolean): Promise<{ hasPassword: boolean }> => {

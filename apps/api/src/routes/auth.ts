@@ -187,7 +187,8 @@ router.post(
 // ──────────────────────────────────────────────────────────
 router.post("/refresh", async (req, res, next) => {
   try {
-    const token = (req as any).cookies?.refresh_token;
+    // Accept from cookie (web) OR request body (mobile)
+    const token = (req as any).cookies?.refresh_token ?? req.body?.refreshToken;
     if (!token) return res.status(401).json({ error: "No refresh token" });
 
     const decoded = await verifyRefreshToken(token);
