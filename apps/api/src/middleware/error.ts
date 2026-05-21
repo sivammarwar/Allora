@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 import { logger } from "../lib/logger";
+import { isProd } from "../env";
 
 export function notFound(_req: Request, res: Response) {
   res.status(404).json({ error: "Not found" });
@@ -14,7 +16,19 @@ export function errorHandler(
   _next: NextFunction
 ) {
   const status = err?.status ?? err?.statusCode ?? 500;
-  const message = err?.message ?? "Internal server error";
-  if (status >= 500) logger.error(err);
-  res.status(status).json({ error: message });
+
+  const isPrismaError =
+    err instanceof Prisma.PrismaClientKnownRequestError ||
+    err instanceof Prisma.PrismaClientUnknownRequestError ||
+    err instanceof Prisma.PrismaClientInitializationError ||
+    err instanceof Prisma.PrismaClientRustPanicError;
+
+  if (isPrismaError || status >= 500) logger.error(err);
+
+  const message =
+    isPrismaError || (isProd && status >= 500)
+      ? "Service temporarily unavailable. Please try again."
+      : (err?.message ?? "Internal server error");
+
+  res.status(isPrismaError ? 503 : status).json({ error: message });
 }

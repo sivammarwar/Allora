@@ -5,8 +5,19 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    log: isProd ? ["error", "warn"] : ["error", "warn"],
-  });
+  new PrismaClient({ log: ["error", "warn"] });
 
 if (!isProd) globalForPrisma.prisma = prisma;
+
+export async function connectDB(): Promise<void> {
+  const MAX_RETRIES = 5;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await prisma.$connect();
+      return;
+    } catch (err) {
+      if (attempt === MAX_RETRIES) throw err;
+      await new Promise((r) => setTimeout(r, 3000 * attempt));
+    }
+  }
+}
