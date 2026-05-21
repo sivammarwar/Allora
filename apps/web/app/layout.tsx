@@ -40,6 +40,7 @@ const devanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://bharat333.com"),
   title: "Bharat Services — Local Services & Delivery",
   description:
     "Connecting local heroes, delivery partners and customers across India.",
