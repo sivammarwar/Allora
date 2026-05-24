@@ -31,7 +31,7 @@ interface SubcategoryInfo {
   id: string;
   name: string;
   imageUrl: string | null;
-  pageContent: { html?: string } | null;
+  pageContent: { html?: string; htmlHi?: string } | null;
   category: { id: string; name: string; type: "PRODUCT" | "SERVICE" };
 }
 
@@ -348,13 +348,18 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
       </div>
 
       {/* ── PM Page Content ── */}
-      {sub.pageContent?.html && (
+      {(sub.pageContent?.html || sub.pageContent?.htmlHi) && (
         <Card>
           <CardContent className="py-5">
             <div
               className="prose max-w-none text-brand-text text-sm leading-relaxed"
               // eslint-disable-next-line react/no-danger
-              dangerouslySetInnerHTML={{ __html: sub.pageContent.html }}
+              dangerouslySetInnerHTML={{
+                __html:
+                  lang === "hi" && sub.pageContent?.htmlHi
+                    ? sub.pageContent.htmlHi
+                    : sub.pageContent?.html ?? "",
+              }}
             />
           </CardContent>
         </Card>

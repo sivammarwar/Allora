@@ -376,17 +376,21 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
           )}
 
           {/* ── Service page content (from PM page builder) ────── */}
-          {sub.pageContent?.html ? (
-            <View style={styles.pageContentWrap}>
-              <WebView
-                scrollEnabled={false}
-                originWhitelist={["*"]}
-                onMessage={(e) => {
-                  const h = parseInt(e.nativeEvent.data, 10);
-                  if (!isNaN(h) && h > 0) setPageHtmlHeight(h + 24);
-                }}
-                source={{
-                  html: `<!DOCTYPE html><html><head>
+          {(sub.pageContent?.html || sub.pageContent?.htmlHi) ? (() => {
+            const htmlContent = lang === "hi" && sub.pageContent?.htmlHi
+              ? sub.pageContent.htmlHi
+              : sub.pageContent?.html ?? "";
+            return (
+              <View style={styles.pageContentWrap}>
+                <WebView
+                  scrollEnabled={false}
+                  originWhitelist={["*"]}
+                  onMessage={(e) => {
+                    const h = parseInt(e.nativeEvent.data, 10);
+                    if (!isNaN(h) && h > 0) setPageHtmlHeight(h + 24);
+                  }}
+                  source={{
+                    html: `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -405,14 +409,15 @@ th{background:#fef2f2;font-weight:700;color:#7c2d12}
 .section,blockquote{background:#fff7f7;border-left:3px solid #c2410c;border-radius:8px;padding:12px 14px;margin:12px 0}
 </style>
 </head><body>
-${sub.pageContent.html.replace(/`/g, '\\`')}
+${htmlContent.replace(/`/g, '\\`')}
 <script>window.ReactNativeWebView.postMessage(String(document.documentElement.scrollHeight));</script>
 </body></html>`,
-                }}
-                style={{ width: Dimensions.get("window").width - 40, height: pageHtmlHeight || 200 }}
-              />
-            </View>
-          ) : null}
+                  }}
+                  style={{ width: Dimensions.get("window").width - 40, height: pageHtmlHeight || 200 }}
+                />
+              </View>
+            );
+          })() : null}
 
           {/* ── Available Slots ──────────────────────────────────── */}
           {resolvedAgentId ? (

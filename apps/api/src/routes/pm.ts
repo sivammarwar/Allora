@@ -228,9 +228,15 @@ router.post(
       if (html.length === 0) {
         return res.status(400).json({ error: "html content is required" });
       }
-      // Basic size guard
       if (html.length > 200_000) {
         return res.status(400).json({ error: "html content exceeds 200KB" });
+      }
+      const htmlHi =
+        typeof req.body.htmlHi === "string" && req.body.htmlHi.trim().length > 0
+          ? req.body.htmlHi
+          : undefined;
+      if (htmlHi && htmlHi.length > 200_000) {
+        return res.status(400).json({ error: "htmlHi content exceeds 200KB" });
       }
 
       const files = (req.files as Express.Multer.File[]) ?? [];
@@ -243,7 +249,7 @@ router.post(
 
       const updated = await prisma.subcategory.update({
         where: { id: req.params.id },
-        data: { pageContent: { html, assets } as any },
+        data: { pageContent: { html, ...(htmlHi ? { htmlHi } : {}), assets } as any },
         select: { id: true, pageContent: true },
       });
       res.json(updated);
