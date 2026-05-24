@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma";
 import authRouter from "./auth";
 import adminRouter from "./admin";
 import pmRouter from "./pm";
@@ -21,19 +20,6 @@ router.get("/health", (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString(), v: "df478df" });
 });
 
-// ONE-TIME revert — remove after use
-router.post("/revert-emails-gmail", async (req, res) => {
-  if (req.headers["x-migrate-secret"] !== "bharat333-migrate-2026") {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const results = await Promise.all([
-    prisma.user.updateMany({ where: { email: "admin@bharat333.com" },    data: { email: "gys738421@gmail.com" } }),
-    prisma.user.updateMany({ where: { email: "pm@bharat333.com" },       data: { email: "gotmyloka@gmail.com" } }),
-    prisma.user.updateMany({ where: { email: "payments@bharat333.com" }, data: { email: "shivamkumarsingh8544@gmail.com" } }),
-    prisma.user.updateMany({ where: { email: "catalog@bharat333.com" },  data: { email: "govindkkp@gmail.com" } }),
-  ]);
-  res.json({ ok: true, results });
-});
 
 router.use("/auth", authRouter);
 router.use("/contact", contactRouter);
