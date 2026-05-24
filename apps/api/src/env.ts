@@ -51,6 +51,7 @@ const schema = z.object({
   ADMIN_EMAIL: z.string().email().default("admin@bharat333.com"),
   PRODUCT_MANAGER_EMAIL: z.string().email().default("pm@bharat333.com"),
   PAYMENT_MANAGER_EMAIL: z.string().email().default("payments@bharat333.com"),
+  ITEM_CATALOG_EMAIL: z.string().email().default("catalog@bharat333.com"),
 });
 
 const parsed = schema.safeParse(process.env);
