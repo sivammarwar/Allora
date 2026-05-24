@@ -21,6 +21,7 @@ interface Category {
 
 interface PageContent {
   html?: string;
+  htmlHi?: string;
   assets?: Array<{ name: string; url: string }>;
 }
 
@@ -96,6 +97,8 @@ export default function PMSubcategoriesPage() {
   // Service page builder state
   const [pageOpen, setPageOpen] = useState<Subcategory | null>(null);
   const [pageHtml, setPageHtml] = useState("");
+  const [pageHtmlHi, setPageHtmlHi] = useState("");
+  const [pageLang, setPageLang] = useState<"en" | "hi">("en");
   const [pageAssets, setPageAssets] = useState<File[]>([]);
   const [pageSaving, setPageSaving] = useState(false);
 
@@ -163,6 +166,8 @@ export default function PMSubcategoriesPage() {
   function openPageBuilder(s: Subcategory) {
     setPageOpen(s);
     setPageHtml(s.pageContent?.html ?? "");
+    setPageHtmlHi(s.pageContent?.htmlHi ?? "");
+    setPageLang("en");
     setPageAssets([]);
   }
 
@@ -176,6 +181,7 @@ export default function PMSubcategoriesPage() {
     try {
       const fd = new FormData();
       fd.append("html", pageHtml);
+      if (pageHtmlHi.trim()) fd.append("htmlHi", pageHtmlHi);
       pageAssets.forEach((f) => fd.append("assets", f));
       const res = await fetch(
         `${API_URL}/api/pm/subcategories/${pageOpen.id}/upload-page`,
