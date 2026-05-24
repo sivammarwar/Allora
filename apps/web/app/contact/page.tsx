@@ -71,7 +71,7 @@ export default function ContactPage() {
               <Mail size={20} className="text-brand-primary" />
             </div>
             <h3 className="font-bold text-gray-900">{isHi ? "ईमेल" : "Email"}</h3>
-            <a href="mailto:support@bharat333.com" className="text-sm text-brand-primary font-semibold hover:underline">support@bharat333.com</a>
+            <a href="mailto:admin@bharat333.com" className="text-sm text-brand-primary font-semibold hover:underline">admin@bharat333.com</a>
           </div>
           <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-6 space-y-3 text-center">
             <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center mx-auto">

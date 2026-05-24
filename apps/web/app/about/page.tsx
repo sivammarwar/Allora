@@ -258,8 +258,8 @@ export default function AboutPage() {
           <p className="text-sm text-gray-500">
             {isHi ? "प्रश्न, साझेदारी या पूछताछ — हमें यहाँ लिखें:" : "Questions, partnerships or inquiries — reach us at:"}
           </p>
-          <a href="mailto:support@bharat333.com" className="text-brand-primary font-semibold text-base hover:underline">
-            support@bharat333.com
+          <a href="mailto:admin@bharat333.com" className="text-brand-primary font-semibold text-base hover:underline">
+            admin@bharat333.com
           </a>
           <div className="flex justify-center gap-3 pt-2">
             <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-primary transition-colors">

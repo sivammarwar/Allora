@@ -14,7 +14,7 @@ const EN_S = [
   { t: "7. Prohibited conduct",    b: "You may not: (a) make fraudulent bookings; (b) harass Heroes or Bharat Services staff; (c) reverse-engineer the platform; (d) create fake reviews." },
   { t: "8. Limitation of liability", b: "Bharat Services's liability for any claim is limited to the amount paid for the relevant transaction. We are not liable for Hero conduct or service quality." },
   { t: "9. Governing law",         b: "These Terms are governed by the laws of India. Disputes are subject to the exclusive jurisdiction of courts in Bangalore, Karnataka." },
-  { t: "10. Contact",              b: "Legal inquiries: support@bharat333.com" },
+  { t: "10. Contact",              b: "Legal inquiries: admin@bharat333.com" },
 ];
 
 const HI_S = [
@@ -27,7 +27,7 @@ const HI_S = [
   { t: "7. प्रतिबंधित आचरण",        b: "आप निम्नलिखित नहीं कर सकते: (क) धोखाधड़ी की बुकिंग; (ख) हीरो या Bharat Services स्टाफ से दुर्व्यवहार; (ग) प्लेटफ़ॉर्म को रिवर्स-इंजीनियर करना; (घ) नकली समीक्षाएं।" },
   { t: "8. देयता की सीमा",          b: "किसी भी दावे के लिए Bharat Services की देयता लेनदेन की राशि तक सीमित है। हम हीरो के आचरण या सेवा गुणवत्ता के लिए उत्तरदायी नहीं हैं।" },
   { t: "9. शासी कानून",             b: "ये शर्तें भारत के कानूनों द्वारा शासित हैं। विवाद बैंगलोर, कर्नाटक के न्यायालयों के अधिकार क्षेत्र में होंगे।" },
-  { t: "10. संपर्क",                b: "कानूनी पूछताछ: support@bharat333.com" },
+  { t: "10. संपर्क",                b: "कानूनी पूछताछ: admin@bharat333.com" },
 ];
 
 export default function TermsPage() {
