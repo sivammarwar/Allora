@@ -469,20 +469,56 @@ export default function PMSubcategoriesPage() {
         size="xl"
       >
         <div className="px-6 py-5 space-y-4">
+          {/* Language tabs */}
+          <div className="flex gap-1 border-b border-brand-border">
+            <button
+              onClick={() => setPageLang("en")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                pageLang === "en"
+                  ? "border-brand-primary text-brand-primary"
+                  : "border-transparent text-brand-textMuted hover:text-brand-text"
+              }`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => setPageLang("hi")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                pageLang === "hi"
+                  ? "border-brand-primary text-brand-primary"
+                  : "border-transparent text-brand-textMuted hover:text-brand-text"
+              }`}
+            >
+              हिंदी
+            </button>
+          </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-brand-text">
-              HTML content
+              {pageLang === "en" ? "HTML content (English)" : "HTML content (हिंदी)"}
             </label>
-            <textarea
-              value={pageHtml}
-              onChange={(e) => setPageHtml(e.target.value)}
-              rows={14}
-              spellCheck={false}
-              placeholder="<section>...</section>"
-              className="w-full p-3 rounded-sm bg-brand-bg border border-brand-border text-sm font-mono text-brand-text focus:outline-none focus:border-brand-primary"
-            />
+            {pageLang === "en" ? (
+              <textarea
+                value={pageHtml}
+                onChange={(e) => setPageHtml(e.target.value)}
+                rows={14}
+                spellCheck={false}
+                placeholder="<section>...</section>"
+                className="w-full p-3 rounded-sm bg-brand-bg border border-brand-border text-sm font-mono text-brand-text focus:outline-none focus:border-brand-primary"
+              />
+            ) : (
+              <textarea
+                value={pageHtmlHi}
+                onChange={(e) => setPageHtmlHi(e.target.value)}
+                rows={14}
+                spellCheck={false}
+                placeholder="<section>हिंदी में विवरण…</section>"
+                className="w-full p-3 rounded-sm bg-brand-bg border border-brand-border text-sm font-mono text-brand-text focus:outline-none focus:border-brand-primary"
+              />
+            )}
             <p className="mt-1 text-xs text-brand-textMuted">
-              Max 200KB. Will be rendered server-side on the user-facing subcategory page.
+              {pageLang === "en"
+                ? "English page — required. Max 200KB."
+                : "Hindi page — optional. Shown when user switches to हिंदी. Leave empty to fall back to English."}
             </p>
           </div>
           <div>
