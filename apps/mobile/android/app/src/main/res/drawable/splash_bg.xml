@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:opacity="opaque">
+    <!-- White background fills entire screen -->
+    <item>
+        <color android:color="#ffffff" />
+    </item>
+    <!-- HD logo centred, ~72% of screen width (50dp inset each side) -->
+    <item
+        android:top="50dp"
+        android:bottom="50dp"
+        android:left="50dp"
+        android:right="50dp">
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_logo"
+            android:tileMode="disabled" />
+    </item>
+</layer-list>

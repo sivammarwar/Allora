@@ -1,0 +1,9 @@
+<resources>
+    <style name="AppTheme" parent="Theme.SplashScreen">
+        <!-- Plain white — icon is transparent so the native splash is invisible -->
+        <item name="windowSplashScreenBackground">#ffffff</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_transparent</item>
+        <item name="windowSplashScreenIconBackgroundColor">#ffffff</item>
+        <item name="postSplashScreenTheme">@style/AppThemeBase</item>
+    </style>
+</resources>
