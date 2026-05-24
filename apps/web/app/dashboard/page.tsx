@@ -178,8 +178,9 @@ export default function UserDashboardPage() {
   const { data: agentData } = useQuery<{ agentId: string | null; supportPhone?: string | null; supportWhatsapp?: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
-    enabled: !!loc && !!currentUser,
+    enabled: !!loc,
     retry: false,
+    staleTime: 5 * 60 * 1000,
   });
   const agentId = agentData?.agentId ?? null;
 
