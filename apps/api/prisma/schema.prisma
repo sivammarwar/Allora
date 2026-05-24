@@ -238,6 +238,8 @@ model AgentProfile {
   primaryArea       Area?    @relation("AgentPrimaryArea", fields: [primaryAreaId], references: [id])
   isVerifiedByAdmin Boolean  @default(false)
   addedByAdminAt    DateTime?
+  supportPhone      String?  // Regional support phone number shown to users in this area
+  supportWhatsapp   String?  // WhatsApp link e.g. https://wa.me/919XXXXXXXXX
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

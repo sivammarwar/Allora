@@ -1287,4 +1287,40 @@ router.get("/booking-history", async (req, res, next) => {
   }
 });
 
+// ─── Agent Support Settings ──────────────────────────────────────────────────
+router.get("/settings", async (req, res, next) => {
+  try {
+    const profile = await getAgentProfile(req.user!.id);
+    res.json({
+      supportPhone: profile.supportPhone ?? null,
+      supportWhatsapp: profile.supportWhatsapp ?? null,
+    });
+  } catch (e) { next(e); }
+});
+
+const agentSettingsSchema = z.object({
+  supportPhone: z.string().trim().max(20).optional().nullable(),
+  supportWhatsapp: z.string().trim().url().optional().nullable(),
+});
+
+router.patch(
+  "/settings",
+  validateBody(agentSettingsSchema),
+  async (req, res, next) => {
+    try {
+      const profile = await getAgentProfile(req.user!.id);
+      const { supportPhone, supportWhatsapp } = req.body as z.infer<typeof agentSettingsSchema>;
+      const updated = await prisma.agentProfile.update({
+        where: { id: profile.id },
+        data: {
+          ...(supportPhone !== undefined ? { supportPhone: supportPhone ?? null } : {}),
+          ...(supportWhatsapp !== undefined ? { supportWhatsapp: supportWhatsapp ?? null } : {}),
+        },
+        select: { supportPhone: true, supportWhatsapp: true },
+      });
+      res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
 export default router;

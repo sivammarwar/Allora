@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MapPin, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown, Sparkles } from "lucide-react";
+import { MapPin, TrendingUp, Star, Grid2X2, ChevronRight, Navigation, ChevronDown, Sparkles, Phone, MessageCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,7 +175,7 @@ export default function UserDashboardPage() {
     pricing: s.pricing,
   }));
 
-  const { data: agentData } = useQuery<{ agentId: string | null }>({
+  const { data: agentData } = useQuery<{ agentId: string | null; supportPhone?: string | null; supportWhatsapp?: string | null }>({
     queryKey: ["user", "my-agent", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`),
     enabled: !!loc && !!currentUser,
@@ -242,6 +242,38 @@ export default function UserDashboardPage() {
           }}
           onClose={() => setPickerOpen(false)}
         />
+      )}
+
+      {/* ── Regional Support Banner ──────────────────────────────────── */}
+      {agentData?.supportPhone && (
+        <div className="mb-6 rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3.5">
+          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-0.5">
+            🛟 {t("home.supportTitle")}
+          </p>
+          <p className="text-sm text-orange-800 mb-3">
+            {t("home.supportDesc")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`tel:${agentData.supportPhone}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 transition-colors"
+            >
+              <Phone size={13} />
+              {t("home.supportCall")} · {agentData.supportPhone}
+            </a>
+            {agentData.supportWhatsapp && (
+              <a
+                href={agentData.supportWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
+              >
+                <MessageCircle size={13} />
+                {t("home.supportWhatsapp")}
+              </a>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="space-y-0">

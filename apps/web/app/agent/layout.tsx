@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, ShieldCheck, Map, CreditCard, BadgeDollarSign, Truck, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Map, CreditCard, BadgeDollarSign, Truck, CalendarCheck, Settings } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 
 const links = [
@@ -19,6 +19,7 @@ const allLinks = [
   { href: "/agent/price-control",   label: "Prices",    icon: BadgeDollarSign },
   { href: "/agent/category-config", label: "Transport",  icon: Truck },
   { href: "/agent/payment-history", label: "Payments",  icon: CreditCard },
+  { href: "/agent/settings",        label: "Settings",  icon: Settings },
 ];
 
 export default function AgentLayout({ children }: { children: React.ReactNode }) {

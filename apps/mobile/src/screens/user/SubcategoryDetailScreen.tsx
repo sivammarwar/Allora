@@ -387,7 +387,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
                   originWhitelist={["*"]}
                   onMessage={(e) => {
                     const h = parseInt(e.nativeEvent.data, 10);
-                    if (!isNaN(h) && h > 0) setPageHtmlHeight(h + 24);
+                    if (!isNaN(h) && h > 0) setPageHtmlHeight((prev) => Math.max(prev, h + 32));
                   }}
                   source={{
                     html: `<!DOCTYPE html><html><head>
@@ -410,7 +410,12 @@ th{background:#fef2f2;font-weight:700;color:#7c2d12}
 </style>
 </head><body>
 ${htmlContent.replace(/`/g, '\\`')}
-<script>window.ReactNativeWebView.postMessage(String(document.documentElement.scrollHeight));</script>
+<script>
+function ph(){window.ReactNativeWebView.postMessage(String(document.documentElement.scrollHeight));}
+ph();
+window.addEventListener('load',function(){ph();setTimeout(ph,300);setTimeout(ph,800);setTimeout(ph,1500);});
+document.querySelectorAll('img').forEach(function(img){img.addEventListener('load',function(){setTimeout(ph,100);});if(img.complete)setTimeout(ph,100);});
+</script>
 </body></html>`,
                   }}
                   style={{ width: Dimensions.get("window").width - 40, height: pageHtmlHeight || 200 }}

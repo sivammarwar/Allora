@@ -518,9 +518,18 @@ router.get("/my-agent", async (req, res, next) => {
 
     if (!agentId) return res.json({ agentId: null });
 
-    // Return slot config too
-    const slotCfg = await prisma.agentSlotConfig.findUnique({ where: { agentId } });
-    res.json({ agentId, slotStartHour: slotCfg?.slotStartHour ?? 6, slotEndHour: slotCfg?.slotEndHour ?? 20 });
+    // Return slot config + support contact
+    const [slotCfg, agentProfile] = await Promise.all([
+      prisma.agentSlotConfig.findUnique({ where: { agentId } }),
+      prisma.agentProfile.findUnique({ where: { id: agentId }, select: { supportPhone: true, supportWhatsapp: true } }),
+    ]);
+    res.json({
+      agentId,
+      slotStartHour: slotCfg?.slotStartHour ?? 6,
+      slotEndHour: slotCfg?.slotEndHour ?? 20,
+      supportPhone: agentProfile?.supportPhone ?? null,
+      supportWhatsapp: agentProfile?.supportWhatsapp ?? null,
+    });
   } catch (e) { next(e); }
 });
 

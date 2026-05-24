@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, ActivityIndicator, Modal,
-  Alert, FlatList, Dimensions, TextInput, RefreshControl,
+  Alert, FlatList, Dimensions, TextInput, RefreshControl, Linking,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PermissionsAndroid, Platform as RNPlatform } from "react-native";
@@ -51,6 +51,7 @@ interface BrowseCategory {
 }
 interface BrowseResponse { services: BrowseCategory[]; products: BrowseCategory[] }
 type AvgRatings = Record<string, { avg: number; count: number }>
+interface AgentData { agentId: string | null; supportPhone?: string | null; supportWhatsapp?: string | null; }
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   // Try Mapbox first
@@ -202,6 +203,14 @@ export default function HomeScreen() {
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  const { data: agentData } = useQuery<AgentData>({
+    queryKey: ["my-agent", loc?.lat, loc?.lng],
+    queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`) as any,
+    enabled: !!loc,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   const { data: browse, isLoading: browseLoading } = useQuery<BrowseResponse>({
     queryKey: ["browse", loc?.lat, loc?.lng],
     queryFn: () => api.get(`/api/user/browse?lat=${loc!.lat}&lng=${loc!.lng}`) as any,
@@ -338,6 +347,32 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── Regional Support Banner ────────────────────────────── */}
+        {agentData?.supportPhone ? (
+          <View style={styles.supportBanner}>
+            <Text style={styles.supportTitle}>🛟 {t("home.supportTitle")}</Text>
+            <Text style={styles.supportDesc}>{t("home.supportDesc")}</Text>
+            <View style={styles.supportBtns}>
+              <TouchableOpacity
+                style={styles.supportCallBtn}
+                onPress={() => Linking.openURL(`tel:${agentData.supportPhone}`)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.supportBtnText}>📞 {t("home.supportCall")} · {agentData.supportPhone}</Text>
+              </TouchableOpacity>
+              {agentData.supportWhatsapp ? (
+                <TouchableOpacity
+                  style={styles.supportWaBtn}
+                  onPress={() => Linking.openURL(agentData.supportWhatsapp!)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.supportBtnText}>💬 {t("home.supportWhatsapp")}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
 
         {/* ── Section 1: TRENDING / Most Used ───────────────────── */}
         <View style={styles.sectionHeader}>
@@ -728,4 +763,11 @@ const styles = StyleSheet.create({
   heroLoginText: { fontSize: 12, fontWeight: "700", color: "#fff" },
   agentLoginBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#f3f4f6", borderRadius: 20, marginLeft: 8 },
   agentLoginText: { fontSize: 12, fontWeight: "700", color: "#374151" },
+  supportBanner: { marginHorizontal: 16, marginBottom: 20, backgroundColor: "#fff7ed", borderRadius: 14, borderWidth: 1, borderColor: "#fed7aa", padding: 14 },
+  supportTitle: { fontSize: 12, fontWeight: "700", color: "#c2410c", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  supportDesc: { fontSize: 13, color: "#7c2d12", lineHeight: 19, marginBottom: 10 },
+  supportBtns: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  supportCallBtn: { backgroundColor: "#ea580c", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  supportWaBtn: { backgroundColor: "#16a34a", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  supportBtnText: { fontSize: 12, fontWeight: "700", color: "#fff" },
 });

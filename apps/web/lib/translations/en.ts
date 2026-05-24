@@ -20,6 +20,10 @@ export const en = {
   },
   home: {
     shareLocation: "Share your location to see services near you",
+    supportTitle: "Need help finding the right service?",
+    supportDesc: "Having difficulty matching your service need? Contact our regional support team immediately.",
+    supportCall: "Call Support",
+    supportWhatsapp: "WhatsApp",
     detect: "Detect",
     retry: "Retry",
     trending: "Trending",
