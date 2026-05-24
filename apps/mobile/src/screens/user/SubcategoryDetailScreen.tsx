@@ -2,8 +2,9 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, StyleSheet, FlatList,
   TouchableOpacity, Image, ActivityIndicator, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform, PermissionsAndroid,
+  Modal, TextInput, KeyboardAvoidingView, Platform, PermissionsAndroid, Dimensions,
 } from "react-native";
+import WebView from "react-native-webview";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -85,6 +86,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState(weekDates[0]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [bookingModal, setBookingModal] = useState(false);
+  const [pageHtmlHeight, setPageHtmlHeight] = useState(0);
   const [showUpsell, setShowUpsell] = useState(false);
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set([id]));
   const [form, setForm] = useState({ name: "", phone: "", address: "", gender: "" });
@@ -372,6 +374,45 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
               )}
             </View>
           )}
+
+          {/* ── Service page content (from PM page builder) ────── */}
+          {sub.pageContent?.html ? (
+            <View style={styles.pageContentWrap}>
+              <WebView
+                scrollEnabled={false}
+                originWhitelist={["*"]}
+                onMessage={(e) => {
+                  const h = parseInt(e.nativeEvent.data, 10);
+                  if (!isNaN(h) && h > 0) setPageHtmlHeight(h + 24);
+                }}
+                source={{
+                  html: `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1f2937;background:transparent;padding:0 2px}
+h1,h2,h3,h4{color:#7c2d12;margin:16px 0 8px;font-weight:700}
+h1{font-size:19px}h2{font-size:16px}h3{font-size:15px}
+p{margin:8px 0;line-height:1.65;color:#374151}
+ul,ol{padding-left:18px;margin:8px 0}
+li{margin:6px 0;line-height:1.55;color:#374151}
+strong,b{color:#111827;font-weight:700}
+hr{border:none;border-top:1px solid #f3f4f6;margin:14px 0}
+img{max-width:100%;border-radius:10px;margin:8px 0}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+td,th{padding:8px 10px;border:1px solid #e5e7eb;font-size:13px;text-align:left}
+th{background:#fef2f2;font-weight:700;color:#7c2d12}
+.section,blockquote{background:#fff7f7;border-left:3px solid #c2410c;border-radius:8px;padding:12px 14px;margin:12px 0}
+</style>
+</head><body>
+${sub.pageContent.html.replace(/`/g, '\\`')}
+<script>window.ReactNativeWebView.postMessage(String(document.documentElement.scrollHeight));</script>
+</body></html>`,
+                }}
+                style={{ width: Dimensions.get("window").width - 40, height: pageHtmlHeight || 200 }}
+              />
+            </View>
+          ) : null}
 
           {/* ── Available Slots ──────────────────────────────────── */}
           {resolvedAgentId ? (
@@ -785,6 +826,7 @@ export default function SubcategoryDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
+  pageContentWrap: { marginBottom: 24, borderRadius: 14, overflow: "hidden", backgroundColor: "#fff" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyTitle: { fontSize: 18, fontWeight: "700", color: "#111", marginBottom: 8 },
