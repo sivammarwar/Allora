@@ -244,14 +244,6 @@ export default function HomeScreen() {
       return acc;
     }, {});
 
-  const { data: agentData } = useQuery<{ agentId: string | null }>({
-    queryKey: ["my-agent", loc?.lat, loc?.lng],
-    queryFn: () => api.get(`/api/user/my-agent?lat=${loc!.lat}&lng=${loc!.lng}`) as any,
-    enabled: !!loc,
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes (location-based)
-  });
-
   const agentId = agentData?.agentId ?? null;
   const goToSub = (id: string) =>
     navigation.navigate("SubcategoryDetail", { id, agentId: agentId ?? undefined });

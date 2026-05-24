@@ -14,6 +14,7 @@ export default function AgentSettingsScreen() {
     { icon: "💰", label: "Price Control", onPress: () => navigation.navigate("AgentPriceControl") },
     { icon: "🕐", label: "Slot Hours", onPress: () => navigation.navigate("AgentSlotConfig") },
     { icon: "💳", label: "Payment History", onPress: () => navigation.navigate("AgentPaymentHistory") },
+    { icon: "📞", label: "Support Contact", onPress: () => navigation.navigate("AgentSupportSettings") },
   ];
 
   return (

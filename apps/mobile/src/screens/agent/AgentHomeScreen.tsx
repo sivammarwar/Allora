@@ -117,6 +117,7 @@ export default function AgentHomeScreen() {
             { icon: "📋", label: "All Bookings", screen: "AgentBookingHistory" as const },
             { icon: "💳", label: "Payments", screen: "AgentPaymentHistory" as const },
             { icon: "�", label: "Price Control", screen: "AgentPriceControl" as const },
+            { icon: "📞", label: "Support Settings", screen: "AgentSupportSettings" as const },
           ].map(({ icon, label, screen }) => (
             <TouchableOpacity key={label} style={styles.quickCard} onPress={() => navigation.navigate(screen)}>
               <Text style={styles.quickIcon}>{icon}</Text>

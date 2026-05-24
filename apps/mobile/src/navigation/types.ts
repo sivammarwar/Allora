@@ -66,6 +66,7 @@ export type AgentStackParams = {
   AgentSlotConfig: undefined;
   AgentBookingHistory: undefined;
   AgentRequestDetail: { id: string };
+  AgentSupportSettings: undefined;
 };
 
 export type PaymentParams = {
