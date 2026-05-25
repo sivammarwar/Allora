@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:600329527965:android:ffdf03e66fdb9412b3ea74",
+        "mobilesdk_app_id": "1:600329527965:android:2844fd9d0cc17390b3ea74",
         "android_client_info": {
-          "package_name": "com.alloraapp"
+          "package_name": "com.bharat333"
         }
       },
       "oauth_client": [],
