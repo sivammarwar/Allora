@@ -1,4 +1,4 @@
-package com.alloraapp
+package com.bharat333
 
 import android.os.Bundle
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -14,7 +14,7 @@ class MainActivity : ReactActivity() {
     super.onCreate(savedInstanceState)
   }
 
-  override fun getMainComponentName(): String = "AlloraApp"
+  override fun getMainComponentName(): String = "BharatServices"
 
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
