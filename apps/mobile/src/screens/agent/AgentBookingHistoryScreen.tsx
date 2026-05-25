@@ -38,7 +38,7 @@ export default function AgentBookingHistoryScreen() {
 
   const { data: bookings = [], isLoading, refetch } = useQuery<Booking[]>({
     queryKey: ["agent", "booking-history", tab],
-    queryFn: () => api.get(`/api/agent/booking-history?status=${tab}`) as any,
+    queryFn: () => api.get(`/api/agent/booking-history?status=${tab}`) as Promise<Booking[]>,
   });
 
   return (
