@@ -444,13 +444,18 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         </div>
       )}
 
-      {/* ── Booking Form ── */}
+      {/* ── Booking Form (bottom-sheet modal) ── */}
       {showForm && selectedHour !== null && (
-        <Card className="border-brand-primary/30">
-          <CardContent className="py-5 space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
+        <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+          <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
-              <button onClick={() => setShowForm(false)}><X size={16} className="text-brand-textMuted" /></button>
+              <button onClick={() => setShowForm(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={18} className="text-gray-400" /></button>
             </div>
             {/* Booking summary */}
             {(() => {
@@ -565,6 +570,9 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 </div>
               </div>
             </div>
+          </div>
+          {/* Sticky footer with submit button */}
+          <div className="px-5 pb-6 pt-3 border-t border-gray-100 bg-gray-50">
             <Button
               className="w-full"
               onClick={() => bookBulk.mutate()}
@@ -573,8 +581,9 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             >
               <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? t("booking.confirmMultiple", { n: selectedSubIds.size }) : t("booking.sendRequest")}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        </div>
       )}
 
       {/* ── Acceptance notification ── */}
