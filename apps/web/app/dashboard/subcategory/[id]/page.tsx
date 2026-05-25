@@ -451,7 +451,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
-        <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+        <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[92vh] overflow-hidden">
           <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
@@ -730,7 +730,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
           >
-            <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+            <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[92vh] overflow-hidden">
               {/* Header */}
               <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100">
                 <div>
