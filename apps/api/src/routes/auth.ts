@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import type { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import {
@@ -15,7 +16,7 @@ import { sendMail, otpEmailHtml } from "../lib/mailer";
 import { authLimiter } from "../middleware/rateLimit";
 import { validateBody } from "../middleware/validate";
 import { requireAuth } from "../middleware/auth";
-import { isProd } from "../env";
+import { isProd, env } from "../env";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -328,6 +329,110 @@ router.post("/set-password", requireAuth, validateBody(setPasswordSchema), async
     });
     res.json({ ok: true });
   } catch (e) { next(e); }
+});
+
+// ──────────────────────────────────────────────────────────
+// POST /api/auth/google
+// Verify a Google ID token, create/find user, return JWT
+// ──────────────────────────────────────────────────────────
+const googleSchema = z.object({
+  idToken: z.string().min(10),
+  role: z.enum(["USER", "HERO", "DELIVERY_BOY", "AGENT", "ADMIN", "PRODUCT_MANAGER", "PAYMENT_MANAGER", "SECRET_SHOP", "ITEM_CATALOG"]).optional(),
+});
+
+router.post("/google", authLimiter, validateBody(googleSchema), async (req, res, next) => {
+  try {
+    if (!env.GOOGLE_CLIENT_ID) {
+      return res.status(503).json({ error: "Google sign-in is not configured on this server." });
+    }
+
+    const { idToken, role } = req.body as z.infer<typeof googleSchema>;
+    const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+
+    let payload: any;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({ error: "Invalid Google token. Please try again." });
+    }
+
+    if (!payload?.email) {
+      return res.status(400).json({ error: "Google account has no email." });
+    }
+
+    const email = payload.email.toLowerCase();
+    const googleId = payload.sub as string;
+    const name = payload.name as string | undefined;
+    const profileImageUrl = payload.picture as string | undefined;
+
+    const SELF_REGISTERABLE: string[] = ["USER", "HERO", "DELIVERY_BOY", "SECRET_SHOP"];
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ googleId }, { email }] },
+    });
+
+    if (!user) {
+      const requestedRole = role ?? "USER";
+      if (!SELF_REGISTERABLE.includes(requestedRole)) {
+        return res.status(404).json({ error: "No account found for that role." });
+      }
+      user = await prisma.user.create({
+        data: {
+          email,
+          googleId,
+          name: name ?? null,
+          profileImageUrl: profileImageUrl ?? null,
+          role: requestedRole as Role,
+          isActive: true,
+          isVerified: true,
+        },
+      });
+    } else {
+      // Link Google ID if signing in with same email for the first time via Google
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: user.googleId ?? googleId,
+          isVerified: true,
+          ...(name && !user.name ? { name } : {}),
+          ...(profileImageUrl && !user.profileImageUrl ? { profileImageUrl } : {}),
+        },
+      });
+    }
+
+    if (!user.isActive) return res.status(403).json({ error: "Account is disabled." });
+
+    if (role && user.role !== role && user.role !== "USER") {
+      return res.status(403).json({
+        error: `This account is registered as ${user.role.replace(/_/g, " ")}. Use the correct login.`,
+      });
+    }
+
+    const access = signAccessToken({ id: user.id, role: user.role, email: user.email });
+    const refresh = await signRefreshToken(user.id);
+    setAuthCookies(res, access, refresh);
+
+    logger.info(`[auth] Google sign-in: ${email} (${user.role})`);
+    res.json({
+      ok: true,
+      accessToken: access,
+      refreshToken: refresh,
+      isNewUser: !user.passwordHash,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: true,
+        profileImageUrl: user.profileImageUrl,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

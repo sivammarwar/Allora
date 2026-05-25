@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Eye, EyeOff, KeyRound, ShieldCheck, Lock } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import {
   useLoginPassword,
   useSendOtp,
   useVerifyOtp,
   useSetPassword,
+  useGoogleAuth,
 } from "@/lib/auth";
 import { roleHome, type Role } from "@/lib/types";
 import { ApiError } from "@/lib/api";
@@ -48,6 +50,26 @@ function RoleLoginForm({ role, title, subtitle }: Props) {
   const sendOtp = useSendOtp();
   const verifyOtp = useVerifyOtp();
   const setPasswordMutation = useSetPassword();
+  const googleAuth = useGoogleAuth();
+
+  const handleGoogleLogin = async (credential: string) => {
+    try {
+      const result = await googleAuth.mutateAsync({ idToken: credential, role });
+      if (result.user.role !== role && result.user.role !== "USER") {
+        toast.error(`This account is registered as ${result.user.role.replace(/_/g, " ")}. Use the correct login.`);
+        return;
+      }
+      if (result.isNewUser) {
+        toast.success("Welcome! Please set a password for future logins.");
+        setStep("set-password");
+      } else {
+        toast.success("Welcome back!");
+        router.replace(redirectTo);
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Google sign-in failed. Try again.");
+    }
+  };
 
   // Step 1: user submits email — single call to send-otp which returns hasPassword flag
   const onContinue = async (e: React.FormEvent) => {
@@ -139,7 +161,8 @@ function RoleLoginForm({ role, title, subtitle }: Props) {
 
   const pending =
     loginPassword.isPending ||
-    sendOtp.isPending || verifyOtp.isPending || setPasswordMutation.isPending;
+    sendOtp.isPending || verifyOtp.isPending || setPasswordMutation.isPending ||
+    googleAuth.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10">
@@ -152,21 +175,45 @@ function RoleLoginForm({ role, title, subtitle }: Props) {
 
         {/* ── Step 1: Email ── */}
         {step === "email" && (
-          <form onSubmit={onContinue} className="space-y-5 mt-8">
-            <Input
-              label="Email address"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={pending}
-            />
-            <Button type="submit" size="lg" className="w-full" loading={pending}>
-              Continue
-            </Button>
-          </form>
+          <div className="mt-8 space-y-5">
+            {/* Google Sign-In */}
+            {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+              <>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={(res) => res.credential && handleGoogleLogin(res.credential)}
+                    onError={() => toast.error("Google sign-in failed")}
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                    width="368"
+                    logo_alignment="center"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-brand-border" />
+                  <span className="text-xs text-brand-textMuted">or continue with email</span>
+                  <div className="flex-1 h-px bg-brand-border" />
+                </div>
+              </>
+            )}
+            <form onSubmit={onContinue} className="space-y-5">
+              <Input
+                label="Email address"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={pending}
+              />
+              <Button type="submit" size="lg" className="w-full" loading={pending}>
+                Continue
+              </Button>
+            </form>
+          </div>
         )}
 
         {/* ── Step 2a: Password login ── */}

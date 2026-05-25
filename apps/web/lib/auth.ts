@@ -66,6 +66,18 @@ export function useSetPassword() {
   });
 }
 
+export function useGoogleAuth() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { idToken: string; role?: Role }) =>
+      api.post<{ ok: true; accessToken?: string; isNewUser: boolean; user: AuthUser }>("/api/auth/google", input),
+    onSuccess: ({ user, accessToken }) => {
+      if (accessToken) setAccessToken(accessToken);
+      qc.setQueryData(["auth", "me"], user);
+    },
+  });
+}
+
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({

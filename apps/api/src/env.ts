@@ -42,6 +42,7 @@ const schema = z.object({
   API_PUBLIC_URL: z.string().optional(),
 
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
 
   // Firebase Cloud Messaging (FCM) for push notifications
   FCM_PROJECT_ID: z.string().optional(),

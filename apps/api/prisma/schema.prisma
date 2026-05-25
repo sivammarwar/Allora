@@ -167,6 +167,7 @@ model User {
   isActive        Boolean  @default(true)
   profileImageUrl String?
   passwordHash    String?
+  googleId        String?  @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { api } from "../lib/api";
 import { storage } from "../lib/storage";
 import { disconnectAll } from "../lib/socket";
 import { registerFCMToken } from "../lib/notifications";
+import { GOOGLE_WEB_CLIENT_ID } from "../lib/config";
 
 export type Role =
   | "USER" | "HERO" | "AGENT" | "DELIVERY_BOY"
@@ -24,6 +26,7 @@ interface AuthState {
   signInWithOTP: (email: string, role?: string, forceOtp?: boolean) => Promise<{ hasPassword: boolean }>;
   verifyOTP: (email: string, otp: string) => Promise<CurrentUser>;
   loginWithPassword: (email: string, password: string) => Promise<CurrentUser>;
+  signInWithGoogle: (role?: string) => Promise<{ user: CurrentUser; isNewUser: boolean }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -35,6 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  // Configure Google Sign-In once
+  useEffect(() => {
+    if (GOOGLE_WEB_CLIENT_ID) {
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+    }
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
@@ -119,6 +129,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const signInWithGoogle = async (role?: string): Promise<{ user: CurrentUser; isNewUser: boolean }> => {
+    await GoogleSignin.hasPlayServices();
+    await GoogleSignin.signIn();
+    const { idToken } = await GoogleSignin.getTokens();
+    if (!idToken) throw new Error("Failed to get Google ID token");
+    const res = await api.post("/api/auth/google", { idToken, ...(role ? { role } : {}) }) as any;
+    await storage.set("access_token", res.accessToken);
+    if (res.refreshToken) await storage.set("refresh_token", res.refreshToken);
+    const me = await api.get("/api/auth/me") as any;
+    const currentUser = me?.user ?? me;
+    setUser(currentUser);
+    registerFCMToken().catch(() => {});
+    return { user: currentUser, isNewUser: !!res.isNewUser };
+  };
+
   const refresh = async () => {
     try {
       const me = await api.get("/api/auth/me") as any;
@@ -127,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithOTP, verifyOTP, loginWithPassword, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, signInWithOTP, verifyOTP, loginWithPassword, signInWithGoogle, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );
