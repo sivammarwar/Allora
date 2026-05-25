@@ -7,11 +7,12 @@
 
 import React, { Component, useEffect } from "react";
 import { StatusBar, View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import messaging from "@react-native-firebase/messaging";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { LanguageProvider } from "./src/lib/i18n";
 import RootNavigator from "./src/navigation/RootNavigator";
@@ -56,22 +57,52 @@ const queryClient = new QueryClient({
   },
 });
 
+// Stable ref so notification handlers can navigate without being inside a component
+const navigationRef = React.createRef<NavigationContainerRef<any>>();
+
+function navigateOnNotificationTap() {
+  try {
+    // Navigate to the Requests tab for HERO; extend per role if needed
+    navigationRef.current?.navigate("HeroRequests" as never);
+  } catch {}
+}
+
 function AppInner() {
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
+
     registerFCMToken();
-    const unsub = onForegroundNotification((title, body) => {
-      Toast.show({ type: "info", text1: title, text2: body, visibilityTime: 4000 });
+
+    // ── Foreground: app is open ──────────────────────────────────────────────
+    const unsubFg = onForegroundNotification((title, body) => {
+      Toast.show({
+        type: "info",
+        text1: title,
+        text2: body,
+        visibilityTime: 6000,
+        onPress: () => user.role === "HERO" ? navigateOnNotificationTap() : undefined,
+      });
     });
-    return unsub;
+
+    // ── Background: app already open, hero taps notification ─────────────────
+    const unsubBg = messaging().onNotificationOpenedApp((_msg) => {
+      navigateOnNotificationTap();
+    });
+
+    // ── Killed: app was closed, hero taps notification to open it ────────────
+    messaging().getInitialNotification().then((msg) => {
+      if (msg) setTimeout(navigateOnNotificationTap, 600);
+    });
+
+    return () => { unsubFg(); unsubBg(); };
   }, [user?.id]);
 
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <RootNavigator />
       </NavigationContainer>
       <Toast />
