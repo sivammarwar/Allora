@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /how-it-works
+Allow: /login
+
+Disallow: /dashboard
+Disallow: /agent/
+Disallow: /hero/
+Disallow: /pm/
+Disallow: /admin/
+Disallow: /cart
+Disallow: /orders
+Disallow: /main-inventory
+
+Sitemap: https://bharat333.com/sitemap.xml
