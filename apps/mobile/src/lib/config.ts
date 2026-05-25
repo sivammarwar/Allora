@@ -12,4 +12,4 @@ export const BRAND_BG      = "#ffffff";
 export const MAPBOX_TOKEN  = "pk.eyJ1Ijoic2l2YW1hcndhciIsImEiOiJjbW9wZXdhcDkxc3lwMnhzYWdhYWo1N254In0.vPlun8EaCXjsLFRzAQ4XYA";
 
 // Replace with your Web Client ID from Google Cloud Console → APIs & Services → Credentials
-export const GOOGLE_WEB_CLIENT_ID = "";
+export const GOOGLE_WEB_CLIENT_ID = "931876167138-nndf6uk1podmlqvl20fped9te2k0mcff.apps.googleusercontent.com";
