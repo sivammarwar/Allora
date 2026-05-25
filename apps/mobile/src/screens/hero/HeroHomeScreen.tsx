@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Switch, Alert, RefreshControl,
+  Linking, Platform,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
 import { connectService } from "../../lib/socket";
+import { storage } from "../../lib/storage";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "#f59e0b",
@@ -83,6 +85,25 @@ export default function HeroHomeScreen() {
     onError: (e: any) => Alert.alert("Error", e?.error ?? "Could not accept request"),
   });
 
+  // ── Battery optimisation banner ─────────────────────────────────────────
+  const [showBatteryBanner, setShowBatteryBanner] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    storage.get("battery_opt_dismissed").then((v) => {
+      if (!v) setShowBatteryBanner(true);
+    });
+  }, []);
+  const dismissBatteryBanner = async () => {
+    await storage.set("battery_opt_dismissed", "1");
+    setShowBatteryBanner(false);
+  };
+  const openBatterySettings = async () => {
+    await storage.set("battery_opt_dismissed", "1");
+    setShowBatteryBanner(false);
+    Linking.openURL(`android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS?package=com.bharat333`)
+      .catch(() => Linking.openSettings());
+  };
+
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -102,6 +123,25 @@ export default function HeroHomeScreen() {
           colors={[BRAND_PRIMARY]} tintColor={BRAND_PRIMARY} />
       }
     >
+      {/* Battery optimisation banner — shown once until dismissed */}
+      {showBatteryBanner && (
+        <View style={styles.batteryBanner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.batteryTitle}>⚡ Enable unrestricted battery access</Text>
+            <Text style={styles.batteryBody}>
+              Your phone may delay or block notifications when the app is closed. Tap "Fix Now" to allow always-on delivery.
+            </Text>
+          </View>
+          <View style={styles.batteryActions}>
+            <TouchableOpacity style={styles.batteryFixBtn} onPress={openBatterySettings}>
+              <Text style={styles.batteryFixText}>Fix Now</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={dismissBatteryBanner} style={{ padding: 6 }}>
+              <Text style={{ color: "#92400e", fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Availability toggle */}
       {isVerified && (
@@ -216,6 +256,19 @@ export default function HeroHomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f9fafb" },
+  batteryBanner: {
+    margin: 16, marginBottom: 0, backgroundColor: "#fef3c7",
+    borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#fde68a",
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+  },
+  batteryTitle: { fontSize: 13, fontWeight: "700", color: "#92400e", marginBottom: 4 },
+  batteryBody: { fontSize: 12, color: "#78350f", lineHeight: 17 },
+  batteryActions: { alignItems: "flex-end", gap: 8, justifyContent: "center" },
+  batteryFixBtn: {
+    backgroundColor: "#d97706", borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  batteryFixText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   availRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: "#fff",
     marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 16,

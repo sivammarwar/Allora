@@ -72,9 +72,14 @@ export async function sendPushNotification(
       data: data ? { ...data, title, body } : { title, body },
       token,
       android: {
+        priority: "high",        // Wake the device from Doze mode — critical for delivery
         notification: {
           sound: "default",
           channelId: "default",
+          priority: "max",       // Show as heads-up banner (slides down from top)
+          defaultVibrateTimings: true,
+          defaultSound: true,
+          visibility: "public",  // Show on lock screen
         },
       },
       apns: {
