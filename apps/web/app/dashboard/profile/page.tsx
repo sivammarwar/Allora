@@ -10,7 +10,7 @@ import {
 import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { useCurrentUser } from "@/lib/auth";
+import { useCurrentUser, useLogout } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 
 interface SavedAddress {
@@ -34,6 +34,28 @@ interface Profile {
 }
 
 const LABEL_PRESETS = ["Home", "Office", "Partner's place", "Other"];
+
+function LogoutButton() {
+  const router = useRouter();
+  const t = useT();
+  const logoutMut = useLogout();
+  return (
+    <button
+      disabled={logoutMut.isPending}
+      onClick={async () => {
+        await logoutMut.mutateAsync();
+        router.replace("/login");
+      }}
+      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50"
+    >
+      {logoutMut.isPending
+        ? <span className="h-4 w-4 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
+        : <LogOut size={15} />
+      }
+      {t("profile.signOut")}
+    </button>
+  );
+}
 
 export default function UserProfilePage() {
   const qc = useQueryClient();
@@ -365,15 +387,7 @@ export default function UserProfilePage() {
       </div>
 
       {/* ── Sign out ─────────────────────────────────────────────────────── */}
-      <button
-        onClick={async () => {
-          await api.post("/api/auth/logout", {});
-          router.replace("/dashboard");
-        }}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-colors"
-      >
-        <LogOut size={15} /> {t("profile.signOut")}
-      </button>
+      <LogoutButton />
     </div>
   );
 }

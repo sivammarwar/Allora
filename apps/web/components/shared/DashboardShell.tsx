@@ -34,15 +34,18 @@ function RoleLogoutButton({ redirectTo }: { redirectTo: string }) {
   const logout = useLogout();
   return (
     <button
-      onClick={() => {
+      onClick={async () => {
+        await logout.mutateAsync();
         router.replace(redirectTo);
-        logout.mutate();
       }}
       disabled={logout.isPending}
       title="Sign out"
-      className="flex items-center justify-center h-7 w-7 rounded-full border border-brand-border bg-white hover:bg-red-50 hover:border-red-300 active:scale-95 transition-all text-brand-textMuted hover:text-red-500"
+      className="flex items-center justify-center h-7 w-7 rounded-full border border-brand-border bg-white hover:bg-red-50 hover:border-red-300 active:scale-95 transition-all text-brand-textMuted hover:text-red-500 disabled:opacity-50"
     >
-      <LogOut size={13} />
+      {logout.isPending
+        ? <span className="h-3 w-3 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
+        : <LogOut size={13} />
+      }
     </button>
   );
 }
