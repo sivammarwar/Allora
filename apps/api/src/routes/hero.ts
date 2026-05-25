@@ -3,6 +3,7 @@ import multer from "multer";
 import { z } from "zod";
 import * as turf from "@turf/turf";
 import { prisma } from "../lib/prisma";
+import { getRoadDistanceKm } from "../lib/geo";
 import { env } from "../env";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/roleGuard";
@@ -973,18 +974,19 @@ router.get("/service-requests/incoming", async (req, res, next) => {
       orderBy: { createdAt: "desc" },
     });
 
-    // Compute distance from hero to each user
-    const withDistance = incoming.map((r) => {
-      let distanceKm = 0;
-      if (r.userLat && r.userLng && profile.locationLat && profile.locationLng) {
-        distanceKm = +turf.distance(
-          turf.point([profile.locationLng, profile.locationLat]),
-          turf.point([r.userLng, r.userLat]),
-          { units: "kilometers" }
-        ).toFixed(2);
-      }
-      return { ...r, distanceKm };
-    });
+    // Compute real road distance from hero to each user
+    const withDistance = await Promise.all(
+      incoming.map(async (r) => {
+        let distanceKm = 0;
+        if (r.userLat && r.userLng && profile.locationLat && profile.locationLng) {
+          distanceKm = await getRoadDistanceKm(
+            profile.locationLat, profile.locationLng,
+            r.userLat, r.userLng,
+          );
+        }
+        return { ...r, distanceKm };
+      })
+    );
     res.json(withDistance);
   } catch (e) { next(e); }
 });
@@ -1004,14 +1006,13 @@ router.post("/service-requests/:id/accept", async (req, res, next) => {
     if (!profile.subcategoryIds.includes(request.subcategoryId))
       return res.status(403).json({ error: "Not your subcategory" });
 
-    // Compute distance between hero and user
+    // Compute real road distance between hero and user
     let distanceKm = 0;
     if (request.userLat && request.userLng && profile.locationLat && profile.locationLng) {
-      distanceKm = +turf.distance(
-        turf.point([profile.locationLng, profile.locationLat]),
-        turf.point([request.userLng, request.userLat]),
-        { units: "kilometers" }
-      ).toFixed(2);
+      distanceKm = await getRoadDistanceKm(
+        profile.locationLat, profile.locationLng,
+        request.userLat, request.userLng,
+      );
     }
     const transportPerKm = Number(request.transportCharge) || 0;
     const transportTotal = +(transportPerKm * distanceKm).toFixed(2);
