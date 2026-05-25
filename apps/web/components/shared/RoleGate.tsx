@@ -54,6 +54,10 @@ export function RoleGate({
 
   if (isPublicAuthRoute) return <>{children}</>;
 
+  // Guest-ok routes (e.g. user dashboard): never block on auth loading.
+  // The useEffect above handles role-mismatch redirects once auth resolves.
+  if (guestOk) return <>{children}</>;
+
   if (isLoading && user === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -61,8 +65,6 @@ export function RoleGate({
       </div>
     );
   }
-  // Guest-ok: render even without a user
-  if (guestOk) return <>{children}</>;
   if (!user || user.role !== role) return null;
   return <>{children}</>;
 }
