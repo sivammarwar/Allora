@@ -20,7 +20,7 @@ function getFCMApp(): admin.app.App | null {
       {
         credential: admin.credential.cert({
           projectId: env.FCM_PROJECT_ID,
-          privateKey: env.FCM_PRIVATE_KEY.replace(/\\n/g, "\n"),
+          privateKey: env.FCM_PRIVATE_KEY.replace(/^"|"$/g, "").replace(/\\n/g, "\n"),
           clientEmail: env.FCM_CLIENT_EMAIL,
         }),
       },
@@ -32,6 +32,7 @@ function getFCMApp(): admin.app.App | null {
   } catch (e) {
     logger.error("[push] Failed to initialize Firebase Admin:", e);
     console.log("[push] Firebase Admin initialization failed:", e);
+    fcmApp = null;
     return null;
   }
 }
