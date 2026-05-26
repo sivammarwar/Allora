@@ -22,12 +22,10 @@ export async function requestPushPermission(): Promise<boolean> {
 
 export async function registerFCMToken(): Promise<void> {
   try {
-    const granted = await requestPushPermission();
-    console.log("[FCM] Permission granted:", granted);
-    if (!granted) {
-      console.log("[FCM] Permission not granted, skipping token registration");
-      return;
-    }
+    // Always request permission (shows dialog if not yet decided).
+    // We do NOT bail out if denied — the token is still needed so the
+    // backend can attempt delivery; display permission is separate.
+    await requestPushPermission();
     const token = await messaging().getToken();
     console.log("[FCM] Token obtained:", token ? "YES" : "NO");
     if (token) {

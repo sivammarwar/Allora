@@ -91,7 +91,7 @@ export default function HeroHomeScreen() {
   useEffect(() => {
     checkNotificationPermission().then((allowed) => {
       if (!allowed) setShowNotifBanner(true);
-      else registerFCMToken().catch(() => {}); // re-register on every open
+      registerFCMToken().catch(() => {}); // always re-register token on every open
     });
   }, []);
   const openNotifSettings = () => {
