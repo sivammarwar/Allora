@@ -321,7 +321,7 @@ router.get("/profile", async (req, res, next) => {
       where: { id: req.user!.id },
       select: {
         id: true, name: true, email: true, phone: true, gender: true,
-        profileImageUrl: true, createdAt: true,
+        profileImageUrl: true, createdAt: true, termsAcceptedAt: true,
         savedAddresses: { orderBy: { createdAt: "asc" } },
       },
     });
@@ -339,6 +339,17 @@ router.patch("/profile", validateBody(updateProfileSchema), async (req, res, nex
       select: { id: true, name: true, email: true, phone: true, gender: true, profileImageUrl: true },
     });
     res.json(user);
+  } catch (e) { next(e); }
+});
+
+// ─── Terms & Conditions ─────────────────────────────────────────────────────────
+router.post("/accept-terms", async (req, res, next) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { termsAcceptedAt: new Date() },
+    });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

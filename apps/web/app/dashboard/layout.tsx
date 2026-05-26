@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/shared/DashboardShell";
 import { UserHeaderActions } from "@/components/shared/UserHeaderActions";
 import { GlobalRatingPrompt } from "@/components/shared/GlobalRatingPrompt";
 import { DashboardFooter } from "@/components/shared/DashboardFooter";
+import { TermsModal } from "@/components/shared/TermsModal";
 import { useLanguage } from "@/lib/i18n";
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +29,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       {children}
       <GlobalRatingPrompt />
       <DashboardFooter />
+      <TermsModal />
     </DashboardShell>
   );
 }

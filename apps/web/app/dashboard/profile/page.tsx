@@ -31,6 +31,7 @@ interface Profile {
   gender: string | null;
   profileImageUrl: string | null;
   savedAddresses: SavedAddress[];
+  termsAcceptedAt: string | null;
 }
 
 const LABEL_PRESETS = ["Home", "Office", "Partner's place", "Other"];
@@ -385,6 +386,21 @@ export default function UserProfilePage() {
           </ul>
         )}
       </div>
+
+      {/* ── T&C acceptance ────────────────────────────────────────────── */}
+      {profile?.termsAcceptedAt && (
+        <div className="rounded-2xl border border-green-100 bg-green-50 px-5 py-4 flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+            <Check size={15} className="text-green-600" strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-green-800">Terms &amp; Conditions Accepted</p>
+            <p className="text-xs text-green-600 mt-0.5">
+              Accepted on {new Date(profile.termsAcceptedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Sign out ─────────────────────────────────────────────────────── */}
       <LogoutButton />

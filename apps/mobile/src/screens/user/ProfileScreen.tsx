@@ -5,7 +5,9 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../auth/AuthContext";
+import { api } from "../../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useLanguage } from "../../lib/i18n";
 import type { UserStackParams } from "../../navigation/types";
@@ -16,6 +18,13 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<NavProp>();
   const { t } = useLanguage();
+
+  const { data: profile } = useQuery<any>({
+    queryKey: ["user-profile"],
+    queryFn: () => api.get("/api/user/profile"),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
   const handleLogout = () => {
     Alert.alert(t("profile.logout"), "Are you sure?", [
@@ -114,6 +123,18 @@ export default function ProfileScreen() {
             <Text style={styles.menuChevron}>›</Text>
           </TouchableOpacity>
         ))}
+        {/* T&C acceptance status — read-only */}
+        {profile?.termsAcceptedAt && (
+          <View style={[styles.menuRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.menuIcon}>✅</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuLabel}>Terms & Conditions</Text>
+              <Text style={styles.tcAcceptedDate}>
+                Accepted on {new Date(profile.termsAcceptedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
@@ -153,6 +174,7 @@ const styles = StyleSheet.create({
   menuIcon: { fontSize: 18, marginRight: 14 },
   menuLabel: { flex: 1, fontSize: 14, color: "#111", fontWeight: "500" },
   menuChevron: { fontSize: 20, color: BRAND_MUTED },
+  tcAcceptedDate: { fontSize: 11, color: "#16a34a", marginTop: 2 },
   logoutBtn: {
     marginTop: 20, marginHorizontal: 16, height: 50,
     borderRadius: 14, borderWidth: 1.5, borderColor: "#ef4444",

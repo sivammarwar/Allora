@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,6 +29,11 @@ import ContactScreen from "../screens/user/ContactScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import { useLanguage } from "../lib/i18n";
 import { registerFCMToken } from "../lib/notifications";
+import { useAuth } from "../auth/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
+import { Modal } from "react-native";
+import TermsAcceptanceScreen from "../screens/user/TermsAcceptanceScreen";
 import type { UserTabParams, UserStackParams } from "./types";
 
 const Tab = createBottomTabNavigator<UserTabParams>();
@@ -110,7 +115,24 @@ function UserTabs() {
 
 export default function UserNavigator() {
   useEffect(() => { registerFCMToken().catch(() => {}); }, []);
+  const { user } = useAuth();
+  const [termsAccepted, setTermsAccepted] = useState(true); // optimistic — avoids flash
+
+  const { data: profile } = useQuery<any>({
+    queryKey: ["user-profile"],
+    queryFn: () => api.get("/api/user/profile"),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!user) { setTermsAccepted(true); return; } // guests skip
+    if (profile !== undefined) setTermsAccepted(!!profile?.termsAcceptedAt);
+  }, [user, profile]);
+
   return (
+    <>
+
     <Stack.Navigator>
       <Stack.Screen name="UserTabs" component={UserTabs} options={{ headerShown: false }} />
       <Stack.Screen
@@ -209,5 +231,11 @@ export default function UserNavigator() {
         options={{ title: "Contact Us", headerTintColor: BRAND_PRIMARY }}
       />
     </Stack.Navigator>
+
+      {/* Terms & Conditions gate — blocks the app until accepted */}
+      <Modal visible={!termsAccepted} animationType="slide" statusBarTranslucent>
+        <TermsAcceptanceScreen onAccepted={() => setTermsAccepted(true)} />
+      </Modal>
+    </>
   );
 }
