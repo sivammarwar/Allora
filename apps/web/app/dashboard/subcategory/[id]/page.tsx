@@ -447,16 +447,16 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
       {/* ── Booking Form (bottom-sheet modal) ── */}
       {showForm && selectedHour !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex sm:items-center sm:justify-center"
           style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
-        <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[92vh] overflow-hidden">
-          <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
-              <button onClick={() => setShowForm(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={18} className="text-gray-400" /></button>
-            </div>
+        <div className="bg-white w-full h-full sm:w-auto sm:h-auto sm:max-w-lg sm:max-h-[92vh] sm:rounded-2xl flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-safe-top pb-4 pt-5 border-b border-gray-100 shrink-0">
+            <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
+            <button onClick={() => setShowForm(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={18} className="text-gray-400" /></button>
+          </div>
+          <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
             {/* Booking summary */}
             {(() => {
               const allPriceable = [
@@ -572,7 +572,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             </div>
           </div>
           {/* Sticky footer with submit button */}
-          <div className="px-5 pb-6 pt-3 border-t border-gray-100 bg-gray-50">
+          <div className="px-5 pb-6 pt-3 border-t border-gray-100 bg-gray-50 safe-bottom">
             <Button
               className="w-full"
               onClick={() => bookBulk.mutate()}
@@ -726,13 +726,13 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
         const savings     = totalOriginal - totalFinal;
         return (
           <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            className="fixed inset-0 z-50 flex sm:items-center sm:justify-center"
             style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
           >
-            <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="bg-white w-full h-full sm:w-auto sm:h-auto sm:max-w-lg sm:max-h-[92vh] sm:rounded-2xl flex flex-col overflow-hidden">
               {/* Header */}
-              <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+              <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
                 <div>
                   <h2 className="font-heading text-lg text-brand-text">Book services together</h2>
                   <p className="text-xs text-brand-textMuted mt-0.5">
