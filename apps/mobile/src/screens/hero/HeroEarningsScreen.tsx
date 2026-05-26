@@ -92,7 +92,7 @@ export default function HeroEarningsScreen() {
     const map = new Map<string, number>();
     for (const tx of allTransactions) {
       const k = tx.service;
-      map.set(k, (map.get(k) ?? 0) + (tx.final || tx.charge));
+      map.set(k, (map.get(k) ?? 0) + Number(tx.final ?? tx.charge ?? 0));
     }
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value: Math.round(value) }))
@@ -196,7 +196,7 @@ export default function HeroEarningsScreen() {
                   })}
                 </Text>
               </View>
-              <Text style={styles.txAmt}>+₹{e.final || Math.round(e.charge)}</Text>
+              <Text style={styles.txAmt}>+₹{Math.round(Number(e.final ?? e.charge ?? 0))}</Text>
             </View>
           ))}
         </View>
