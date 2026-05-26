@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -14,6 +14,7 @@ import HeroPendingScreen from "../screens/hero/HeroPendingScreen";
 import { api } from "../lib/api";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import type { HeroTabParams } from "./types";
+import { registerFCMToken } from "../lib/notifications";
 
 const Tab = createBottomTabNavigator<HeroTabParams>();
 
@@ -26,6 +27,10 @@ function tabIcon(active: IoniconName, inactive: IoniconName) {
 
 export default function HeroNavigator() {
   const qc = useQueryClient();
+
+  // Register FCM token as soon as the hero dashboard loads — before any tab mounts
+  useEffect(() => { registerFCMToken().catch(() => {}); }, []);
+
   const { data: me, isLoading } = useQuery<any>({
     queryKey: ["hero-me"],
     queryFn: () => api.get("/api/hero/me") as any,
