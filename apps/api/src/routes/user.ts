@@ -301,6 +301,10 @@ const PUBLIC_GET = [
 router.use((req, res, next) => {
   const isPublicGet = req.method === "GET" && PUBLIC_GET.some((re) => re.test(req.path));
   if (isPublicGet) return optionalAuth(req, res, next);
+  // FCM token registration must be open to all roles (HERO, AGENT, etc.)
+  if (req.method === "POST" && req.path === "/fcm-token") {
+    return requireAuth(req, res, next);
+  }
   return requireAuth(req, res, () => requireRole("USER")(req, res, next));
 });
 
