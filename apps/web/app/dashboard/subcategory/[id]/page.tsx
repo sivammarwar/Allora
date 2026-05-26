@@ -451,12 +451,12 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
-        <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-full sm:max-w-lg sm:h-[88vh] sm:rounded-2xl">
+        <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-auto sm:h-auto sm:max-h-[90vh] sm:max-w-lg sm:rounded-2xl">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
             <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
             <button onClick={() => setShowForm(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={18} className="text-gray-400" /></button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* Booking summary */}
             {(() => {
               const allPriceable = [
@@ -570,17 +570,16 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
                 </div>
               </div>
             </div>
-          </div>
-          {/* Sticky footer with submit button */}
-          <div className="px-5 pb-6 pt-3 border-t border-gray-100 bg-gray-50 safe-bottom">
-            <Button
-              className="w-full"
-              onClick={() => bookBulk.mutate()}
-              loading={bookBulk.isPending}
-              disabled={!form.name || !form.phone || !form.address}
-            >
-              <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? t("booking.confirmMultiple", { n: selectedSubIds.size }) : t("booking.sendRequest")}
-            </Button>
+            <div className="pt-2 pb-4">
+              <Button
+                className="w-full"
+                onClick={() => bookBulk.mutate()}
+                loading={bookBulk.isPending}
+                disabled={!form.name || !form.phone || !form.address}
+              >
+                <CheckCircle2 size={15} /> {selectedSubIds.size > 1 ? t("booking.confirmMultiple", { n: selectedSubIds.size }) : t("booking.sendRequest")}
+              </Button>
+            </div>
           </div>
         </div>
         </div>
@@ -730,7 +729,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
           >
-            <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-full sm:max-w-lg sm:h-[88vh] sm:rounded-2xl">
+            <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-auto sm:h-auto sm:max-h-[90vh] sm:max-w-lg sm:rounded-2xl">
               {/* Header */}
               <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
                 <div>
@@ -745,7 +744,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
               </div>
 
               {/* Service list */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2">
+              <div className="min-h-0 overflow-y-auto px-4 py-3 space-y-2">
                 {allSelectable.map((s) => {
                   const isSelected = selectedSubIds.has(s.id);
                   return (
