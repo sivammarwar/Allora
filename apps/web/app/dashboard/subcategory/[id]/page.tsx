@@ -451,7 +451,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
           style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
-        <div className="bg-white w-full h-full sm:w-auto sm:max-w-lg sm:max-h-[90vh] sm:rounded-2xl flex flex-col overflow-hidden">
+        <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-full sm:max-w-lg sm:h-[88vh] sm:rounded-2xl">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
             <h2 className="font-heading text-lg text-brand-text">{t("booking.yourDetails")}</h2>
             <button onClick={() => setShowForm(false)} className="p-1 rounded-full hover:bg-gray-100"><X size={18} className="text-gray-400" /></button>
@@ -730,7 +730,7 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
             style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowUpsell(false); }}
           >
-            <div className="bg-white w-full h-full sm:w-auto sm:max-w-lg sm:max-h-[90vh] sm:rounded-2xl flex flex-col overflow-hidden">
+            <div className="bg-white flex flex-col overflow-hidden w-full h-full sm:w-full sm:max-w-lg sm:h-[88vh] sm:rounded-2xl">
               {/* Header */}
               <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100 shrink-0">
                 <div>
