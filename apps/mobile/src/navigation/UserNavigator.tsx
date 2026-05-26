@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +28,7 @@ import RefundPolicyScreen from "../screens/user/RefundPolicyScreen";
 import ContactScreen from "../screens/user/ContactScreen";
 import { BRAND_PRIMARY, BRAND_MUTED } from "../lib/config";
 import { useLanguage } from "../lib/i18n";
+import { registerFCMToken } from "../lib/notifications";
 import type { UserTabParams, UserStackParams } from "./types";
 
 const Tab = createBottomTabNavigator<UserTabParams>();
@@ -108,6 +109,7 @@ function UserTabs() {
 }
 
 export default function UserNavigator() {
+  useEffect(() => { registerFCMToken().catch(() => {}); }, []);
   return (
     <Stack.Navigator>
       <Stack.Screen name="UserTabs" component={UserTabs} options={{ headerShown: false }} />
