@@ -8,6 +8,7 @@ import {
   Pencil, Check, X, LogOut,
 } from "lucide-react";
 import { useEffect } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/lib/auth";
@@ -393,12 +394,19 @@ export default function UserProfilePage() {
           <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
             <Check size={15} className="text-green-600" strokeWidth={2.5} />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-green-800">Terms &amp; Conditions Accepted</p>
             <p className="text-xs text-green-600 mt-0.5">
               Accepted on {new Date(profile.termsAcceptedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
             </p>
           </div>
+          <Link
+            href="/legal/terms"
+            target="_blank"
+            className="text-xs font-semibold text-green-700 underline underline-offset-2 hover:text-green-900 shrink-0"
+          >
+            View
+          </Link>
         </div>
       )}
 

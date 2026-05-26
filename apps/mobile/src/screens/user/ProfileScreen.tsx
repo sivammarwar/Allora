@@ -123,9 +123,13 @@ export default function ProfileScreen() {
             <Text style={styles.menuChevron}>›</Text>
           </TouchableOpacity>
         ))}
-        {/* T&C acceptance status — read-only */}
+        {/* T&C acceptance status — tappable to view */}
         {profile?.termsAcceptedAt && (
-          <View style={[styles.menuRow, { borderBottomWidth: 0 }]}>
+          <TouchableOpacity
+            style={[styles.menuRow, { borderBottomWidth: 0 }]}
+            onPress={() => navigation.navigate("Terms")}
+            activeOpacity={0.7}
+          >
             <Text style={styles.menuIcon}>✅</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuLabel}>Terms & Conditions</Text>
@@ -133,7 +137,8 @@ export default function ProfileScreen() {
                 Accepted on {new Date(profile.termsAcceptedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
               </Text>
             </View>
-          </View>
+            <Text style={styles.menuChevron}>›</Text>
+          </TouchableOpacity>
         )}
       </View>
 
