@@ -109,6 +109,28 @@ export default function HeroHomeScreen() {
     refetchInterval: 60_000, // 60 seconds (reduced from 15 seconds to save network calls)
   });
 
+  const { data: allCategories = [] } = useQuery<any[]>({
+    queryKey: ["public-categories"],
+    queryFn: () => api.get("/api/user/categories") as any,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: allSubcategories = [] } = useQuery<any[]>({
+    queryKey: ["public-subcategories"],
+    queryFn: () => api.get("/api/user/subcategories") as any,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const verifiedServiceCats = useMemo(() => {
+    const ids: string[] = me?.profile?.categoryIds ?? [];
+    return allCategories.filter((c: any) => ids.includes(c.id) && c.type === "SERVICE");
+  }, [allCategories, me?.profile?.categoryIds]);
+
+  const verifiedSubs = useMemo(() => {
+    const ids: string[] = me?.profile?.subcategoryIds ?? [];
+    return allSubcategories.filter((s: any) => ids.includes(s.id));
+  }, [allSubcategories, me?.profile?.subcategoryIds]);
+
   const availMutation = useMutation({
     mutationFn: (isAvailable: boolean) =>
       api.put("/api/hero/availability", { isAvailable }) as any,
@@ -302,6 +324,32 @@ export default function HeroHomeScreen() {
           </View>
         );
       })()}
+
+      {/* Verified Services */}
+      {isVerified && verifiedServiceCats.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🛡️ Your Verified Services</Text>
+          {verifiedServiceCats.map((cat: any) => {
+            const subs = verifiedSubs.filter((s: any) => s.categoryId === cat.id);
+            return (
+              <View key={cat.id} style={styles.catBlock}>
+                <View style={styles.catPill}>
+                  <Text style={styles.catPillText}>{cat.name}</Text>
+                </View>
+                <View style={styles.subRow}>
+                  {subs.length > 0 ? subs.map((s: any) => (
+                    <View key={s.id} style={styles.subChip}>
+                      <Text style={styles.subChipText}>{s.name}</Text>
+                    </View>
+                  )) : (
+                    <Text style={styles.subNone}>No subcategories assigned</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* Stats strip */}
       <View style={styles.statsRow}>
@@ -550,6 +598,26 @@ const styles = StyleSheet.create({
   reqCharge: { fontSize: 16, fontWeight: "800", color: BRAND_PRIMARY },
   transportTag: { fontSize: 11, color: BRAND_MUTED },
   tapHint: { fontSize: 11, color: BRAND_MUTED, marginTop: 8 },
+  card: {
+    backgroundColor: "#fff", borderRadius: 16, marginHorizontal: 16,
+    marginBottom: 12, padding: 16,
+    shadowColor: "#000", shadowOpacity: 0.04, elevation: 2,
+  },
+  cardTitle: { fontSize: 14, fontWeight: "700", color: "#111", marginBottom: 12 },
+  catBlock: { marginBottom: 12 },
+  catPill: {
+    alignSelf: "flex-start", backgroundColor: BRAND_PRIMARY,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 8,
+  },
+  catPillText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  subRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingLeft: 4 },
+  subChip: {
+    borderWidth: 1, borderColor: BRAND_PRIMARY + "55",
+    backgroundColor: BRAND_PRIMARY + "0D",
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+  },
+  subChipText: { fontSize: 11, fontWeight: "600", color: BRAND_PRIMARY },
+  subNone: { fontSize: 11, color: BRAND_MUTED },
   // ── Bottom-sheet modal ───────────────────────────
   overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
   sheet: {
