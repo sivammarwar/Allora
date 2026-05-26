@@ -128,12 +128,10 @@ export default function UserSubcategoryPage({ params }: { params: { id: string }
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
 
-  // Lock background scroll while any modal is open so the page can't scroll under the overlay
+  // Scroll to top when a modal opens so the fixed overlay is always in view
   useEffect(() => {
-    const isOpen = showForm || showUpsell || showMapPicker;
-    document.body.style.overflow = isOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [showForm, showUpsell, showMapPicker]);
+    if (showForm || showUpsell) window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [showForm, showUpsell]);
 
   const handleGpsAutoFill = () => {
     if (!navigator.geolocation) { toast.error("Geolocation not available"); return; }
