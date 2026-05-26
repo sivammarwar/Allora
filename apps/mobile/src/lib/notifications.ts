@@ -40,6 +40,24 @@ export async function registerFCMToken(): Promise<void> {
   }
 }
 
+/** Returns true if notifications are currently allowed (does NOT prompt). */
+export async function checkNotificationPermission(): Promise<boolean> {
+  if (Platform.OS === "ios") {
+    const status = await messaging().hasPermission();
+    return (
+      status === messaging.AuthorizationStatus.AUTHORIZED ||
+      status === messaging.AuthorizationStatus.PROVISIONAL
+    );
+  }
+  if (Platform.OS === "android" && Platform.Version >= 33) {
+    const result = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+    return result;
+  }
+  return true;
+}
+
 export function onForegroundNotification(
   handler: (title: string, body: string) => void
 ): () => void {

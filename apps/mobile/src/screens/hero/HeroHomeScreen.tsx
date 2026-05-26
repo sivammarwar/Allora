@@ -10,6 +10,7 @@ import { BRAND_PRIMARY, BRAND_MUTED } from "../../lib/config";
 import { useAuth } from "../../auth/AuthContext";
 import { connectService } from "../../lib/socket";
 import { storage } from "../../lib/storage";
+import { checkNotificationPermission, registerFCMToken } from "../../lib/notifications";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "#f59e0b",
@@ -85,6 +86,19 @@ export default function HeroHomeScreen() {
     onError: (e: any) => Alert.alert("Error", e?.error ?? "Could not accept request"),
   });
 
+  // ── Notification permission banner ──────────────────────────────────────
+  const [showNotifBanner, setShowNotifBanner] = useState(false);
+  useEffect(() => {
+    checkNotificationPermission().then((allowed) => {
+      if (!allowed) setShowNotifBanner(true);
+      else registerFCMToken().catch(() => {}); // re-register on every open
+    });
+  }, []);
+  const openNotifSettings = () => {
+    setShowNotifBanner(false);
+    Linking.openSettings();
+  };
+
   // ── Battery optimisation banner ─────────────────────────────────────────
   const [showBatteryBanner, setShowBatteryBanner] = useState(false);
   useEffect(() => {
@@ -123,6 +137,21 @@ export default function HeroHomeScreen() {
           colors={[BRAND_PRIMARY]} tintColor={BRAND_PRIMARY} />
       }
     >
+      {/* Notification permission banner — shown whenever notifications are blocked */}
+      {showNotifBanner && (
+        <View style={styles.notifBanner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.notifTitle}>🔔 Notifications are blocked</Text>
+            <Text style={styles.notifBody}>
+              You won't receive alerts for new service requests. Tap "Fix Now" to enable notifications.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.notifFixBtn} onPress={openNotifSettings}>
+            <Text style={styles.notifFixText}>Fix Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Battery optimisation banner — shown once until dismissed */}
       {showBatteryBanner && (
         <View style={styles.batteryBanner}>
@@ -256,6 +285,18 @@ export default function HeroHomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f9fafb" },
+  notifBanner: {
+    margin: 16, marginBottom: 0, backgroundColor: "#fee2e2",
+    borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#fecaca",
+    flexDirection: "row", alignItems: "center", gap: 10,
+  },
+  notifTitle: { fontSize: 13, fontWeight: "700", color: "#991b1b", marginBottom: 4 },
+  notifBody: { fontSize: 12, color: "#7f1d1d", lineHeight: 17 },
+  notifFixBtn: {
+    backgroundColor: "#dc2626", borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 8, alignSelf: "center",
+  },
+  notifFixText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   batteryBanner: {
     margin: 16, marginBottom: 0, backgroundColor: "#fef3c7",
     borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#fde68a",
