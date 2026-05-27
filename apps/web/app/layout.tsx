@@ -89,6 +89,24 @@ export default function RootLayout({
         <link rel="preconnect" href="https://res.cloudinary.com" />
       </head>
       <body className="min-h-screen antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Bharat Services",
+              url: "https://bharat333.com",
+              logo: "https://bharat333.com/icon-512x512.png",
+              sameAs: [],
+              contactPoint: {
+                "@type": "ContactPoint",
+                email: "support@bharat333.com",
+                contactType: "customer support",
+              },
+            }),
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
