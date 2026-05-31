@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Clock, RefreshCw, Package, FileText, Bell, CalendarClock, IndianRupee, ToggleLeft, ToggleRight } from "lucide-react";
+import { Loader2, ShieldCheck, Clock, RefreshCw, Package, Bell, CalendarClock, IndianRupee, ToggleLeft, ToggleRight } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -298,25 +298,6 @@ function HeroVerifiedDashboard({ profile }: { profile: any }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Products card hidden */}
-
-        {verifiedServiceCategories.length > 0 && (
-          <Card
-            className="cursor-pointer hover:border-brand-primary/50 transition-colors"
-            onClick={() => router.push("/hero/services")}
-          >
-            <CardContent className="py-6 space-y-3">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-primary/10 text-brand-primary">
-                <FileText size={24} />
-              </div>
-              <div>
-                <h2 className="font-heading text-lg text-brand-text">Services</h2>
-                <p className="text-sm text-brand-textMuted">
-                  Set pricing for your verified subcategories
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Card className="cursor-pointer hover:border-brand-primary/50 transition-colors" onClick={() => router.push("/hero/slots")}>
           <CardContent className="py-6 space-y-3">
