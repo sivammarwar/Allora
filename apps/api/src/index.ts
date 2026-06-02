@@ -1,3 +1,4 @@
+console.log("[startup] index.ts loading...");
 import http from "http";
 import express from "express";
 import compression from "compression";
@@ -14,7 +15,9 @@ import { initSocket } from "./socket";
 import { redis } from "./lib/redis";
 import { prisma } from "./lib/prisma";
 
+console.log("[startup] Creating express app...");
 const app = express();
+console.log("[startup] Express app created");
 
 app.set("trust proxy", 1);
 
@@ -85,11 +88,16 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ── HTTP + Socket.io server ───────────────────────────────
+console.log("[startup] Creating HTTP server...");
 const server = http.createServer(app);
+console.log("[startup] HTTP server created, initializing socket...");
 initSocket(server);
+console.log("[startup] Socket initialized");
 
 const port = env.PORT;
+console.log(`[startup] Starting server on port ${port}...`);
 server.listen(port, () => {
+  console.log(`[startup] Bharat Services API ready on port ${port} (${env.NODE_ENV})`);
   logger.info(`Bharat Services API ready → http://localhost:${port} (${env.NODE_ENV})`);
 });
 

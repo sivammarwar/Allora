@@ -63,5 +63,7 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+// eslint-disable-next-line no-console
+console.log("✅ Environment variables loaded successfully");
 export const env = parsed.data;
 export const isProd = env.NODE_ENV === "production";
