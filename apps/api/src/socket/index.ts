@@ -1,11 +1,11 @@
 import { Server as HttpServer } from "http";
 import { Server as IOServer, Socket } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
 import cookie from "cookie";
 import { verifyAccessToken } from "../lib/jwt";
 import { env } from "../env";
 import { logger } from "../lib/logger";
-import { createRedisClient } from "../lib/redis";
+// import { createAdapter } from "@socket.io/redis-adapter";
+// import { createRedisClient } from "../lib/redis";
 
 let io: IOServer | null = null;
 
@@ -23,11 +23,12 @@ export function initSocket(httpServer: HttpServer): IOServer {
     transports: ["websocket", "polling"],
   });
 
-  // Redis adapter — required for horizontal scaling (multiple API instances)
-  const pubClient = createRedisClient();
-  const subClient = pubClient.duplicate();
-  io.adapter(createAdapter(pubClient, subClient));
-  logger.info("[socket] Redis adapter attached");
+  // Redis adapter disabled for free-tier single-instance deployment.
+  // Re-enable when scaling to multiple instances with a Redis cluster.
+  // const pubClient = createRedisClient();
+  // const subClient = pubClient.duplicate();
+  // io.adapter(createAdapter(pubClient, subClient));
+  // logger.info("[socket] Redis adapter attached");
 
   // Auth middleware — runs at handshake time on every namespace
   const authMiddleware = (socket: Socket, next: (err?: Error) => void) => {
