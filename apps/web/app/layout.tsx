@@ -83,8 +83,8 @@ export default function RootLayout({
       className={`${dmSans.variable} ${playfair.variable} ${jetbrains.variable} ${cormorant.variable} ${devanagari.variable}`}
     >
       <head>
-        <link rel="dns-prefetch" href="https://api.bharat333.com" />
-        <link rel="preconnect" href="https://api.bharat333.com" crossOrigin="use-credentials" />
+        <link rel="dns-prefetch" href="https://bharat-api-nqbq.onrender.com" />
+        <link rel="preconnect" href="https://bharat-api-nqbq.onrender.com" crossOrigin="use-credentials" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
       </head>

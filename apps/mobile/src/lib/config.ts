@@ -1,6 +1,6 @@
-export const API_URL = "https://api.bharat333.com";
+export const API_URL = "https://bharat-api-nqbq.onrender.com";
 // Other options (uncomment as needed):
-// Production:          "https://api.bharat333.com"
+// Production:          "https://bharat-api-nqbq.onrender.com"
 // Android emulator:    "http://10.0.2.2:4000"
 // Physical device USB: "http://localhost:4000"  +  run `adb reverse tcp:4000 tcp:4000`
 
