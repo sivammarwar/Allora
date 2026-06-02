@@ -12,7 +12,7 @@ import { errorHandler, notFound } from "./middleware/error";
 import apiRouter from "./routes";
 import { initSocket } from "./socket";
 import { redis } from "./lib/redis";
-import { prisma, connectDB } from "./lib/prisma";
+import { prisma } from "./lib/prisma";
 
 const app = express();
 
@@ -89,16 +89,9 @@ const server = http.createServer(app);
 initSocket(server);
 
 const port = env.PORT;
-connectDB()
-  .then(() => {
-    server.listen(port, () => {
-      logger.info(`Bharat Services API ready → http://localhost:${port} (${env.NODE_ENV})`);
-    });
-  })
-  .catch((err) => {
-    logger.error("Failed to connect to database after retries:", err);
-    process.exit(1);
-  });
+server.listen(port, () => {
+  logger.info(`Bharat Services API ready → http://localhost:${port} (${env.NODE_ENV})`);
+});
 
 // ── Graceful shutdown ─────────────────────────────────────
 async function shutdown(signal: string) {
