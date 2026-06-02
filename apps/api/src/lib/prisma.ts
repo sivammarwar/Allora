@@ -13,7 +13,9 @@ export async function connectDB(): Promise<void> {
   const MAX_RETRIES = 5;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      await prisma.$connect();
+      // Use a lightweight query instead of $connect() — Transaction Pooler
+      // doesn't support persistent connections, but Prisma lazy-connects fine.
+      await prisma.$queryRaw`SELECT 1`;
       return;
     } catch (err) {
       if (attempt === MAX_RETRIES) throw err;
